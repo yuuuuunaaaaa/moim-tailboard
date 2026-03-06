@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  admins     Admin[]
+  events     Event[]
+  logs       ActionLog[]
+}
+
+model Admin {
+  id          Int      @id @default(autoincrement())
+  telegramId  String   @unique
+  name        String?
+  tenantId    Int
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Event {
+  id          Int          @id @default(autoincrement())
+  tenantId    Int
+  title       String
+  description String?
+  eventDate   DateTime
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  optionGroups  OptionGroup[]
+  participants  Participant[]
+  logs          ActionLog[]
+
+  @@index([tenantId, eventDate])
+}
+
+model OptionGroup {
+  id             Int          @id @default(autoincrement())
+  eventId        Int
+  name           String
+  multipleSelect Boolean      @default(false)
+  sortOrder      Int          @default(0)
+
+  event   Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  options OptionItem[]
+
+  @@index([eventId, sortOrder])
+}
+
+model OptionItem {
+  id           Int          @id @default(autoincrement())
+  optionGroupId Int
+  name         String
+  limitEnabled Boolean      @default(false)
+  limitCount   Int?
+  sortOrder    Int          @default(0)
+
+  optionGroup OptionGroup       @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
+  selections  ParticipantOption[]
+
+  @@index([optionGroupId, sortOrder])
+}
+
+model Participant {
+  id         Int          @id @default(autoincrement())
+  eventId    Int
+  name       String
+  studentNo  String?
+  telegramId String
+  createdAt  DateTime     @default(now())
+
+  event    Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  options  ParticipantOption[]
+  logs     ActionLog[]
+
+  @@index([eventId, name])
+}
+
+model ParticipantOption {
+  id            Int         @id @default(autoincrement())
+  participantId Int
+  optionItemId  Int
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  optionItem  OptionItem  @relation(fields: [optionItemId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, optionItemId])
+}
+
+model ActionLog {
+  id           Int        @id @default(autoincrement())
+  tenantId     Int
+  eventId      Int?
+  participantId Int?
+  action       String
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event       Event?      @relation(fields: [eventId], references: [id])
+  participant Participant? @relation(fields: [participantId], references: [id])
+
+  @@index([tenantId, createdAt])
+}
+

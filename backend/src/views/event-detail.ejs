@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title><%= event.title %> - <%= tenant.name %></title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        max-width: 860px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 4px;
+      }
+      .meta {
+        color: #666;
+        font-size: 0.875rem;
+        margin-bottom: 16px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+      }
+      @media (max-width: 768px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .panel h2 {
+        margin-top: 0;
+      }
+      .group {
+        margin-bottom: 16px;
+      }
+      .group-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .participants-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      .participants-table th,
+      .participants-table td {
+        border: 1px solid #ddd;
+        padding: 4px 6px;
+        text-align: left;
+      }
+      .participants-table th {
+        background: #f5f5f5;
+      }
+      .inline-form {
+        display: inline;
+      }
+      .btn {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background: #fafafa;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      .btn-primary {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+        color: white;
+      }
+      .btn-danger {
+        background: #dc2626;
+        border-color: #b91c1c;
+        color: white;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+      input[type="text"],
+      input[type="date"],
+      input[type="datetime-local"] {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="/t/<%= tenant.slug %>/events">&larr; Back to events</a>
+    <h1><%= event.title %></h1>
+    <div class="meta">
+      <span><%= event.eventDate.toISOString().slice(0,16).replace('T',' ') %></span>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <h2>Join</h2>
+        <form method="post" action="/participants">
+          <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+          <input type="hidden" name="eventId" value="<%= event.id %>" />
+
+          <label for="name">Name</label>
+          <input id="name" name="name" required />
+
+          <label for="studentNo">Student No (optional, used if names duplicate)</label>
+          <input id="studentNo" name="studentNo" />
+
+          <label for="telegramId">Telegram ID</label>
+          <input id="telegramId" name="telegramId" required />
+
+          <% event.optionGroups.forEach(function(group){ %>
+          <div class="group">
+            <div class="group-title"><%= group.name %></div>
+            <% group.options.forEach(function(opt){ %>
+            <div>
+              <% if (group.multipleSelect) { %>
+              <label>
+                <input
+                  type="checkbox"
+                  name="optionItemIds"
+                  value="<%= opt.id %>"
+                />
+                <%= opt.name %>
+              </label>
+              <% } else { %>
+              <label>
+                <input
+                  type="radio"
+                  name="optionItemIds"
+                  value="<%= opt.id %>"
+                />
+                <%= opt.name %>
+              </label>
+              <% } %>
+            </div>
+            <% }) %>
+          </div>
+          <% }) %>
+
+          <button class="btn btn-primary" type="submit">Join</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Participants</h2>
+        <table class="participants-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <% event.optionGroups.forEach(function(group){ %>
+              <th><%= group.name %></th>
+              <% }) %>
+              <th>Edit / Delete (self)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% event.participants.forEach(function(p, idx){ %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td>
+                <%= p.name %>
+                <% if (p.studentNo) { %>
+                (<%= p.studentNo %>)
+                <% } %>
+              </td>
+              <% event.optionGroups.forEach(function(group){ %>
+              <td>
+                <% const selections = p.options
+                  .filter(function(po){ return po.optionItem.optionGroupId === group.id; })
+                  .map(function(po){ return po.optionItem.name; });
+                %>
+                <%= selections.join(", ") %>
+              </td>
+              <% }) %>
+              <td>
+                <form
+                  class="inline-form"
+                  method="post"
+                  action="/participants/update"
+                >
+                  <input
+                    type="hidden"
+                    name="tenantSlug"
+                    value="<%= tenant.slug %>"
+                  />
+                  <input
+                    type="hidden"
+                    name="participantId"
+                    value="<%= p.id %>"
+                  />
+                  <div>
+                    <label style="font-size: 0.75rem; font-weight: 400;">
+                      New name
+                      <input
+                        type="text"
+                        name="name"
+                        value="<%= p.name %>"
+                        style="width: 140px; margin-bottom: 2px;"
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label style="font-size: 0.75rem; font-weight: 400;">
+                      Student No
+                      <input
+                        type="text"
+                        name="studentNo"
+                        value="<%= p.studentNo || '' %>"
+                        style="width: 80px; margin-bottom: 2px;"
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label style="font-size: 0.75rem; font-weight: 400;">
+                      Your Telegram ID
+                      <input
+                        type="text"
+                        name="telegramId"
+                        required
+                        style="width: 140px; margin-bottom: 4px;"
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <button
+                      class="btn btn-primary"
+                      type="submit"
+                      name="mode"
+                      value="update"
+                    >
+                      Save
+                    </button>
+                    <button
+                      class="btn btn-danger"
+                      type="submit"
+                      name="mode"
+                      value="delete"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+  </html>
+
