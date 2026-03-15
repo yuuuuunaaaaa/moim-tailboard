@@ -5,18 +5,22 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate"
+    "start": "node src/server.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.13.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
     "ejs": "^3.1.9",
     "express": "^4.19.0",
-    "morgan": "^1.10.0"
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.11.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0",
-    "prisma": "^5.13.0"
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18 <19",
+    "npm": ">=10 <11"
   }
 }
