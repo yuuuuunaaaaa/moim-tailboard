@@ -2,6 +2,12 @@ const mysql = require("mysql2/promise");
 const fs = require("fs");
 require("dotenv").config();
 
+const sslCaPath = process.env.DB_SSL_CA;
+const sslOption =
+  sslCaPath && sslCaPath.trim()
+    ? { ssl: { ca: fs.readFileSync(sslCaPath.trim()) } }
+    : {};
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -11,9 +17,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: {
-    ca: fs.readFileSync(process.env.DB_SSL_CA),
-  },
+  ...sslOption,
 });
 
 async function getTenantOr404(slug, res) {
