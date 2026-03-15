@@ -27,12 +27,12 @@ async function authMiddleware(req, res, next) {
     req.auth = decoded;
 
     if (decoded.admin_id != null) {
-      const [[admin]] = await pool.query(
-        "SELECT id, telegram_id, username, tenant_id, name FROM admin WHERE id = ? LIMIT 1",
+      const [[row]] = await pool.query(
+        "SELECT id, telegram_id, username, tenant_id, name, is_superadmin FROM admin WHERE id = ? LIMIT 1",
         [decoded.admin_id],
       );
-      if (admin) {
-        req.admin = admin;
+      if (row) {
+        req.admin = { ...row, is_superadmin: !!row.is_superadmin };
       }
     }
 
@@ -65,12 +65,12 @@ async function optionalAuthMiddleware(req, res, next) {
     req.auth = decoded;
 
     if (decoded.admin_id != null) {
-      const [[admin]] = await pool.query(
-        "SELECT id, telegram_id, username, tenant_id, name FROM admin WHERE id = ? LIMIT 1",
+      const [[row]] = await pool.query(
+        "SELECT id, telegram_id, username, tenant_id, name, is_superadmin FROM admin WHERE id = ? LIMIT 1",
         [decoded.admin_id],
       );
-      if (admin) {
-        req.admin = admin;
+      if (row) {
+        req.admin = { ...row, is_superadmin: !!row.is_superadmin };
       }
     }
   } catch {

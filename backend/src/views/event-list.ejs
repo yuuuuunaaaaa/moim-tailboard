@@ -12,15 +12,17 @@
   <header class="page-header">
     <div class="container">
       <div class="brand">
-        <% if (isAdmin) { %><a href="/">모임 테일보드</a><% } else { %><a href="/t/<%= tenant.slug %>/events">모임 테일보드</a><% } %>
+        <% if (canChooseTenant) { %><a href="/">모임 테일보드</a><% } else { %><a href="/t/<%= tenant.slug %>/events">모임 테일보드</a><% } %>
+        <% if (username) { %> <span class="brand-username">(<%= username %>)</span><% } %>
       </div>
       <nav class="nav-links">
-        <% if (isAdmin) { %><a href="/">공동체 선택</a> <a href="/admin">관리</a><% } %>
+        <% if (canChooseTenant) { %><a href="/">공동체 선택</a><% } %>
+        <% if (isAdmin) { %><a href="/admin">관리</a><% } %>
       </nav>
     </div>
   </header>
   <main class="container">
-    <% if (isAdmin) { %><a href="/" class="back-link">← 공동체 선택</a><% } %>
+    <% if (canChooseTenant) { %><a href="/" class="back-link">← 공동체 선택</a><% } %>
     <h1><%= tenant.name %></h1>
     <p class="page-subtitle">진행 중인 이벤트에 참여할 수 있습니다.</p>
     <% if (events.length === 0) { %>

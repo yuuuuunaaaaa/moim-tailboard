@@ -3,9 +3,27 @@ const { pool, getTenantOr404 } = require("../db/mysql");
 
 const router = express.Router();
 
+/** superadmin이면 모든 테넌트 접근 가능, 아니면 소속 테넌트만 */
+function canAccessTenant(req, tenant) {
+  return req.admin.is_superadmin || req.admin.tenant_id === tenant.id;
+}
+
 router.get("/admin", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
+  }
+  if (req.admin.is_superadmin) {
+    const [tenants] = await pool.query(
+      "SELECT id, slug, name FROM tenant ORDER BY name ASC",
+    );
+    const slug = req.query.tenant;
+    const tenant = slug
+      ? tenants.find((t) => t.slug === slug) || tenants[0]
+      : tenants[0];
+    if (!tenant) {
+      return res.status(404).send("등록된 공동체가 없습니다.");
+    }
+    return res.render("admin", { tenant, tenants });
   }
   const [[tenant]] = await pool.query(
     "SELECT id, slug, name FROM tenant WHERE id = ? LIMIT 1",
@@ -17,7 +35,7 @@ router.get("/admin", async (req, res) => {
   res.render("admin", { tenant, tenants: [tenant] });
 });
 
-// 테넌트별 관리자 관리 페이지 (소속 공동체만 접근)
+// 테넌트별 관리자 관리 페이지 (소속 공동체만 접근, superadmin은 전체)
 router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -25,7 +43,7 @@ router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (tenant.id !== req.admin.tenant_id) {
+  if (!canAccessTenant(req, tenant)) {
     return res.status(403).send("소속 공동체만 조회할 수 있습니다.");
   }
 
@@ -42,7 +60,7 @@ router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   });
 });
 
-// 테넌트 관리자 추가 (소속 공동체만)
+// 테넌트 관리자 추가 (소속 공동체만, superadmin은 전체)
 router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -50,7 +68,7 @@ router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (tenant.id !== req.admin.tenant_id) {
+  if (!canAccessTenant(req, tenant)) {
     return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
   }
 
@@ -74,7 +92,7 @@ router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   }
 });
 
-// 테넌트 관리자 삭제 (소속 공동체만)
+// 테넌트 관리자 삭제 (소속 공동체만, superadmin은 전체)
 router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -82,7 +100,7 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
   const { tenantSlug, adminId } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (tenant.id !== req.admin.tenant_id) {
+  if (!canAccessTenant(req, tenant)) {
     return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
   }
 
@@ -105,7 +123,7 @@ router.post("/admin/events", async (req, res) => {
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (tenant.id !== req.admin.tenant_id) {
+  if (!canAccessTenant(req, tenant)) {
     return res.status(403).send("소속 공동체만 등록할 수 있습니다.");
   }
 
@@ -144,7 +162,7 @@ router.post("/admin/options", async (req, res) => {
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (tenant.id !== req.admin.tenant_id) {
+  if (!canAccessTenant(req, tenant)) {
     return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
   }
 

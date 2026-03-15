@@ -23,7 +23,7 @@ router.post("/participants", async (req, res) => {
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (!ensureTenantAllowed(req, res, tenantSlug)) return;
+  if (!ensureTenantAllowed(req, res, tenant)) return;
 
   const [[event]] = await pool.query(
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
@@ -81,7 +81,7 @@ router.post("/participants/update", async (req, res) => {
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (!ensureTenantAllowed(req, res, tenantSlug)) return;
+  if (!ensureTenantAllowed(req, res, tenant)) return;
 
   const [[participant]] = await pool.query(
     "SELECT p.*, e.tenant_id, e.id AS event_id FROM participant p JOIN event e ON p.event_id = e.id WHERE p.id = ? LIMIT 1",

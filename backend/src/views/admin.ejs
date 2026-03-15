@@ -11,9 +11,12 @@
 <body>
   <header class="page-header">
     <div class="container">
-      <div class="brand"><a href="/">모임 테일보드</a></div>
+      <div class="brand">
+        <a href="/">모임 테일보드</a><% if (username) { %> <span class="brand-username">(<%= username %>)</span><% } %>
+      </div>
       <nav class="nav-links">
-        <% if (isAdmin) { %><a href="/">공동체 선택</a><% } %>
+        <% if (canChooseTenant) { %><a href="/">공동체 선택</a><% } %>
+        <a href="/admin">관리</a>
       </nav>
     </div>
   </header>
@@ -23,6 +26,13 @@
 
     <div class="tenant-pills">
       <strong style="margin-right: 8px;">공동체:</strong>
+      <% if (tenants.length > 1) { %>
+        <select onchange="location.href='/admin?tenant='+this.value" style="margin-right: 8px;">
+          <% tenants.forEach(function(t){ %>
+            <option value="<%= t.slug %>" <%= t.id === tenant.id ? 'selected' : '' %>><%= t.name %></option>
+          <% }); %>
+        </select>
+      <% } %>
       <a href="/t/<%= tenant.slug %>/events"><%= tenant.name %> 이벤트</a>
       <a href="/admin/tenants/<%= tenant.slug %>"><%= tenant.name %> 관리자</a>
     </div>

@@ -20,15 +20,26 @@ app.use(express.static(path.join(__dirname, "public")));
 // Resolve JWT from Authorization header or auth_token cookie; set req.auth and req.admin
 app.use(optionalAuthMiddleware);
 
-// 비관리자 UI에서 공동체 선택/관리 링크 숨기기
+// 권한·사용자명 전역: username 있을 때만 공동체 선택/관리 노출
 app.use(function (req, res, next) {
-  res.locals.isAdmin = !!req.admin;
+  const raw =
+    (req.auth && req.auth.username) || (req.cookies && req.cookies.username);
+  res.locals.username = raw ? String(raw).trim() : null;
+  const hasUsername = !!res.locals.username;
+  res.locals.isAdmin = hasUsername && !!req.admin;
+  res.locals.canChooseTenant = hasUsername && !!(req.admin && req.admin.is_superadmin);
   next();
 });
+
+// 로컬/개발 환경에서는 로그인 없이 진입 가능 (UI 작업용)
+const isLocalDev =
+  process.env.NODE_ENV === "development" ||
+  process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
 
 // Require auth for non-public routes: allow login/auth endpoints; else require JWT or username cookie.
 // Unauthenticated → redirect to /login so PC users can open the site in a browser and see the login screen.
 function requireTelegramAuth(req, res, next) {
+  if (isLocalDev) return next();
   const allowPath =
     req.path === "/login" ||
     (req.path === "/auth/telegram" && (req.method === "GET" || req.method === "POST")) ||
@@ -45,13 +56,13 @@ app.use(requireTelegramAuth);
 
 app.get("/", async (req, res) => {
   try {
-    const isAdmin = !!req.admin;
+    const canChooseTenant = res.locals.canChooseTenant;
     const [tenants] = await pool.query(
       "SELECT id, slug, name FROM tenant ORDER BY name ASC",
     );
     res.render("home", {
-      tenants: isAdmin ? tenants : [],
-      canChooseTenant: isAdmin,
+      tenants: canChooseTenant ? tenants : [],
+      canChooseTenant,
     });
   } catch (err) {
     console.error(err);
@@ -64,6 +75,7 @@ app.use("/", eventsRouter);
 app.use("/", participantsRouter);
 app.use("/", adminRouter);
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+const PORT = Number(process.env.PORT) || 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });
