@@ -13,12 +13,11 @@ const participantsRouter = require("./routes/participants");
 const adminRouter = require("./routes/admin");
 const authRouter = require("./routes/auth");
 
-// 필수 환경변수 검증 (서버 시작 전)
+// 필수 환경변수 경고 (exit 하지 않음 — 서버는 기동하고 요청 시 에러 확인)
 const REQUIRED_ENV = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME", "JWT_SECRET", "TELEGRAM_BOT_TOKEN"];
 const missingEnv = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missingEnv.length > 0) {
-  console.error("[server] Missing required env vars:", missingEnv.join(", "));
-  process.exit(1);
+  console.error("[server] WARNING: Missing env vars:", missingEnv.join(", "));
 }
 
 const app = express();

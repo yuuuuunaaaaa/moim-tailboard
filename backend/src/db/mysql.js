@@ -25,8 +25,20 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   connectTimeout: 15000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 30000,
   ...sslOption,
 });
+
+// mysql2/promise PoolWrapper → 내부 pool에 error 핸들러 등록
+try {
+  const underlying = pool.pool || pool;
+  if (typeof underlying.on === "function") {
+    underlying.on("error", (err) => {
+      console.error("[db] pool error:", err.message);
+    });
+  }
+} catch (_) {}
 
 async function testConnection() {
   const conn = await pool.getConnection();
