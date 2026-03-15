@@ -9,7 +9,7 @@ router.get("/t/:tenantSlug", async (req, res) => {
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (!ensureTenantAllowed(req, res, tenantSlug)) return;
+  if (!ensureTenantAllowed(req, res, tenant)) return;
   res.redirect(302, `/t/${tenantSlug}/events`);
 });
 
@@ -18,7 +18,7 @@ router.get("/t/:tenantSlug/events", async (req, res) => {
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (!ensureTenantAllowed(req, res, tenantSlug)) return;
+  if (!ensureTenantAllowed(req, res, tenant)) return;
 
   const [events] = await pool.query(
     "SELECT * FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC",
@@ -38,7 +38,7 @@ router.get("/t/:tenantSlug/events/:eventId", async (req, res) => {
   const { tenantSlug, eventId } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
-  if (!ensureTenantAllowed(req, res, tenantSlug)) return;
+  if (!ensureTenantAllowed(req, res, tenant)) return;
 
   const [[event]] = await pool.query(
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
