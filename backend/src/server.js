@@ -20,6 +20,12 @@ app.use(express.static(path.join(__dirname, "public")));
 // Resolve JWT from Authorization header or auth_token cookie; set req.auth and req.admin
 app.use(optionalAuthMiddleware);
 
+// 비관리자 UI에서 공동체 선택/관리 링크 숨기기
+app.use(function (req, res, next) {
+  res.locals.isAdmin = !!req.admin;
+  next();
+});
+
 // Require auth for non-public routes: allow login/auth endpoints; else require JWT or username cookie.
 // Unauthenticated → redirect to /login so PC users can open the site in a browser and see the login screen.
 function requireTelegramAuth(req, res, next) {

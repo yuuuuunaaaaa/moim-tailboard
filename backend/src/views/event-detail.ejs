@@ -13,11 +13,12 @@
 <body>
   <header class="page-header">
     <div class="container">
-      <div class="brand"><a href="/">모임 테일보드</a></div>
+      <div class="brand">
+        <% if (isAdmin) { %><a href="/">모임 테일보드</a><% } else { %><a href="/t/<%= tenant.slug %>/events">모임 테일보드</a><% } %>
+      </div>
       <nav class="nav-links">
         <a href="/t/<%= tenant.slug %>/events">이벤트 목록</a>
-        <a href="/">공동체 선택</a>
-        <a href="/admin">관리</a>
+        <% if (isAdmin) { %> <a href="/">공동체 선택</a> <a href="/admin">관리</a><% } %>
       </nav>
     </div>
   </header>

@@ -13,7 +13,7 @@
     <div class="container">
       <div class="brand"><a href="/">모임 테일보드</a></div>
       <nav class="nav-links">
-        <a href="/admin">관리</a>
+        <% if (canChooseTenant) { %><a href="/admin">관리</a><% } %>
       </nav>
     </div>
   </header>
