@@ -20,6 +20,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Railway 등 배포 환경 헬스 체크 (인증 없이 200 반환)
+app.get("/health", (req, res) => res.status(200).send("ok"));
+
 // Resolve JWT from Authorization header or auth_token cookie; set req.auth and req.admin
 app.use(optionalAuthMiddleware);
 
@@ -96,6 +99,8 @@ process.on("uncaughtException", (err) => {
 });
 
 const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+const HOST = process.env.HOST || "0.0.0.0";
+
+app.listen(PORT, HOST, () => {
+  console.log("Server running on", HOST + ":" + PORT);
 });

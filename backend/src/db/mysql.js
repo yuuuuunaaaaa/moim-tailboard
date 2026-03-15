@@ -9,7 +9,11 @@ let sslOption = {};
 if (sslCaContent && sslCaContent.trim()) {
   sslOption = { ssl: { ca: sslCaContent.trim() } };
 } else if (sslCaPath && sslCaPath.trim()) {
-  sslOption = { ssl: { ca: fs.readFileSync(sslCaPath.trim()) } };
+  try {
+    sslOption = { ssl: { ca: fs.readFileSync(sslCaPath.trim()) } };
+  } catch (e) {
+    console.warn("DB_SSL_CA file not found, connecting without SSL:", e.message);
+  }
 }
 
 const pool = mysql.createPool({
