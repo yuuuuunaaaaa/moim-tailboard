@@ -73,8 +73,12 @@ async function optionalAuthMiddleware(req, res, next) {
         req.admin = { ...row, is_superadmin: !!row.is_superadmin };
       }
     }
-  } catch {
-    // ignore invalid/expired token
+  } catch (err) {
+    if (err.name === "TokenExpiredError" || err.name === "JsonWebTokenError") {
+      // ignore invalid/expired token
+    } else {
+      return next(err);
+    }
   }
 
   return next();

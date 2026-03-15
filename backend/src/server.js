@@ -1,4 +1,7 @@
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+require("express-async-errors");
+
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const { pool } = require("./db/mysql");
@@ -54,6 +57,9 @@ function requireTelegramAuth(req, res, next) {
 }
 app.use(requireTelegramAuth);
 
+// /t 만 오면 홈으로 (일부 클라이언트가 /t 요청하는 경우 대비)
+app.get("/t", (req, res) => res.redirect(302, "/"));
+
 app.get("/", async (req, res) => {
   try {
     const canChooseTenant = res.locals.canChooseTenant;
@@ -74,6 +80,20 @@ app.use("/", authRouter);
 app.use("/", eventsRouter);
 app.use("/", participantsRouter);
 app.use("/", adminRouter);
+
+// 라우트/미들웨어에서 next(err) 된 경우 500 응답 (프로세스 크래시 방지)
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).send("Server error");
+});
+
+// 미처리 예외 시 로그 출력 (502 원인 파악용)
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled Rejection:", err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
 
 const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, () => {
