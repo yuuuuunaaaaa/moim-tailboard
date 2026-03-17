@@ -12,18 +12,16 @@
     .login-page { max-width: 400px; margin: 48px auto; text-align: center; }
     .login-page .card { padding: 32px; }
     .login-widget-wrap { display: flex; justify-content: center; margin: 24px 0; min-height: 44px; }
+    #webapp-section { display: none; }
+    #desktop-section { display: none; }
   </style>
 </head>
 <body>
   <header class="page-header">
     <div class="container">
       <div class="brand">
-        <a href="/">모임 테일보드</a><% if (username) { %> <span class="brand-username">(<%= username %>)</span><% } %>
+        <a href="/">모임 테일보드</a>
       </div>
-      <nav class="nav-links">
-        <% if (canChooseTenant) { %><a href="/">공동체 선택</a><% } %>
-        <% if (isAdmin) { %><a href="/admin">관리</a><% } %>
-      </nav>
     </div>
   </header>
   <main class="container">
@@ -31,38 +29,58 @@
       <div class="card">
         <h1>텔레그램으로 로그인</h1>
         <p class="page-subtitle">참여 시 본인 확인·수정에 사용됩니다.</p>
-        <div class="login-widget-wrap">
-          <script async src="https://telegram.org/js/telegram-widget.js?22"
-                  data-telegram-login="<%= botName %>"
-                  data-size="large"
-                  data-auth-url="<%= authUrl %>"
-                  data-request-access="write">
-          </script>
+
+        <!-- 텔레그램 WebApp: 자동 로그인 중 -->
+        <div id="webapp-section">
+          <p style="margin: 24px 0; color: #6b7280;">로그인 중...</p>
         </div>
-        <p style="margin-top: 16px;"><a href="/">← 돌아가기</a></p>
+
+        <!-- PC 브라우저: 로그인 위젯 -->
+        <div id="desktop-section">
+          <div class="login-widget-wrap">
+            <script async src="https://telegram.org/js/telegram-widget.js?22"
+                    data-telegram-login="<%= botName %>"
+                    data-size="large"
+                    data-auth-url="<%= authUrl %>"
+                    data-request-access="write">
+            </script>
+          </div>
+          <p style="margin-top: 16px;"><a href="/">← 돌아가기</a></p>
+        </div>
       </div>
     </div>
   </main>
   <script>
     (function () {
       var tg = window.Telegram && window.Telegram.WebApp;
-      if (!tg || !tg.initData) return;
-      tg.ready();
-      fetch("/auth/telegram-webapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: tg.initData }),
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.ok || !data.token) return;
-          var maxAge = 90 * 24 * 60 * 60;
-          document.cookie = "auth_token=" + data.token + "; path=/; max-age=" + maxAge;
-          var uname = data.user && (data.user.username || String(data.user.id));
-          if (uname) document.cookie = "username=" + uname + "; path=/; max-age=" + maxAge;
-          location.href = "/";
+      if (tg && tg.initData) {
+        // 텔레그램 WebApp: 자동 인증
+        document.getElementById("webapp-section").style.display = "block";
+        tg.ready();
+        fetch("/auth/telegram-webapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData: tg.initData }),
         })
-        .catch(function () {});
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data.ok || !data.token) {
+              document.querySelector("#webapp-section p").textContent = "로그인에 실패했습니다. 텔레그램에서 다시 열어 주세요.";
+              return;
+            }
+            var maxAge = 90 * 24 * 60 * 60;
+            document.cookie = "auth_token=" + data.token + "; path=/; max-age=" + maxAge;
+            var uname = data.user && (data.user.username || String(data.user.id));
+            if (uname) document.cookie = "username=" + uname + "; path=/; max-age=" + maxAge;
+            location.href = "/";
+          })
+          .catch(function () {
+            document.querySelector("#webapp-section p").textContent = "오류가 발생했습니다. 다시 시도해 주세요.";
+          });
+      } else {
+        // PC 브라우저: 위젯 표시
+        document.getElementById("desktop-section").style.display = "block";
+      }
     })();
   </script>
 </body>
