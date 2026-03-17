@@ -80,6 +80,7 @@ router.post("/auth/telegram-webapp", async (req, res) => {
       username,
       admin_id: admin ? admin.id : null,
       tenant_id: admin ? admin.tenant_id : null,
+      via_webapp: true,
     };
 
     const token = signToken(payload);
