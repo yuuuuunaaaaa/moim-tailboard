@@ -53,7 +53,7 @@
             <input id="username" type="text" readonly class="input-readonly" value="<%= username %>" />
             <p class="form-hint">로그인한 계정으로 참여됩니다.</p>
             <% } else { %>
-            <p class="form-hint form-hint--warning">로그인이 필요합니다. 텔레그램에서 이 링크를 열어 주세요.</p>
+            <p class="form-hint form-hint--warning">로그인이 필요합니다. <a href="/login">로그인</a>하거나 텔레그램에서 열어 주세요.</p>
             <% } %>
           </div>
 
@@ -146,30 +146,34 @@
   </main>
   <script>
     (function () {
+      var alreadyAuthed = !!("<%= username %>");
+      if (alreadyAuthed) return;
       var tg = window.Telegram && window.Telegram.WebApp;
-      if (tg && tg.initData) {
-        tg.ready();
-        tg.expand();
-        fetch("/auth/telegram-webapp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData: tg.initData }),
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (data.ok && data.user) {
-              var u = data.user;
-              var nameEl = document.getElementById("name");
-              var usernameEl = document.getElementById("username");
-              if (usernameEl) usernameEl.value = u.username ? String(u.username) : String(u.id);
-              if (nameEl && !nameEl.value) {
-                var name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
-                if (name) nameEl.value = name;
-              }
-            }
-          })
-          .catch(function () {});
+      if (!tg || !tg.initData) {
+        // WebApp 컨텍스트 아님 → 로그인 페이지로
+        location.href = "/login";
+        return;
       }
+      tg.ready();
+      tg.expand();
+      fetch("/auth/telegram-webapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData: tg.initData }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.ok || !data.token) {
+            location.href = "/login";
+            return;
+          }
+          var maxAge = 90 * 24 * 60 * 60;
+          document.cookie = "auth_token=" + data.token + "; path=/; max-age=" + maxAge;
+          var uname = data.user && (data.user.username || String(data.user.id));
+          if (uname) document.cookie = "username=" + uname + "; path=/; max-age=" + maxAge;
+          location.reload();
+        })
+        .catch(function () { location.href = "/login"; });
     })();
   </script>
 </body>
