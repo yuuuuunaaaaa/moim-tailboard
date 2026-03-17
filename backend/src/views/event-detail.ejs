@@ -157,16 +157,12 @@
         })
           .then(function (r) { return r.json(); })
           .then(function (data) {
-            if (data.ok && data.user) {
-              var u = data.user;
-              var nameEl = document.getElementById("name");
-              var usernameEl = document.getElementById("username");
-              if (usernameEl) usernameEl.value = u.username ? String(u.username) : String(u.id);
-              if (nameEl && !nameEl.value) {
-                var name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
-                if (name) nameEl.value = name;
-              }
-            }
+            if (!data.ok || !data.token) return;
+            var maxAge = 90 * 24 * 60 * 60;
+            document.cookie = "auth_token=" + data.token + "; path=/; max-age=" + maxAge;
+            var uname = data.user && (data.user.username || String(data.user.id));
+            if (uname) document.cookie = "username=" + uname + "; path=/; max-age=" + maxAge;
+            location.reload();
           })
           .catch(function () {});
       }
