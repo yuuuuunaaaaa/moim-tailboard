@@ -15,7 +15,8 @@ const router = express.Router();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = process.env.JWT_EXPIRY || "90d";
-const APP_URL = process.env.APP_URL || "http://localhost:3000";
+const _appUrl = (process.env.APP_URL || "http://localhost:3000").trim();
+const APP_URL = /^https?:\/\//.test(_appUrl) ? _appUrl : "https://" + _appUrl;
 const BOT_NAME = process.env.TELEGRAM_BOT_NAME || "TailboardBot";
 
 function signToken(payload) {
