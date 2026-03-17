@@ -180,14 +180,11 @@ router.get("/auth/telegram", async (req, res) => {
 
     const username = getTelegramUsernameFromPayload(payload);
     const admin = await findAdminByUsername(username);
-    if (!admin) {
-      return res.status(403).send("Not an admin. This login is for administrators only.");
-    }
 
     const tokenPayload = {
-      admin_id: admin.id,
-      username: admin.username,
-      tenant_id: admin.tenant_id,
+      username,
+      admin_id: admin ? admin.id : null,
+      tenant_id: admin ? admin.tenant_id : null,
     };
     const token = signToken(tokenPayload);
 
