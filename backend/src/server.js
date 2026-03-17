@@ -56,7 +56,22 @@ function requireTelegramAuth(req, res, next) {
     (req.path === "/auth/telegram" && (req.method === "GET" || req.method === "POST")) ||
     (req.path === "/auth/telegram-webapp" && req.method === "POST");
   if (allowPath) return next();
-  if (req.auth || req.cookies.username) return next();
+  if (req.auth || req.cookies.username) {
+    // 비관리자가 PC(WebApp 아님)로 접근 시 차단
+    const isAdmin = !!(req.admin);
+    const isWebApp = !!(req.auth && req.auth.via_webapp);
+    if (!isAdmin && !isWebApp) {
+      return res.status(403).send(
+        '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>접근 불가</title></head><body style="font-family:sans-serif;text-align:center;padding:48px">' +
+        '<h2>텔레그램 앱에서만 이용할 수 있습니다.</h2>' +
+        '<p>이 서비스는 텔레그램 봇을 통해서만 접근할 수 있습니다.</p>' +
+        '</body></html>'
+      );
+    }
+    return next();
+  }
   if (req.get("Accept") && req.get("Accept").includes("application/json")) {
     return res.status(401).send(UNAUTH_MESSAGE);
   }
