@@ -13,27 +13,26 @@ router.get("/admin", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
   }
+  let tenant, tenants;
   if (req.admin.is_superadmin) {
-    const [tenants] = await pool.query(
-      "SELECT id, slug, name FROM tenant ORDER BY name ASC",
-    );
+    [tenants] = await pool.query("SELECT id, slug, name FROM tenant ORDER BY name ASC");
     const slug = req.query.tenant;
-    const tenant = slug
-      ? tenants.find((t) => t.slug === slug) || tenants[0]
-      : tenants[0];
-    if (!tenant) {
-      return res.status(404).send("등록된 공동체가 없습니다.");
-    }
-    return res.render("admin", { tenant, tenants });
+    tenant = slug ? tenants.find((t) => t.slug === slug) || tenants[0] : tenants[0];
+    if (!tenant) return res.status(404).send("등록된 공동체가 없습니다.");
+  } else {
+    const [[row]] = await pool.query(
+      "SELECT id, slug, name FROM tenant WHERE id = ? LIMIT 1",
+      [req.admin.tenant_id],
+    );
+    if (!row) return res.status(404).send("소속 공동체를 찾을 수 없습니다.");
+    tenant = row;
+    tenants = [row];
   }
-  const [[tenant]] = await pool.query(
-    "SELECT id, slug, name FROM tenant WHERE id = ? LIMIT 1",
-    [req.admin.tenant_id],
+  const [events] = await pool.query(
+    "SELECT id, title, event_date, is_active FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
+    [tenant.id],
   );
-  if (!tenant) {
-    return res.status(404).send("소속 공동체를 찾을 수 없습니다.");
-  }
-  res.render("admin", { tenant, tenants: [tenant] });
+  res.render("admin", { tenant, tenants, events });
 });
 
 // 테넌트별 관리자 관리 페이지 (소속 공동체만 접근, superadmin은 전체)
@@ -113,6 +112,36 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
     return res.redirect(`/admin/tenants/${tenantSlug}?success=removed`);
   }
   return res.redirect(`/admin/tenants/${tenantSlug}?error=not_found`);
+});
+
+// 이벤트 공개/비공개 토글
+router.post("/admin/events/:eventId/toggle", async (req, res) => {
+  if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
+  const { eventId } = req.params;
+  const { tenantSlug } = req.body;
+  const tenant = await getTenantOr404(tenantSlug, res);
+  if (!tenant) return;
+  if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
+  await pool.query(
+    "UPDATE event SET is_active = 1 - is_active WHERE id = ? AND tenant_id = ?",
+    [Number(eventId), tenant.id],
+  );
+  res.redirect(`/admin?tenant=${tenant.slug}`);
+});
+
+// 이벤트 수정
+router.post("/admin/events/:eventId/update", async (req, res) => {
+  if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
+  const { eventId } = req.params;
+  const { tenantSlug, title, description, eventDate } = req.body;
+  const tenant = await getTenantOr404(tenantSlug, res);
+  if (!tenant) return;
+  if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
+  await pool.query(
+    "UPDATE event SET title = ?, description = ?, event_date = ? WHERE id = ? AND tenant_id = ?",
+    [title, description || null, new Date(eventDate), Number(eventId), tenant.id],
+  );
+  res.redirect(`/admin?tenant=${tenant.slug}`);
 });
 
 router.post("/admin/events", async (req, res) => {

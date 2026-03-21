@@ -7,6 +7,28 @@
   <link rel="stylesheet" href="/style.css" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
+  <style>
+    .event-admin-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+    .event-admin-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 4px; border-bottom: 1px solid var(--border);
+    }
+    .event-admin-item:last-child { border-bottom: none; }
+    .event-admin-info { flex: 1; }
+    .event-admin-title { font-weight: 500; font-size: 0.9375rem; }
+    .event-admin-date { font-size: 0.8125rem; color: var(--muted); margin-top: 2px; }
+    .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+    .badge--on { background: var(--primary-light); color: var(--primary-hover); }
+    .badge--off { background: #f3f4f6; color: var(--muted); }
+    .event-edit-form { display: none; padding: 10px 0 4px; }
+    .event-edit-form .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .event-edit-form .row input, .event-edit-form .row textarea { flex: 1; min-width: 120px; }
+    .icon-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 4px; border-radius: 4px; line-height: 0;
+    }
+    .icon-btn:hover { color: var(--primary); background: var(--bg); }
+  </style>
 </head>
 <body>
   <header class="page-header">
@@ -21,28 +43,79 @@
     </div>
   </header>
   <main class="container container--wide">
-    <h1>관리</h1>
-    <p class="page-subtitle">이벤트와 옵션 그룹을 등록할 수 있습니다.</p>
+    <h1>관리 — <%= tenant.name %></h1>
 
     <div class="tenant-pills">
-      <strong style="margin-right: 8px;">공동체:</strong>
       <% if (tenants.length > 1) { %>
-        <select onchange="location.href='/admin?tenant='+this.value" style="margin-right: 8px;">
+        <select onchange="location.href='/admin?tenant='+this.value">
           <% tenants.forEach(function(t){ %>
             <option value="<%= t.slug %>" <%= t.id === tenant.id ? 'selected' : '' %>><%= t.name %></option>
           <% }); %>
         </select>
       <% } %>
-      <a href="/t/<%= tenant.slug %>/events"><%= tenant.name %> 이벤트</a>
-      <a href="/admin/tenants/<%= tenant.slug %>"><%= tenant.name %> 관리자</a>
+      <a href="/t/<%= tenant.slug %>/events">이벤트 목록</a>
+      <a href="/admin/tenants/<%= tenant.slug %>">관리자 설정</a>
     </div>
-    <p class="page-subtitle" style="margin-top: -8px;"><strong>관리자</strong> 링크에서 해당 공동체의 관리자(사용자명)를 추가·삭제할 수 있습니다.</p>
 
     <div class="admin-grid">
+
+      <!-- 이벤트 목록 + 수정 -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <h2 class="card__title">이벤트 목록</h2>
+        <% if (events.length === 0) { %>
+          <p class="empty-state mt-0 mb-0">아직 이벤트가 없습니다. 아래에서 만들어 주세요.</p>
+        <% } else { %>
+        <ul class="event-admin-list">
+          <% events.forEach(function(ev){ %>
+          <li>
+            <div class="event-admin-item">
+              <div class="event-admin-info">
+                <div class="event-admin-title"><%= ev.title %></div>
+                <div class="event-admin-date"><%= new Date(ev.event_date).toISOString().slice(0,16).replace('T',' ') %></div>
+              </div>
+              <span class="badge <%= ev.is_active ? 'badge--on' : 'badge--off' %>">
+                <%= ev.is_active ? '공개' : '비공개' %>
+              </span>
+              <form method="post" action="/admin/events/<%= ev.id %>/toggle" style="display:inline">
+                <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+                <button class="icon-btn" title="<%= ev.is_active ? '비공개로 전환' : '공개로 전환' %>">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </form>
+              <button class="icon-btn" onclick="toggleEventEdit(<%= ev.id %>)" title="수정">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <a href="/t/<%= tenant.slug %>/events/<%= ev.id %>" class="icon-btn" title="보기">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
+            <!-- 수정 폼 -->
+            <form class="event-edit-form" id="edit-<%= ev.id %>" method="post" action="/admin/events/<%= ev.id %>/update">
+              <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+              <div class="row">
+                <input type="text" name="title" value="<%= ev.title %>" placeholder="제목" required />
+                <input type="datetime-local" name="eventDate" value="<%= new Date(ev.event_date).toISOString().slice(0,16) %>" required />
+              </div>
+              <div class="row">
+                <textarea name="description" placeholder="설명(선택)"></textarea>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn--primary btn--sm" type="submit">저장</button>
+                <button class="btn btn--sm" type="button" onclick="toggleEventEdit(<%= ev.id %>)">닫기</button>
+              </div>
+            </form>
+          </li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </div>
+
+      <!-- 이벤트 만들기 -->
       <div class="card">
         <h2 class="card__title">이벤트 만들기</h2>
         <form method="post" action="/admin/events">
           <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+          <input type="hidden" name="username" value="<%= username || '' %>" />
           <div class="form-group">
             <label for="title">제목</label>
             <input id="title" name="title" required placeholder="예: 3/7 인천 수련회" />
@@ -61,21 +134,24 @@
               공개 (목록에 표시)
             </label>
           </div>
-          <div class="form-group">
-            <label for="adminUsername">관리자 사용자명 <span class="optional">(로그용)</span></label>
-            <input id="adminUsername" name="username" placeholder="예: yuna9354" />
-          </div>
           <button class="btn btn--primary" type="submit">이벤트 만들기</button>
         </form>
       </div>
 
+      <!-- 옵션 그룹 추가 -->
       <div class="card">
         <h2 class="card__title">옵션 그룹 추가</h2>
         <form method="post" action="/admin/options">
           <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+          <input type="hidden" name="username" value="<%= username || '' %>" />
           <div class="form-group">
-            <label for="eventId">이벤트 ID</label>
-            <input id="eventId" name="eventId" type="number" required placeholder="숫자 입력" min="1" />
+            <label for="eventId">이벤트</label>
+            <select id="eventId" name="eventId" required>
+              <option value="">이벤트 선택</option>
+              <% events.forEach(function(ev){ %>
+              <option value="<%= ev.id %>"><%= ev.title %></option>
+              <% }); %>
+            </select>
           </div>
           <div class="form-group">
             <label for="groupName">그룹 이름</label>
@@ -91,14 +167,16 @@
             <label for="options">옵션 (한 줄에 하나)</label>
             <textarea id="options" name="options" placeholder="식사 O&#10;식사 X"></textarea>
           </div>
-          <div class="form-group">
-            <label for="adminUsername2">관리자 사용자명 <span class="optional">(로그용)</span></label>
-            <input id="adminUsername2" name="username" placeholder="예: yuna9354" />
-          </div>
           <button class="btn btn--primary" type="submit">옵션 그룹 추가</button>
         </form>
       </div>
     </div>
   </main>
+  <script>
+    function toggleEventEdit(id) {
+      var f = document.getElementById("edit-" + id);
+      f.style.display = f.style.display === "block" ? "none" : "block";
+    }
+  </script>
 </body>
 </html>
