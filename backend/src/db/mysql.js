@@ -48,7 +48,7 @@ async function testConnection() {
 
 async function getTenantOr404(slug, res) {
   const [[row]] = await pool.query(
-    "SELECT id, slug, name FROM tenant WHERE slug = ? LIMIT 1",
+    "SELECT id, slug, name, chat_room_id FROM tenant WHERE slug = ? LIMIT 1",
     [slug],
   );
   if (!row) {
