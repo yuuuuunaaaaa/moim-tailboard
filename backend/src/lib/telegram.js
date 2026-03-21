@@ -15,6 +15,14 @@ function eventDetailUrl(tenantSlug, eventId) {
   return `${base}/t/${encodeURIComponent(tenantSlug)}/events/${Number(eventId)}`;
 }
 
+/** Telegram HTML 모드용 이스케이프 */
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 async function sendMessage(chatId, text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId || String(chatId) === "-1") return;
@@ -36,4 +44,4 @@ async function sendMessage(chatId, text) {
   }
 }
 
-module.exports = { sendMessage, getAppBaseUrl, eventDetailUrl };
+module.exports = { sendMessage, getAppBaseUrl, eventDetailUrl, escapeHtml };
