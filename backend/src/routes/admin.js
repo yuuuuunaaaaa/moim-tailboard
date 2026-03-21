@@ -4,6 +4,13 @@ const { sendMessage, eventDetailUrl, escapeHtml } = require("../lib/telegram");
 
 const router = express.Router();
 
+/** application/x-www-form-urlencoded에서 동일 name이 여러 개면 배열이 됨(중첩 form 등) */
+function firstBodyString(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return String(v[0] ?? "").trim();
+  return String(v).trim();
+}
+
 /** superadmin이면 모든 테넌트 접근 가능, 아니면 소속 테넌트만 */
 function canAccessTenant(req, tenant) {
   return req.admin.is_superadmin || req.admin.tenant_id === tenant.id;
@@ -29,7 +36,7 @@ router.get("/admin", async (req, res) => {
     tenants = [row];
   }
   const [events] = await pool.query(
-    "SELECT id, title, event_date, is_active FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
+    "SELECT id, title, description, event_date, is_active FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
     [tenant.id],
   );
   const eventIds = events.map((e) => e.id);
@@ -141,7 +148,7 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
 router.post("/admin/events/:eventId/delete", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
   const { eventId } = req.params;
-  const { tenantSlug } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
@@ -153,11 +160,12 @@ router.post("/admin/events/:eventId/delete", async (req, res) => {
 router.post("/admin/option-groups/:groupId/delete", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
   const { groupId } = req.params;
-  const { tenantSlug } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
+  if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
   await pool.query(
-    "DELETE og FROM option_group og JOIN event e ON og.event_id = e.id WHERE og.id = ? AND e.tenant_id = ?",
+    "DELETE FROM option_group WHERE id = ? AND EXISTS (SELECT 1 FROM event e WHERE e.id = option_group.event_id AND e.tenant_id = ?)",
     [Number(groupId), tenant.id],
   );
   res.redirect(`/admin?tenant=${tenant.slug}`);
@@ -167,7 +175,7 @@ router.post("/admin/option-groups/:groupId/delete", async (req, res) => {
 router.post("/admin/events/:eventId/toggle", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
   const { eventId } = req.params;
-  const { tenantSlug } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
@@ -182,14 +190,19 @@ router.post("/admin/events/:eventId/toggle", async (req, res) => {
 router.post("/admin/events/:eventId/update", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
   const { eventId } = req.params;
-  const { tenantSlug, title, description, eventDate } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
+  const { title, description, eventDate } = req.body;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
   const eid = Number(eventId);
+  const when = new Date(eventDate);
+  if (Number.isNaN(when.getTime())) {
+    return res.status(400).send("일시 형식이 올바르지 않습니다.");
+  }
   await pool.query(
     "UPDATE event SET title = ?, description = ?, event_date = ? WHERE id = ? AND tenant_id = ?",
-    [title, description || null, new Date(eventDate), eid, tenant.id],
+    [title, description || null, when, eid, tenant.id],
   );
   // 수정 폼에서 새 옵션 그룹 추가
   const groupNames = [].concat(req.body.groupName || []).filter(Boolean);
@@ -199,7 +212,7 @@ router.post("/admin/events/:eventId/update", async (req, res) => {
     const gName = groupNames[i].trim();
     if (!gName) continue;
     const [existCount] = await pool.query("SELECT COUNT(*) AS cnt FROM option_group WHERE event_id = ?", [eid]);
-    const sortOrder = existCount[0].cnt;
+    const sortOrder = Number(existCount[0]?.cnt ?? 0);
     const [gResult] = await pool.query(
       "INSERT INTO option_group (event_id, name, multiple_select, sort_order) VALUES (?, ?, ?, ?)",
       [eid, gName, multipleSelects[i] === "true" ? 1 : 0, sortOrder],
@@ -219,8 +232,8 @@ router.post("/admin/events", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
   }
-  const { tenantSlug, title, description, eventDate, isActive, username: logUsername } =
-    req.body;
+  const { title, description, eventDate, isActive, username: logUsername } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
@@ -280,14 +293,8 @@ router.post("/admin/options", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
   }
-  const {
-    tenantSlug,
-    eventId,
-    groupName,
-    multipleSelect,
-    options,
-    username: logUsername,
-  } = req.body;
+  const { eventId, groupName, multipleSelect, options, username: logUsername } = req.body;
+  const tenantSlug = firstBodyString(req.body.tenantSlug);
 
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
