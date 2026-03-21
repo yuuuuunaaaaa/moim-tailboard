@@ -169,6 +169,27 @@ router.post("/admin/events", async (req, res) => {
   );
   const eventId = result.insertId;
 
+  // 옵션 그룹 일괄 처리 (groupName[], multipleSelect[], options[])
+  const groupNames = [].concat(req.body.groupName || []).filter(Boolean);
+  const multipleSelects = [].concat(req.body.multipleSelect || []);
+  const optionTexts = [].concat(req.body.optionText || []);
+  for (let i = 0; i < groupNames.length; i++) {
+    const gName = groupNames[i].trim();
+    if (!gName) continue;
+    const isMulti = multipleSelects[i] === "true" ? 1 : 0;
+    const [gResult] = await pool.query(
+      "INSERT INTO option_group (event_id, name, multiple_select, sort_order) VALUES (?, ?, ?, ?)",
+      [eventId, gName, isMulti, i],
+    );
+    const optNames = (optionTexts[i] || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    if (optNames.length > 0) {
+      await pool.query(
+        "INSERT INTO option_item (option_group_id, name, sort_order) VALUES ?",
+        [optNames.map((n, idx) => [gResult.insertId, n, idx])],
+      );
+    }
+  }
+
   await pool.query(
     "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'title', ?))",
     [tenant.id, eventId, "ADMIN_CREATE_EVENT", logUsername || null, title],
