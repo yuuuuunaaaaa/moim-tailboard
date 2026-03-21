@@ -88,6 +88,13 @@
               <a href="/t/<%= tenant.slug %>/events/<%= ev.id %>" class="icon-btn" title="보기">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
+              <form method="post" action="/admin/events/<%= ev.id %>/delete" style="display:inline"
+                    onsubmit="return confirm('이벤트와 모든 참여자 데이터가 삭제됩니다. 계속하시겠습니까?')">
+                <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+                <button class="icon-btn" style="color:var(--danger)" title="삭제">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </form>
             </div>
             <!-- 수정 폼 -->
             <form class="event-edit-form" id="edit-<%= ev.id %>" method="post" action="/admin/events/<%= ev.id %>/update">
@@ -99,7 +106,30 @@
               <div class="row">
                 <textarea name="description" placeholder="설명(선택)"></textarea>
               </div>
-              <div style="display:flex;gap:6px;">
+              <!-- 기존 옵션 그룹 목록 + 삭제 -->
+              <% var groups = groupsByEvent[ev.id] || []; %>
+              <% if (groups.length > 0) { %>
+              <div style="margin-bottom:10px;">
+                <div style="font-size:0.8125rem;font-weight:600;margin-bottom:6px;color:var(--muted);">현재 옵션 그룹</div>
+                <% groups.forEach(function(g){ %>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:0.875rem;">
+                  <span style="flex:1;"><b><%= g.name %></b> · <%= g.items.map(function(i){return i.name;}).join(", ") %></span>
+                  <form method="post" action="/admin/option-groups/<%= g.id %>/delete" style="display:inline"
+                        onsubmit="return confirm('옵션 그룹을 삭제하시겠습니까?')">
+                    <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+                    <button class="icon-btn" style="color:var(--danger);font-size:0.75rem;" title="그룹 삭제">✕</button>
+                  </form>
+                </div>
+                <% }) %>
+              </div>
+              <% } %>
+              <!-- 새 옵션 그룹 추가 -->
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:0.8125rem;font-weight:600;color:var(--muted);">옵션 그룹 추가</span>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="addEditGroup(<%= ev.id %>)">+ 추가</button>
+              </div>
+              <div id="edit-og-<%= ev.id %>"></div>
+              <div style="display:flex;gap:6px;margin-top:8px;">
                 <button class="btn btn--primary btn--sm" type="submit">저장</button>
                 <button class="btn btn--sm" type="button" onclick="toggleEventEdit(<%= ev.id %>)">닫기</button>
               </div>
@@ -190,6 +220,46 @@
       var f = document.getElementById("edit-" + id);
       f.style.display = f.style.display === "block" ? "none" : "block";
     }
+
+    var _editIdx = {};
+    function addEditGroup(evId) {
+      if (!_editIdx[evId]) _editIdx[evId] = 0;
+      var idx = _editIdx[evId]++;
+      var wrap = document.getElementById("edit-og-" + evId);
+      var div = document.createElement("div");
+      div.className = "option-group-card";
+      div.id = "eog-" + evId + "-" + idx;
+      div.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+          '<input type="text" class="og-name" placeholder="그룹 이름" style="flex:1" />' +
+          '<label style="white-space:nowrap;font-size:0.8125rem;margin:0;">' +
+            '<input type="checkbox" class="og-multi" style="width:auto;margin-right:4px;" /> 복수선택' +
+          '</label>' +
+          '<button type="button" class="icon-btn" onclick="document.getElementById(\'eog-' + evId + '-' + idx + '\').remove()" title="삭제">✕</button>' +
+        '</div>' +
+        '<textarea class="og-text" placeholder="항목 (한 줄에 하나)" style="height:70px;width:100%;"></textarea>';
+      wrap.appendChild(div);
+    }
+
+    // 수정 폼 submit 시 옵션 그룹 직렬화
+    document.querySelectorAll(".event-edit-form").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        var evId = form.id.replace("edit-", "");
+        var wrap = document.getElementById("edit-og-" + evId);
+        if (!wrap) return;
+        wrap.querySelectorAll(".option-group-card").forEach(function (card) {
+          var name = card.querySelector(".og-name").value.trim();
+          var multi = card.querySelector(".og-multi").checked ? "true" : "false";
+          var text = card.querySelector(".og-text").value;
+          if (!name) return;
+          [["groupName", name], ["multipleSelect", multi], ["optionText", text]].forEach(function (pair) {
+            var inp = document.createElement("input");
+            inp.type = "hidden"; inp.name = pair[0]; inp.value = pair[1];
+            form.appendChild(inp);
+          });
+        });
+      });
+    });
 
     var _groupIdx = 0;
     function addOptionGroup() {

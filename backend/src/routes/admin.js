@@ -32,7 +32,30 @@ router.get("/admin", async (req, res) => {
     "SELECT id, title, event_date, is_active FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
     [tenant.id],
   );
-  res.render("admin", { tenant, tenants, events });
+  const eventIds = events.map((e) => e.id);
+  let optionGroups = [], optionItems = [];
+  if (eventIds.length > 0) {
+    [optionGroups] = await pool.query(
+      "SELECT * FROM option_group WHERE event_id IN (?) ORDER BY event_id, sort_order",
+      [eventIds],
+    );
+    const groupIds = optionGroups.map((g) => g.id);
+    if (groupIds.length > 0) {
+      [optionItems] = await pool.query(
+        "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY option_group_id, sort_order",
+        [groupIds],
+      );
+    }
+  }
+  const groupsByEvent = {};
+  optionGroups.forEach((g) => {
+    if (!groupsByEvent[g.event_id]) groupsByEvent[g.event_id] = [];
+    groupsByEvent[g.event_id].push({
+      ...g,
+      items: optionItems.filter((i) => i.option_group_id === g.id),
+    });
+  });
+  res.render("admin", { tenant, tenants, events, groupsByEvent });
 });
 
 // 테넌트별 관리자 관리 페이지 (소속 공동체만 접근, superadmin은 전체)
@@ -114,6 +137,32 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
   return res.redirect(`/admin/tenants/${tenantSlug}?error=not_found`);
 });
 
+// 이벤트 삭제
+router.post("/admin/events/:eventId/delete", async (req, res) => {
+  if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
+  const { eventId } = req.params;
+  const { tenantSlug } = req.body;
+  const tenant = await getTenantOr404(tenantSlug, res);
+  if (!tenant) return;
+  if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
+  await pool.query("DELETE FROM event WHERE id = ? AND tenant_id = ?", [Number(eventId), tenant.id]);
+  res.redirect(`/admin?tenant=${tenant.slug}`);
+});
+
+// 옵션 그룹 삭제
+router.post("/admin/option-groups/:groupId/delete", async (req, res) => {
+  if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
+  const { groupId } = req.params;
+  const { tenantSlug } = req.body;
+  const tenant = await getTenantOr404(tenantSlug, res);
+  if (!tenant) return;
+  await pool.query(
+    "DELETE og FROM option_group og JOIN event e ON og.event_id = e.id WHERE og.id = ? AND e.tenant_id = ?",
+    [Number(groupId), tenant.id],
+  );
+  res.redirect(`/admin?tenant=${tenant.slug}`);
+});
+
 // 이벤트 공개/비공개 토글
 router.post("/admin/events/:eventId/toggle", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -129,7 +178,7 @@ router.post("/admin/events/:eventId/toggle", async (req, res) => {
   res.redirect(`/admin?tenant=${tenant.slug}`);
 });
 
-// 이벤트 수정
+// 이벤트 수정 (기본 정보 + 옵션 그룹 추가)
 router.post("/admin/events/:eventId/update", async (req, res) => {
   if (!req.admin) return res.status(403).send("관리자만 접근할 수 있습니다.");
   const { eventId } = req.params;
@@ -137,10 +186,32 @@ router.post("/admin/events/:eventId/update", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) return res.status(403).send("권한이 없습니다.");
+  const eid = Number(eventId);
   await pool.query(
     "UPDATE event SET title = ?, description = ?, event_date = ? WHERE id = ? AND tenant_id = ?",
-    [title, description || null, new Date(eventDate), Number(eventId), tenant.id],
+    [title, description || null, new Date(eventDate), eid, tenant.id],
   );
+  // 수정 폼에서 새 옵션 그룹 추가
+  const groupNames = [].concat(req.body.groupName || []).filter(Boolean);
+  const multipleSelects = [].concat(req.body.multipleSelect || []);
+  const optionTexts = [].concat(req.body.optionText || []);
+  for (let i = 0; i < groupNames.length; i++) {
+    const gName = groupNames[i].trim();
+    if (!gName) continue;
+    const [existCount] = await pool.query("SELECT COUNT(*) AS cnt FROM option_group WHERE event_id = ?", [eid]);
+    const sortOrder = existCount[0].cnt;
+    const [gResult] = await pool.query(
+      "INSERT INTO option_group (event_id, name, multiple_select, sort_order) VALUES (?, ?, ?, ?)",
+      [eid, gName, multipleSelects[i] === "true" ? 1 : 0, sortOrder],
+    );
+    const optNames = (optionTexts[i] || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    if (optNames.length > 0) {
+      await pool.query(
+        "INSERT INTO option_item (option_group_id, name, sort_order) VALUES ?",
+        [optNames.map((n, idx) => [gResult.insertId, n, idx])],
+      );
+    }
+  }
   res.redirect(`/admin?tenant=${tenant.slug}`);
 });
 
@@ -199,7 +270,7 @@ router.post("/admin/events", async (req, res) => {
   await sendMessage(
     tenant.chat_room_id,
     `📅 <b>새 이벤트가 생성되었습니다!</b>\n이벤트명: ${escapeHtml(title)}\n` +
-      `<a href="${escapeHtml(link)}">바로가기 (${escapeHtml(tenant.name)})</a>`
+      `<a href="${escapeHtml(link)}">바로가기</a>`
   );
 
   res.redirect(`/t/${tenant.slug}/events/${eventId}`);
