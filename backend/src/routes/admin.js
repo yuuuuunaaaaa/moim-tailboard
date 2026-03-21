@@ -1,16 +1,17 @@
 const express = require("express");
 const { pool, getTenantOr404 } = require("../db/mysql");
+const { sendMessage } = require("../lib/telegram");
 
 const router = express.Router();
 
-/** superadmin이면 모든 테넌트 접근 가능, 아니면 소속 테넌트만 */
+/** superadmin�씠硫� 紐⑤뱺 �뀒�꼳�듃 �젒洹� 媛��뒫, �븘�땲硫� �냼�냽 �뀒�꼳�듃留� */
 function canAccessTenant(req, tenant) {
   return req.admin.is_superadmin || req.admin.tenant_id === tenant.id;
 }
 
 router.get("/admin", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   if (req.admin.is_superadmin) {
     const [tenants] = await pool.query(
@@ -21,7 +22,7 @@ router.get("/admin", async (req, res) => {
       ? tenants.find((t) => t.slug === slug) || tenants[0]
       : tenants[0];
     if (!tenant) {
-      return res.status(404).send("등록된 공동체가 없습니다.");
+      return res.status(404).send("�벑濡앸맂 怨듬룞泥닿�� �뾾�뒿�땲�떎.");
     }
     return res.render("admin", { tenant, tenants });
   }
@@ -30,21 +31,21 @@ router.get("/admin", async (req, res) => {
     [req.admin.tenant_id],
   );
   if (!tenant) {
-    return res.status(404).send("소속 공동체를 찾을 수 없습니다.");
+    return res.status(404).send("�냼�냽 怨듬룞泥대�� 李얠쓣 �닔 �뾾�뒿�땲�떎.");
   }
   res.render("admin", { tenant, tenants: [tenant] });
 });
 
-// 테넌트별 관리자 관리 페이지 (소속 공동체만 접근, superadmin은 전체)
+// �뀒�꼳�듃蹂� 愿�由ъ옄 愿�由� �럹�씠吏� (�냼�냽 怨듬룞泥대쭔 �젒洹�, superadmin��� �쟾泥�)
 router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 조회할 수 있습니다.");
+    return res.status(403).send("�냼�냽 怨듬룞泥대쭔 議고쉶�븷 �닔 �엳�뒿�땲�떎.");
   }
 
   const [admins] = await pool.query(
@@ -60,16 +61,16 @@ router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   });
 });
 
-// 테넌트 관리자 추가 (소속 공동체만, superadmin은 전체)
+// �뀒�꼳�듃 愿�由ъ옄 異붽�� (�냼�냽 怨듬룞泥대쭔, superadmin��� �쟾泥�)
 router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   const { tenantSlug } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("�냼�냽 怨듬룞泥대쭔 �닔�젙�븷 �닔 �엳�뒿�땲�떎.");
   }
 
   const { username: inputUsername, name } = req.body || {};
@@ -92,16 +93,16 @@ router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   }
 });
 
-// 테넌트 관리자 삭제 (소속 공동체만, superadmin은 전체)
+// �뀒�꼳�듃 愿�由ъ옄 �궘�젣 (�냼�냽 怨듬룞泥대쭔, superadmin��� �쟾泥�)
 router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   const { tenantSlug, adminId } = req.params;
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("�냼�냽 怨듬룞泥대쭔 �닔�젙�븷 �닔 �엳�뒿�땲�떎.");
   }
 
   const [result] = await pool.query(
@@ -116,7 +117,7 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
 
 router.post("/admin/events", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   const { tenantSlug, title, description, eventDate, isActive, username: logUsername } =
     req.body;
@@ -124,7 +125,7 @@ router.post("/admin/events", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 등록할 수 있습니다.");
+    return res.status(403).send("�냼�냽 怨듬룞泥대쭔 �벑濡앺븷 �닔 �엳�뒿�땲�떎.");
   }
 
   const [result] = await pool.query(
@@ -144,12 +145,17 @@ router.post("/admin/events", async (req, res) => {
     [tenant.id, eventId, "ADMIN_CREATE_EVENT", logUsername || null, title],
   );
 
+  sendMessage(
+    tenant.chat_room_id,
+    `📅 <b>새 이벤트가 생성되었습니다!</b>\n이벤트명: ${title}`
+  );
+
   res.redirect(`/t/${tenant.slug}/events/${eventId}`);
 });
 
 router.post("/admin/options", async (req, res) => {
   if (!req.admin) {
-    return res.status(403).send("관리자만 접근할 수 있습니다.");
+    return res.status(403).send("愿�由ъ옄留� �젒洹쇳븷 �닔 �엳�뒿�땲�떎.");
   }
   const {
     tenantSlug,
@@ -163,7 +169,7 @@ router.post("/admin/options", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("�냼�냽 怨듬룞泥대쭔 �닔�젙�븷 �닔 �엳�뒿�땲�떎.");
   }
 
   const [[event]] = await pool.query(
