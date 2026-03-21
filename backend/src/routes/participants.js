@@ -66,7 +66,7 @@ router.post("/participants", async (req, res) => {
   sendMessage(
     tenant.chat_room_id,
     `👤 <b>${event.title}</b>\n신청자 수: ${cnt}명 (+1)\n` +
-      `<a href="${link}">바로가기 (${tenant.name})</a>`
+      `<a href="${link}">바로가기</a>`
   );
 
   res.redirect(`/t/${tenant.slug}/events/${event.id}`);
@@ -104,6 +104,8 @@ router.post("/participants/update", async (req, res) => {
       [tenant.id, participant.event_id, participant.id, "CANCEL_EVENT", participant.name],
     );
 
+    // FK(action_log.participant_id → participant.id) RESTRICT이므로 먼저 NULL 처리
+    await pool.query("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [participant.id]);
     await pool.query("DELETE FROM participant WHERE id = ?", [participant.id]);
 
     const [[{ cnt }]] = await pool.query(
@@ -114,7 +116,7 @@ router.post("/participants/update", async (req, res) => {
     sendMessage(
       tenant.chat_room_id,
       `👤 <b>${ev ? ev.title : ""}</b>\n신청자 수: ${cnt}명 (-1)\n` +
-        `<a href="${link}">바로가기 (${tenant.name})</a>`
+        `<a href="${link}">바로가기</a>`
     );
   } else {
     const newName = name || participant.name;
