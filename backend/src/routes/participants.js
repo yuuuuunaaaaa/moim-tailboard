@@ -1,11 +1,11 @@
 const express = require("express");
 const { pool, getTenantOr404 } = require("../db/mysql");
 const { ensureTenantAllowed } = require("../middleware/tenantRestrict");
-const { sendMessage } = require("../lib/telegram");
+const { sendMessage, eventDetailUrl } = require("../lib/telegram");
 
 const router = express.Router();
 
-/** 嚥≪뮄�젃占쎌뵥占쎈립 占쎄텢占쎌뒠占쎌쁽筌륅옙 (JWT 占쎌굢占쎈뮉 �뜎醫뤾텕). 占쎌읈占쎈열占쎌몵嚥∽옙 占쎄텢占쎌뒠. */
+/** 로그인한 사용자명 (JWT 또는 쿠키). 전역으로 사용. */
 function getLoggedInUsername(req) {
   const fromAuth = req.auth && req.auth.username;
   const fromCookie = req.cookies && req.cookies.username;
@@ -17,7 +17,7 @@ function getLoggedInUsername(req) {
 router.post("/participants", async (req, res) => {
   const username = getLoggedInUsername(req);
   if (!username) {
-    return res.status(401).send("嚥≪뮄�젃占쎌뵥占쎌뵠 占쎈툡占쎌뒄占쎈��占쎈빍占쎈뼄. 占쎈�쏉옙�쟿域밸챶�삪占쎈퓠占쎄퐣 占쎈였占쎈선 雅뚯눘苑�占쎌뒄.");
+    return res.status(401).send("로그인이 필요합니다. 텔레그램에서 열어 주세요.");
   }
 
   const { tenantSlug, eventId, name, studentNo, optionItemIds } = req.body;
@@ -62,7 +62,12 @@ router.post("/participants", async (req, res) => {
   const [[{ cnt }]] = await pool.query(
     "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?", [event.id]
   );
-  sendMessage(tenant.chat_room_id, `�윉� <b>${event.title}</b>\n�떊泥��옄 �닔: ${cnt}紐� (+1)`);
+  const link = eventDetailUrl(tenant.slug, event.id);
+  sendMessage(
+    tenant.chat_room_id,
+    `👤 <b>${event.title}</b>\n신청자 수: ${cnt}명 (+1)\n` +
+      `<a href="${link}">바로가기 (${tenant.name})</a>`
+  );
 
   res.redirect(`/t/${tenant.slug}/events/${event.id}`);
 });
@@ -71,7 +76,7 @@ router.post("/participants", async (req, res) => {
 router.post("/participants/update", async (req, res) => {
   const username = getLoggedInUsername(req);
   if (!username) {
-    return res.status(401).send("嚥≪뮄�젃占쎌뵥占쎌뵠 占쎈툡占쎌뒄占쎈��占쎈빍占쎈뼄.");
+    return res.status(401).send("로그인이 필요합니다.");
   }
 
   const { tenantSlug, participantId, name, studentNo, mode } = req.body;
@@ -105,7 +110,12 @@ router.post("/participants/update", async (req, res) => {
       "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?", [participant.event_id]
     );
     const [[ev]] = await pool.query("SELECT title FROM event WHERE id = ? LIMIT 1", [participant.event_id]);
-    sendMessage(tenant.chat_room_id, `👤 <b>${ev ? ev.title : ""}</b>\n신청자 수: ${cnt}명 (-1)`);
+    const link = eventDetailUrl(tenant.slug, participant.event_id);
+    sendMessage(
+      tenant.chat_room_id,
+      `👤 <b>${ev ? ev.title : ""}</b>\n신청자 수: ${cnt}명 (-1)\n` +
+        `<a href="${link}">바로가기 (${tenant.name})</a>`
+    );
   } else {
     const newName = name || participant.name;
     const newStudentNo = studentNo || null;
