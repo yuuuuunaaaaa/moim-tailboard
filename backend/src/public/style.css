@@ -321,6 +321,48 @@ input[type="radio"] {
 }
 @media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
 
+/* Participant list (mobile-first) */
+.p-list { list-style: none; padding: 0; margin: 0; }
+.p-item {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 4px;
+}
+.p-item:last-child { border-bottom: none; }
+.p-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.p-num { color: var(--muted); font-size: 0.8125rem; min-width: 1.4em; flex-shrink: 0; }
+.p-info { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.p-name { font-weight: 500; font-size: 0.9375rem; }
+.p-sno { font-weight: 400; color: var(--muted); font-size: 0.8125rem; }
+.p-opts { display: flex; flex-wrap: wrap; gap: 4px; }
+.p-opt-tag {
+  font-size: 0.75rem;
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.p-edit-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 0;
+}
+.p-edit-btn:hover { color: var(--primary); background: var(--bg); }
+.p-edit-form { padding: 8px 0 4px 1.8em; }
+.p-edit-fields { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.p-edit-fields input { flex: 1; min-width: 100px; }
+.p-edit-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn--sm { padding: 6px 12px; font-size: 0.8125rem; }
+
 /* Utility */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .mt-0 { margin-top: 0; }
