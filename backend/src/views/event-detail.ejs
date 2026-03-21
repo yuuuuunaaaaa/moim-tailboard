@@ -9,6 +9,28 @@
   <link rel="stylesheet" href="/style.css" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
+  <style>
+    .card__title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .card__title-row .card__title { margin-bottom: 0; }
+    /* 옵션별 그룹 뷰 */
+    .p-group-block { margin-bottom: 18px; }
+    .p-group-block:last-child { margin-bottom: 0; }
+    .p-group-label {
+      font-size: 0.8125rem; font-weight: 700; color: var(--primary);
+      text-transform: uppercase; letter-spacing: .04em;
+      padding: 4px 0 6px; border-bottom: 2px solid var(--primary-light); margin-bottom: 8px;
+    }
+    .p-opt-row {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.875rem;
+    }
+    .p-opt-row:last-child { border-bottom: none; }
+    .p-opt-item-name { font-weight: 600; white-space: nowrap; min-width: 64px; }
+    .p-opt-count { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
+    .p-opt-names { color: var(--text); line-height: 1.6; flex: 1; }
+    .p-opt-row--none .p-opt-item-name { color: var(--muted); font-weight: 500; }
+    .p-opt-row--none .p-opt-names { color: var(--muted); }
+  </style>
 </head>
 <body>
   <header class="page-header">
@@ -87,19 +109,73 @@
       </div>
 
       <div class="card">
-        <h2 class="card__title">참여자 (<%= event.participants.length %>명)</h2>
+        <div class="card__title-row">
+          <h2 class="card__title">참여자 (<%= event.participants.length %>명)</h2>
+          <% if (event.optionGroups.length > 0 && event.participants.length > 0) { %>
+          <button type="button" class="btn btn--sm btn--secondary" id="p-view-toggle">전체 목록</button>
+          <% } %>
+        </div>
+
         <% if (event.participants.length === 0) { %>
         <p class="empty-state mt-0 mb-0">아직 참여자가 없습니다.</p>
         <% } else { %>
-        <ul class="p-list">
+
+        <%
+          var hasOptions = event.optionGroups.length > 0;
+        %>
+
+        <!-- ① 옵션별 그룹 뷰 (옵션이 있을 때 기본) -->
+        <% if (hasOptions) { %>
+        <div id="p-view-grouped">
+          <% event.optionGroups.forEach(function(group){ %>
+          <div class="p-group-block">
+            <div class="p-group-label"><%= group.name %></div>
+            <% group.options.forEach(function(opt){ %>
+            <%
+              var matched = event.participants.filter(function(p){
+                return p.options.some(function(po){ return po.optionItem.id === opt.id; });
+              });
+            %>
+            <% if (matched.length > 0) { %>
+            <div class="p-opt-row">
+              <span class="p-opt-item-name"><%= opt.name %> <span class="p-opt-count">(<%= matched.length %>명)</span></span>
+              <span class="p-opt-names">
+                <% matched.forEach(function(p, i){ %>
+                  <%= p.name %><% if (p.studentNo) { %> (<%= p.studentNo %>)<% } %><% if (i < matched.length - 1) { %>, <% } %>
+                <% }) %>
+              </span>
+            </div>
+            <% } %>
+            <% }) %>
+            <%
+              var unselected = event.participants.filter(function(p){
+                return !p.options.some(function(po){ return po.optionItem.optionGroupId === group.id; });
+              });
+            %>
+            <% if (unselected.length > 0) { %>
+            <div class="p-opt-row p-opt-row--none">
+              <span class="p-opt-item-name">미선택 <span class="p-opt-count">(<%= unselected.length %>명)</span></span>
+              <span class="p-opt-names">
+                <% unselected.forEach(function(p, i){ %>
+                  <%= p.name %><% if (p.studentNo) { %> (<%= p.studentNo %>)<% } %><% if (i < unselected.length - 1) { %>, <% } %>
+                <% }) %>
+              </span>
+            </div>
+            <% } %>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+
+        <!-- ② 전체 목록 (옵션 없을 때 기본, 옵션 있을 때 토글로 표시) -->
+        <ul class="p-list" id="p-view-flat" <% if (hasOptions) { %>style="display:none"<% } %>>
           <% event.participants.forEach(function(p, idx){ %>
           <li class="p-item" id="p-item-<%= p.id %>">
-            <!-- 보기 모드 -->
             <div class="p-view">
               <span class="p-num"><%= idx + 1 %></span>
               <span class="p-info">
                 <span class="p-name"><%= p.name %><% if (p.studentNo) { %> <span class="p-sno">(<%= p.studentNo %>)</span><% } %></span>
-                <% if (event.optionGroups.length > 0) { %>
+                <% if (hasOptions) { %>
                 <span class="p-opts">
                   <% event.optionGroups.forEach(function(group){ %>
                   <% var sels = p.options.filter(function(po){ return po.optionItem.optionGroupId === group.id; }).map(function(po){ return po.optionItem.name; }); %>
@@ -109,12 +185,11 @@
                 <% } %>
               </span>
               <% if (username && p.username === username) { %>
-              <button class="p-edit-btn" type="button" onclick="toggleEdit(<%= p.id %>)" title="수정">
+              <button class="p-edit-btn js-toggle-edit" type="button" data-pid="<%= p.id %>" title="수정">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
               <% } %>
             </div>
-            <!-- 수정 모드 (숨김) -->
             <% if (username && p.username === username) { %>
             <form class="p-edit-form" id="p-edit-<%= p.id %>" method="post" action="/participants/update" style="display:none">
               <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
@@ -125,7 +200,7 @@
               </div>
               <div class="p-edit-actions">
                 <button class="btn btn--secondary btn--sm" type="submit" name="mode" value="update">저장</button>
-                <button class="btn btn--sm" type="button" onclick="toggleEdit(<%= p.id %>)">닫기</button>
+                <button class="btn btn--sm js-toggle-edit" type="button" data-pid="<%= p.id %>">닫기</button>
                 <button class="btn btn--danger btn--sm" type="submit" name="mode" value="delete"
                   onclick="return confirm('참여를 취소하시겠습니까?')">삭제</button>
               </div>
@@ -139,6 +214,20 @@
     </div>
   </main>
   <script>
+    (function () {
+      var btn = document.getElementById("p-view-toggle");
+      if (!btn) return;
+      var grouped = document.getElementById("p-view-grouped");
+      var flat    = document.getElementById("p-view-flat");
+      var showingFlat = false;
+      btn.addEventListener("click", function () {
+        showingFlat = !showingFlat;
+        grouped.style.display = showingFlat ? "none"  : "block";
+        flat.style.display    = showingFlat ? "block" : "none";
+        btn.textContent = showingFlat ? "옵션별 보기" : "전체 목록";
+      });
+    })();
+
     function toggleEdit(id) {
       var view = document.querySelector("#p-item-" + id + " .p-view");
       var form = document.getElementById("p-edit-" + id);
@@ -147,6 +236,12 @@
       form.style.display = editing ? "none" : "block";
       view.style.opacity = editing ? "1" : "0.5";
     }
+
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".js-toggle-edit");
+      if (!btn) return;
+      toggleEdit(btn.getAttribute("data-pid"));
+    });
   </script>
   <script>
     (function () {
@@ -165,7 +260,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initData: tg.initData,
-          tenantSlug: <%- JSON.stringify(tenant.slug) %>,
+          tenantSlug: "<%= tenant.slug %>",
         }),
       })
         .then(function (r) { return r.json(); })
