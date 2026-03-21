@@ -20,7 +20,8 @@
     .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
     .badge--on { background: var(--primary-light); color: var(--primary-hover); }
     .badge--off { background: #f3f4f6; color: var(--muted); }
-    .event-edit-form { display: none; padding: 10px 0 4px; }
+    /* 수정 패널: 내부에 옵션 삭제용 form을 두므로 래퍼만 숨김 (form 중첩 금지) */
+    .event-edit-wrapper { display: none; padding: 10px 0 4px; }
     .event-edit-form .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .event-edit-form .row input, .event-edit-form .row textarea { flex: 1; min-width: 120px; }
     .icon-btn {
@@ -96,18 +97,9 @@
                 </button>
               </form>
             </div>
-            <!-- 수정 폼 -->
-            <form class="event-edit-form" id="edit-<%= ev.id %>" method="post" action="/admin/events/<%= ev.id %>/update">
-              <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
-              <div class="row">
-                <input type="text" name="title" value="<%= ev.title %>" placeholder="제목" required />
-                <input type="datetime-local" name="eventDate" value="<%= new Date(ev.event_date).toISOString().slice(0,16) %>" required />
-              </div>
-              <div class="row">
-                <textarea name="description" placeholder="설명(선택)"></textarea>
-              </div>
-              <!-- 기존 옵션 그룹 목록 + 삭제 -->
-              <% var groups = groupsByEvent[ev.id] || []; %>
+            <% var groups = groupsByEvent[ev.id] || []; %>
+            <div class="event-edit-wrapper" id="edit-wrap-<%= ev.id %>">
+              <!-- 기존 옵션 삭제는 수정 폼 밖의 별도 form (HTML form 중첩 불가) -->
               <% if (groups.length > 0) { %>
               <div style="margin-bottom:10px;">
                 <div style="font-size:0.8125rem;font-weight:600;margin-bottom:6px;color:var(--muted);">현재 옵션 그룹</div>
@@ -117,23 +109,32 @@
                   <form method="post" action="/admin/option-groups/<%= g.id %>/delete" style="display:inline"
                         onsubmit="return confirm('옵션 그룹을 삭제하시겠습니까?')">
                     <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
-                    <button class="icon-btn" style="color:var(--danger);font-size:0.75rem;" title="그룹 삭제">✕</button>
+                    <button type="submit" class="icon-btn" style="color:var(--danger);font-size:0.75rem;" title="그룹 삭제">✕</button>
                   </form>
                 </div>
                 <% }) %>
               </div>
               <% } %>
-              <!-- 새 옵션 그룹 추가 -->
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:0.8125rem;font-weight:600;color:var(--muted);">옵션 그룹 추가</span>
-                <button type="button" class="btn btn--secondary btn--sm" onclick="addEditGroup(<%= ev.id %>)">+ 추가</button>
-              </div>
-              <div id="edit-og-<%= ev.id %>"></div>
-              <div style="display:flex;gap:6px;margin-top:8px;">
-                <button class="btn btn--primary btn--sm" type="submit">저장</button>
-                <button class="btn btn--sm" type="button" onclick="toggleEventEdit(<%= ev.id %>)">닫기</button>
-              </div>
-            </form>
+              <form class="event-edit-form" id="edit-form-<%= ev.id %>" data-ev-id="<%= ev.id %>" method="post" action="/admin/events/<%= ev.id %>/update">
+                <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
+                <div class="row">
+                  <input type="text" name="title" value="<%= ev.title %>" placeholder="제목" required />
+                  <input type="datetime-local" name="eventDate" value="<%= new Date(ev.event_date).toISOString().slice(0,16) %>" required />
+                </div>
+                <div class="row">
+                  <textarea name="description" placeholder="설명(선택)"><%= ev.description != null ? ev.description : "" %></textarea>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <span style="font-size:0.8125rem;font-weight:600;color:var(--muted);">옵션 그룹 추가</span>
+                  <button type="button" class="btn btn--secondary btn--sm" onclick="addEditGroup(<%= ev.id %>)">+ 추가</button>
+                </div>
+                <div id="edit-og-<%= ev.id %>"></div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                  <button class="btn btn--primary btn--sm" type="submit">저장</button>
+                  <button class="btn btn--sm" type="button" onclick="toggleEventEdit(<%= ev.id %>)">닫기</button>
+                </div>
+              </form>
+            </div>
           </li>
           <% }) %>
         </ul>
@@ -217,7 +218,8 @@
   </main>
   <script>
     function toggleEventEdit(id) {
-      var f = document.getElementById("edit-" + id);
+      var f = document.getElementById("edit-wrap-" + id);
+      if (!f) return;
       f.style.display = f.style.display === "block" ? "none" : "block";
     }
 
@@ -244,17 +246,26 @@
     // 수정 폼 submit 시 옵션 그룹 직렬화
     document.querySelectorAll(".event-edit-form").forEach(function (form) {
       form.addEventListener("submit", function () {
-        var evId = form.id.replace("edit-", "");
+        var evId = form.getAttribute("data-ev-id");
+        if (!evId) return;
+        form.querySelectorAll("input.js-edit-og-field").forEach(function (el) { el.remove(); });
         var wrap = document.getElementById("edit-og-" + evId);
         if (!wrap) return;
         wrap.querySelectorAll(".option-group-card").forEach(function (card) {
-          var name = card.querySelector(".og-name").value.trim();
-          var multi = card.querySelector(".og-multi").checked ? "true" : "false";
-          var text = card.querySelector(".og-text").value;
+          var nameEl = card.querySelector(".og-name");
+          var multiEl = card.querySelector(".og-multi");
+          var textEl = card.querySelector(".og-text");
+          if (!nameEl || !multiEl || !textEl) return;
+          var name = nameEl.value.trim();
+          var multi = multiEl.checked ? "true" : "false";
+          var text = textEl.value;
           if (!name) return;
           [["groupName", name], ["multipleSelect", multi], ["optionText", text]].forEach(function (pair) {
             var inp = document.createElement("input");
-            inp.type = "hidden"; inp.name = pair[0]; inp.value = pair[1];
+            inp.type = "hidden";
+            inp.name = pair[0];
+            inp.value = pair[1];
+            inp.className = "js-edit-og-field";
             form.appendChild(inp);
           });
         });
