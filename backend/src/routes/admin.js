@@ -25,13 +25,13 @@ router.get("/admin", async (req, res) => {
     [tenants] = await pool.query("SELECT id, slug, name FROM tenant ORDER BY name ASC");
     const slug = req.query.tenant;
     tenant = slug ? tenants.find((t) => t.slug === slug) || tenants[0] : tenants[0];
-    if (!tenant) return res.status(404).send("등록된 공동체가 없습니다.");
+    if (!tenant) return res.status(404).send("등록된 지역이 없습니다.");
   } else {
     const [[row]] = await pool.query(
       "SELECT id, slug, name FROM tenant WHERE id = ? LIMIT 1",
       [req.admin.tenant_id],
     );
-    if (!row) return res.status(404).send("소속 공동체를 찾을 수 없습니다.");
+    if (!row) return res.status(404).send("소속 지역을 찾을 수 없습니다.");
     tenant = row;
     tenants = [row];
   }
@@ -65,7 +65,7 @@ router.get("/admin", async (req, res) => {
   res.render("admin", { tenant, tenants, events, groupsByEvent });
 });
 
-// 테넌트별 관리자 관리 페이지 (소속 공동체만 접근, superadmin은 전체)
+// 테넌트별 관리자 관리 페이지 (소속 지역만 접근, superadmin은 전체)
 router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -74,7 +74,7 @@ router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 조회할 수 있습니다.");
+    return res.status(403).send("소속 지역만 조회할 수 있습니다.");
   }
 
   const [admins] = await pool.query(
@@ -90,7 +90,7 @@ router.get("/admin/tenants/:tenantSlug", async (req, res) => {
   });
 });
 
-// 테넌트 관리자 추가 (소속 공동체만, superadmin은 전체)
+// 테넌트 관리자 추가 (소속 지역만, superadmin은 전체)
 router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -99,7 +99,7 @@ router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("소속 지역만 수정할 수 있습니다.");
   }
 
   const { username: inputUsername, name } = req.body || {};
@@ -122,7 +122,7 @@ router.post("/admin/tenants/:tenantSlug/admins", async (req, res) => {
   }
 });
 
-// 테넌트 관리자 삭제 (소속 공동체만, superadmin은 전체)
+// 테넌트 관리자 삭제 (소속 지역만, superadmin은 전체)
 router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res) => {
   if (!req.admin) {
     return res.status(403).send("관리자만 접근할 수 있습니다.");
@@ -131,7 +131,7 @@ router.post("/admin/tenants/:tenantSlug/admins/:adminId/delete", async (req, res
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("소속 지역만 수정할 수 있습니다.");
   }
 
   const [result] = await pool.query(
@@ -238,7 +238,7 @@ router.post("/admin/events", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 등록할 수 있습니다.");
+    return res.status(403).send("소속 지역만 등록할 수 있습니다.");
   }
 
   const [result] = await pool.query(
@@ -299,7 +299,7 @@ router.post("/admin/options", async (req, res) => {
   const tenant = await getTenantOr404(tenantSlug, res);
   if (!tenant) return;
   if (!canAccessTenant(req, tenant)) {
-    return res.status(403).send("소속 공동체만 수정할 수 있습니다.");
+    return res.status(403).send("소속 지역만 수정할 수 있습니다.");
   }
 
   const [[event]] = await pool.query(

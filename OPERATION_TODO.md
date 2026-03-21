@@ -48,7 +48,7 @@
 - [x] **메뉴 버튼** 설정 (BotFather 또는 Bot API)
   - [x] Menu Button → Configure → **Send URL**
   - [x] URL에 **테넌트 포함** (예: `https://도메인/t/incheon` 또는 `.../t/incheon/events`)
-- [ ] (선택) Bot API로 버튼 문구/URL 공동체별 설정
+- [ ] (선택) Bot API로 버튼 문구/URL 지역별 설정
   ```bash
   curl "https://api.telegram.org/bot<TOKEN>/setChatMenuButton" \
     -H "Content-Type: application/json" \
@@ -88,10 +88,10 @@
 
 ## 6. 초기 운영 데이터
 
-- [x] 테넌트(공동체) 추가
+- [x] 테넌트(지역) 추가
   - [x] `tenant` 테이블에 `slug`, `name` INSERT
 - [x] 각 테넌트별 관리자 추가
-  - [x] `/admin` 로그인 후 **해당 공동체 관리자** 페이지에서 **사용자명** 추가
+  - [x] `/admin` 로그인 후 **해당 지역 관리자** 페이지에서 **사용자명** 추가
   - [x] 또는 DB에 직접 `admin` INSERT (username, tenant_id)
 - [ ] (선택) 첫 이벤트 생성 후 메뉴 버튼 URL을 특정 이벤트로 설정
 
@@ -103,8 +103,8 @@
 - [x] **관리자**: PC에서 `/login` → 텔레그램 로그인 위젯 → 로그인 후 `/admin` 접근 가능
 - [x] **참여자**: 텔레그램 봇 메뉴 버튼(또는 링크) → Web App → 이벤트 목록/참여 페이지 동작
 - [x] 참여 페이지에서 **이름/사용자명 자동 입력** (Web App 로그인) 확인
-- [x] 다른 공동체 URL 직접 입력 시 **비관리자는 403** 인지 확인
-- [x] **공동체 선택** 링크/헤더가 비관리자에게 안 보이는지 확인
+- [x] 다른 지역 URL 직접 입력 시 **비관리자는 403** 인지 확인
+- [x] **지역 선택** 링크/헤더가 비관리자에게 안 보이는지 확인
 
 ---
 
@@ -121,9 +121,9 @@
 ## 9. 문서·공유
 
 - [ ] **README.md** 의 APP_URL, 도메인 예시를 실제 운영 값으로 갱신 (또는 placeholder 유지)
-- [ ] 공동체별 **봇 링크/메뉴 버튼 URL** 정리 (테넌트 slug 별로)
+- [ ] 지역별 **봇 링크/메뉴 버튼 URL** 정리 (테넌트 slug 별로)
 - [ ] 관리자에게 **로그인 방법**(PC: /login, 모바일: Web App 자동 로그인) 안내
-- [ ] 새 공동체 추가 절차: tenant INSERT → admin 추가 → 봇 메뉴 URL 설정
+- [ ] 새 지역 추가 절차: tenant INSERT → admin 추가 → 봇 메뉴 URL 설정
 
 ---
 

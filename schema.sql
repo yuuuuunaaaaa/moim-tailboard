@@ -1,7 +1,7 @@
 -- MySQL schema for moim-tailboard
--- 모임 테일보드 서비스에서 사용하는 핵심 DB 스키마입니다.
+-- 꼬리달기 서비스에서 사용하는 핵심 DB 스키마입니다.
 
--- 테넌트(공동체) 정보
+-- 테넌트(지역) 정보
 -- 예: 인천청년, 서울청년 등
 CREATE TABLE tenant (
   -- PK

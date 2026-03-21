@@ -14,12 +14,12 @@
   <header class="page-header">
     <div class="container">
       <div class="brand">
-        <% if (canChooseTenant) { %><a href="/">모임 테일보드</a><% } else { %><a href="/t/<%= tenant.slug %>/events">모임 테일보드</a><% } %>
+        <% if (canChooseTenant) { %><a href="/">꼬리달기</a><% } else { %><a href="/t/<%= tenant.slug %>/events">꼬리달기</a><% } %>
         <% if (username) { %> <span class="brand-username">(<%= username %>)</span><% } %>
       </div>
       <nav class="nav-links">
         <a href="/t/<%= tenant.slug %>/events">이벤트 목록</a>
-        <% if (canChooseTenant) { %><a href="/">공동체 선택</a><% } %>
+        <% if (canChooseTenant) { %><a href="/">지역 선택</a><% } %>
         <% if (isAdmin) { %><a href="/admin">관리</a><% } %>
       </nav>
     </div>
