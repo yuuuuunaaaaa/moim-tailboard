@@ -1,6 +1,6 @@
 const express = require("express");
 const { pool, getTenantOr404 } = require("../db/mysql");
-const { sendMessage, eventDetailUrl } = require("../lib/telegram");
+const { sendMessage, eventDetailUrl, escapeHtml } = require("../lib/telegram");
 
 const router = express.Router();
 
@@ -146,10 +146,10 @@ router.post("/admin/events", async (req, res) => {
   );
 
   const link = eventDetailUrl(tenant.slug, eventId);
-  sendMessage(
+  await sendMessage(
     tenant.chat_room_id,
-    `📅 <b>새 이벤트가 생성되었습니다!</b>\n이벤트명: ${title}\n` +
-      `<a href="${link}">바로가기 (${tenant.name})</a>`
+    `📅 <b>새 이벤트가 생성되었습니다!</b>\n이벤트명: ${escapeHtml(title)}\n` +
+      `<a href="${escapeHtml(link)}">바로가기 (${escapeHtml(tenant.name)})</a>`
   );
 
   res.redirect(`/t/${tenant.slug}/events/${eventId}`);

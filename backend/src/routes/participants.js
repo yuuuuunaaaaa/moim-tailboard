@@ -1,7 +1,7 @@
 const express = require("express");
 const { pool, getTenantOr404 } = require("../db/mysql");
 const { ensureTenantAllowed } = require("../middleware/tenantRestrict");
-const { sendMessage, eventDetailUrl } = require("../lib/telegram");
+const { sendMessage, eventDetailUrl, escapeHtml } = require("../lib/telegram");
 
 const router = express.Router();
 
@@ -63,10 +63,10 @@ router.post("/participants", async (req, res) => {
     "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?", [event.id]
   );
   const link = eventDetailUrl(tenant.slug, event.id);
-  sendMessage(
+  await sendMessage(
     tenant.chat_room_id,
-    `👤 <b>${event.title}</b>\n신청자 수: ${cnt}명 (+1)\n` +
-      `<a href="${link}">바로가기</a>`
+    `👤 <b>${escapeHtml(event.title)}</b>\n신청자 수: ${cnt}명 (+1)\n` +
+      `<a href="${escapeHtml(link)}">바로가기</a>`
   );
 
   res.redirect(`/t/${tenant.slug}/events/${event.id}`);
@@ -113,10 +113,11 @@ router.post("/participants/update", async (req, res) => {
     );
     const [[ev]] = await pool.query("SELECT title FROM event WHERE id = ? LIMIT 1", [participant.event_id]);
     const link = eventDetailUrl(tenant.slug, participant.event_id);
-    sendMessage(
+    const titleText = escapeHtml(ev && ev.title ? ev.title : "이벤트");
+    await sendMessage(
       tenant.chat_room_id,
-      `👤 <b>${ev ? ev.title : ""}</b>\n신청자 수: ${cnt}명 (-1)\n` +
-        `<a href="${link}">바로가기</a>`
+      `👤 <b>${titleText}</b>\n신청자 수: ${cnt}명 (-1)\n` +
+        `<a href="${escapeHtml(link)}">바로가기</a>`
     );
   } else {
     const newName = name || participant.name;
