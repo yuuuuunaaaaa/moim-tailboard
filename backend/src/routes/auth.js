@@ -76,12 +76,7 @@ router.post("/auth/telegram-webapp", async (req, res) => {
         : String(user.id);
     const admin = await findAdminByUsername(username);
 
-    const payload = {
-      username,
-      admin_id: admin ? admin.id : null,
-      tenant_id: admin ? admin.tenant_id : null,
-      via_webapp: true,
-    };
+    const payload = { username, via_webapp: true };
 
     const token = signToken(payload);
     return res.json({
@@ -135,12 +130,7 @@ router.post("/auth/telegram", async (req, res) => {
       });
     }
 
-    const tokenPayload = {
-      admin_id: admin.id,
-      username: admin.username,
-      tenant_id: admin.tenant_id,
-    };
-    const token = signToken(tokenPayload);
+    const token = signToken({ username });
 
     return res.json({
       ok: true,
@@ -180,14 +170,7 @@ router.get("/auth/telegram", async (req, res) => {
     }
 
     const username = getTelegramUsernameFromPayload(payload);
-    const admin = await findAdminByUsername(username);
-
-    const tokenPayload = {
-      username,
-      admin_id: admin ? admin.id : null,
-      tenant_id: admin ? admin.tenant_id : null,
-    };
-    const token = signToken(tokenPayload);
+    const token = signToken({ username });
 
     res.cookie("auth_token", token, {
       maxAge: 90 * 24 * 60 * 60 * 1000,
