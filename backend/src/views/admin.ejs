@@ -111,30 +111,43 @@
       </div>
 
       <!-- 이벤트 만들기 -->
-      <div class="card">
+      <div class="card" style="grid-column: 1 / -1;">
         <h2 class="card__title">이벤트 만들기</h2>
-        <form method="post" action="/admin/events">
+        <form method="post" action="/admin/events" id="event-create-form">
           <input type="hidden" name="tenantSlug" value="<%= tenant.slug %>" />
           <input type="hidden" name="username" value="<%= username || '' %>" />
-          <div class="form-group">
-            <label for="title">제목</label>
-            <input id="title" name="title" required placeholder="예: 3/7 인천 수련회" />
+          <div class="admin-grid" style="margin-bottom:0;">
+            <div>
+              <div class="form-group">
+                <label>제목</label>
+                <input name="title" required placeholder="예: 3/7 인천 수련회" />
+              </div>
+              <div class="form-group">
+                <label>설명 <span class="optional">(선택)</span></label>
+                <textarea name="description" placeholder="이벤트 설명"></textarea>
+              </div>
+              <div class="form-group">
+                <label>일시</label>
+                <input name="eventDate" type="datetime-local" required />
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" name="isActive" value="true" checked />
+                  공개 (목록에 표시)
+                </label>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span style="font-weight:600;font-size:0.9375rem;">옵션 그룹 <span class="optional">(선택)</span></span>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="addOptionGroup()">+ 그룹 추가</button>
+              </div>
+              <div id="option-groups"></div>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="description">설명 <span class="optional">(선택)</span></label>
-            <textarea id="description" name="description" placeholder="이벤트 설명"></textarea>
+          <div style="margin-top:16px;">
+            <button class="btn btn--primary" type="submit">이벤트 만들기</button>
           </div>
-          <div class="form-group">
-            <label for="eventDate">일시</label>
-            <input id="eventDate" name="eventDate" type="datetime-local" required />
-          </div>
-          <div class="form-group">
-            <label>
-              <input type="checkbox" name="isActive" value="true" checked />
-              공개 (목록에 표시)
-            </label>
-          </div>
-          <button class="btn btn--primary" type="submit">이벤트 만들기</button>
         </form>
       </div>
 
@@ -177,6 +190,49 @@
       var f = document.getElementById("edit-" + id);
       f.style.display = f.style.display === "block" ? "none" : "block";
     }
+
+    var _groupIdx = 0;
+    function addOptionGroup() {
+      var idx = _groupIdx++;
+      var wrap = document.getElementById("option-groups");
+      var div = document.createElement("div");
+      div.className = "option-group-card";
+      div.id = "og-" + idx;
+      div.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+          '<input type="text" class="og-name" placeholder="그룹 이름 (예: 식사)" style="flex:1" />' +
+          '<label style="white-space:nowrap;font-size:0.8125rem;margin:0;">' +
+            '<input type="checkbox" class="og-multi" style="width:auto;margin-right:4px;" /> 복수선택' +
+          '</label>' +
+          '<button type="button" class="icon-btn" onclick="removeGroup(' + idx + ')" title="삭제">✕</button>' +
+        '</div>' +
+        '<textarea class="og-text" placeholder="항목 (한 줄에 하나)&#10;예: 식사 O&#10;식사 X" style="height:80px;width:100%;"></textarea>';
+      wrap.appendChild(div);
+    }
+
+    function removeGroup(idx) {
+      var el = document.getElementById("og-" + idx);
+      if (el) el.remove();
+    }
+
+    // submit 전 option-groups를 hidden input으로 직렬화
+    document.getElementById("event-create-form").addEventListener("submit", function () {
+      var cards = document.querySelectorAll("#option-groups .option-group-card");
+      cards.forEach(function (card) {
+        var name = card.querySelector(".og-name").value.trim();
+        var multi = card.querySelector(".og-multi").checked ? "true" : "false";
+        var text = card.querySelector(".og-text").value;
+        if (!name) return;
+        addHidden("groupName", name);
+        addHidden("multipleSelect", multi);
+        addHidden("optionText", text);
+      });
+      function addHidden(n, v) {
+        var inp = document.createElement("input");
+        inp.type = "hidden"; inp.name = n; inp.value = v;
+        document.getElementById("event-create-form").appendChild(inp);
+      }
+    });
   </script>
 </body>
 </html>
