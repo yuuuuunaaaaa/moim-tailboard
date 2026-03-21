@@ -5,7 +5,7 @@ const COOKIE_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
  * 테넌트 접근 허용 여부.
  * 1) superadmin → 모든 테넌트 허용
  * 2) admin(소속 테넌트만) → req.admin.tenant_id와 일치할 때만 허용
- * 3) 비관리자 → 최초 접속한 공동체(쿠키)만 허용
+ * 3) 비관리자 → 최초 접속한 지역(쿠키)만 허용
  *
  * @param {object} req
  * @param {object} res
@@ -18,14 +18,14 @@ function ensureTenantAllowed(req, res, tenant) {
   if (req.admin) {
     if (req.admin.is_superadmin) return true;
     if (req.admin.tenant_id === tenant.id) return true;
-    res.status(403).send("소속 공동체만 접근할 수 있습니다.");
+    res.status(403).send("소속 지역만 접근할 수 있습니다.");
     return false;
   }
 
   const allowed = req.cookies && req.cookies[COOKIE_NAME];
 
   if (allowed && allowed !== tenantSlug) {
-    res.status(403).send("다른 공동체에는 접근할 수 없습니다.");
+    res.status(403).send("다른 지역에는 접근할 수 없습니다.");
     return false;
   }
 

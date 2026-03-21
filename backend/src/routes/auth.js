@@ -38,11 +38,66 @@ async function findAdminByUsername(username) {
   return row || null;
 }
 
+/** 쿼리/바디 등에서 slug 한 개로 정규화 */
+function normalizeTenantSlugInput(v) {
+  if (v == null) return null;
+  const raw = Array.isArray(v) ? v[0] : v;
+  const s = String(raw).trim();
+  return s || null;
+}
+
+/** Referer 등 절대 URL에서 /t/:slug/ 패턴 추출 (비관리자는 링크에 slug 포함 전제) */
+function tenantSlugFromReferer(referer) {
+  if (!referer || typeof referer !== "string") return null;
+  try {
+    const u = new URL(referer);
+    const m = u.pathname.match(/^\/t\/([^/]+)\/?/);
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getTenantIdBySlug(slug) {
+  if (!slug) return null;
+  const [[row]] = await pool.query("SELECT id FROM tenant WHERE slug = ? LIMIT 1", [slug]);
+  return row ? row.id : null;
+}
+
+/**
+ * action_log.tenant_id: 관리자는 admin.tenant_id,
+ * 비관리자는 요청에 실린 tenant slug(명시) 또는 Referer의 /t/slug/ 만 사용.
+ */
+async function resolveLoginTenantForLog({ admin, tenantSlug }) {
+  if (admin && admin.tenant_id != null) return admin.tenant_id;
+  if (!tenantSlug) return null;
+  return getTenantIdBySlug(tenantSlug);
+}
+
+/** 로그인 감사 로그 (실패해도 로그인 응답은 유지) */
+async function insertLoginActionLog({ tenantId, username, method, isAdmin, tenantSlug }) {
+  if (tenantId == null) return;
+  try {
+    await pool.query(
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, NULL, NULL, 'LOGIN', JSON_OBJECT('username', ?, 'method', ?, 'isAdmin', ?, 'tenantSlug', ?))",
+      [tenantId, String(username).trim(), String(method), isAdmin ? 1 : 0, tenantSlug || null],
+    );
+  } catch (err) {
+    console.error("[auth] action_log LOGIN failed:", err.message);
+  }
+}
+
 // --- Page: login (Telegram Login Widget for desktop) ---
 router.get("/login", (req, res) => {
+  const tenantSlug =
+    normalizeTenantSlugInput(req.query.tenantSlug) ||
+    normalizeTenantSlugInput(req.query.tenant) ||
+    "";
+  const qs = tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : "";
   res.render("login", {
     botName: BOT_NAME,
-    authUrl: `${APP_URL}/auth/telegram`,
+    authUrl: `${APP_URL}/auth/telegram${qs}`,
+    loginTenantSlug: tenantSlug,
   });
 });
 
@@ -75,6 +130,18 @@ router.post("/auth/telegram-webapp", async (req, res) => {
         ? String(user.username).trim()
         : String(user.id);
     const admin = await findAdminByUsername(username);
+
+    const slugHint =
+      normalizeTenantSlugInput((req.body || {}).tenantSlug) ||
+      tenantSlugFromReferer(req.get("Referer"));
+    const tenantId = await resolveLoginTenantForLog({ admin, tenantSlug: slugHint });
+    await insertLoginActionLog({
+      tenantId,
+      username,
+      method: "telegram_webapp",
+      isAdmin: !!admin,
+      tenantSlug: slugHint,
+    });
 
     const payload = { username, via_webapp: true };
 
@@ -130,6 +197,18 @@ router.post("/auth/telegram", async (req, res) => {
       });
     }
 
+    const slugHint =
+      normalizeTenantSlugInput(req.body.tenantSlug) ||
+      normalizeTenantSlugInput(req.body.tenant) ||
+      tenantSlugFromReferer(req.get("Referer"));
+    await insertLoginActionLog({
+      tenantId: admin.tenant_id,
+      username,
+      method: "telegram_widget",
+      isAdmin: true,
+      tenantSlug: slugHint,
+    });
+
     const token = signToken({ username });
 
     return res.json({
@@ -170,6 +249,20 @@ router.get("/auth/telegram", async (req, res) => {
     }
 
     const username = getTelegramUsernameFromPayload(payload);
+    const admin = await findAdminByUsername(username);
+    const slugHint =
+      normalizeTenantSlugInput(payload.tenantSlug) ||
+      normalizeTenantSlugInput(payload.tenant) ||
+      tenantSlugFromReferer(req.get("Referer"));
+    const tenantId = await resolveLoginTenantForLog({ admin, tenantSlug: slugHint });
+    await insertLoginActionLog({
+      tenantId,
+      username,
+      method: "telegram_widget_redirect",
+      isAdmin: !!admin,
+      tenantSlug: slugHint,
+    });
+
     const token = signToken({ username });
 
     res.cookie("auth_token", token, {
