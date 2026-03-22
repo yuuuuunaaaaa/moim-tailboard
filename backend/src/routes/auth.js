@@ -230,7 +230,10 @@ router.post("/auth/telegram", async (req, res) => {
 // Verifies and issues JWT; redirects to / with token in cookie for backward compat.
 router.get("/auth/telegram", async (req, res) => {
   try {
-    const payload = { ...req.query };
+    // tenantSlug/tenant 는 우리가 붙인 파라미터 — Telegram 서명에 포함되지 않으므로 분리
+    const { tenantSlug: tsQuery, tenant: tenantQuery, ...telegramPayload } = req.query;
+    const payload = telegramPayload;
+
     if (!payload.hash || payload.id == null) {
       return res.status(400).send("Invalid Telegram login");
     }
@@ -251,8 +254,8 @@ router.get("/auth/telegram", async (req, res) => {
     const username = getTelegramUsernameFromPayload(payload);
     const admin = await findAdminByUsername(username);
     const slugHint =
-      normalizeTenantSlugInput(payload.tenantSlug) ||
-      normalizeTenantSlugInput(payload.tenant) ||
+      normalizeTenantSlugInput(tsQuery) ||
+      normalizeTenantSlugInput(tenantQuery) ||
       tenantSlugFromReferer(req.get("Referer"));
     const tenantId = await resolveLoginTenantForLog({ admin, tenantSlug: slugHint });
     await insertLoginActionLog({
