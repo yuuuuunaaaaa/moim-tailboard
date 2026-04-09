@@ -6,7 +6,7 @@
 
 ## 1. 환경 변수 및 설정
 
-- [x] **backend/.env** 작성
+- [x] 환경 변수 작성 (로컬은 `.env.local`, 운영은 플랫폼/서버 환경변수 또는 `.env.production`)
   - [x] `DB_HOST` – MySQL 호스트 (Aiven 등)
   - [x] `DB_PORT` – MySQL 포트
   - [x] `DB_USER` – DB 사용자
@@ -14,12 +14,12 @@
   - [x] `DB_NAME` – DB 이름
   - [x] `DB_SSL_CA` – (로컬) SSL CA 인증서 **파일 경로** (예: `./ca.pem`)
   - [x] `DB_SSL_CA_CONTENT` – (Railway 등) SSL CA 인증서 **PEM 전체 문자열** (파일 없이 env에 붙여넣기)
-  - [x] `TELEGRAM_BOT_TOKEN` – BotFather에서 발급한 봇 토큰
-  - [x] `TELEGRAM_BOT_NAME` – 봇 사용자명 (예: `TailboardBot`)
-  - [x] `APP_URL` – 서비스 공개 URL (예: `https://tailboard.example.com`)
   - [x] `JWT_SECRET` – 32자 이상 랜덤 문자열 (JWT 서명용)
   - [x] `JWT_EXPIRY` – (선택) 토큰 유효기간, 기본 `90d`
-- [x] **.env.example** 과 동기화 여부 확인 (민감 정보 제외)
+  - [x] `TELEGRAM_BOT_TOKEN` – BotFather에서 발급한 봇 토큰
+  - [x] `NEXT_PUBLIC_APP_URL` – 서비스 공개 URL (예: `https://tailboard.example.com`)
+  - [x] `NEXT_PUBLIC_TELEGRAM_BOT_NAME` – 봇 사용자명 (예: `TailboardBot`)
+- [x] `.env.local.example` 과 동기화 여부 확인 (민감 정보 제외)
 - [ ] 프로덕션용 **NODE_ENV=production** 설정
 
 ---
@@ -71,18 +71,16 @@
 
 - [ ] 서버 또는 PaaS 선택 (VPS, AWS, GCP, Railway, Render 등)
 - [ ] **Node.js 18** 런타임 준비
-- [ ] **backend** 디렉토리 기준으로 실행
+- [ ] 프로젝트 루트 기준으로 실행 (Next.js)
   ```bash
-  cd backend && npm ci --omit=dev && node src/server.js
+  npm ci --omit=dev
+  npm run build
+  npm run start
   ```
 - [ ] **PORT** 환경 변수로 포트 지정 (기본 3000)
 - [ ] 리버스 프록시 설정 (Nginx 등)
   - [ ] HTTPS 설정
-  - [ ] `APP_URL` 과 동일한 호스트로 프록시
-- [ ] (선택) **Docker** 사용 시
-  - [ ] `docker/node.Dockerfile` 빌드
-  - [ ] `docker/docker-compose.yml` 에 DB/앱 연동 후 실행
-  - [ ] DB는 외부 MySQL(Aiven 등) 사용 시 compose 에서 제외 가능
+  - [ ] `NEXT_PUBLIC_APP_URL` 과 동일한 호스트로 프록시
 
 ---
 
@@ -99,7 +97,7 @@
 
 ## 7. 배포 후 확인
 
-- [x] **APP_URL** 로 접속 시 홈/로그인/이벤트 목록 정상 노출
+- [x] **NEXT_PUBLIC_APP_URL** 로 접속 시 홈/로그인/이벤트 목록 정상 노출
 - [x] **관리자**: PC에서 `/login` → 텔레그램 로그인 위젯 → 로그인 후 `/admin` 접근 가능
 - [x] **참여자**: 텔레그램 봇 메뉴 버튼(또는 링크) → Web App → 이벤트 목록/참여 페이지 동작
 - [x] 참여 페이지에서 **이름/사용자명 자동 입력** (Web App 로그인) 확인
@@ -120,7 +118,7 @@
 
 ## 9. 문서·공유
 
-- [ ] **README.md** 의 APP_URL, 도메인 예시를 실제 운영 값으로 갱신 (또는 placeholder 유지)
+- [ ] **README.md** 의 NEXT_PUBLIC_APP_URL, 도메인 예시를 실제 운영 값으로 갱신 (또는 placeholder 유지)
 - [ ] 지역별 **봇 링크/메뉴 버튼 URL** 정리 (테넌트 slug 별로)
 - [ ] 관리자에게 **로그인 방법**(PC: /login, 모바일: Web App 자동 로그인) 안내
 - [ ] 새 지역 추가 절차: tenant INSERT → admin 추가 → 봇 메뉴 URL 설정
@@ -131,10 +129,10 @@
 
 | 구분           | 항목 | 상태 |
 |----------------|------|------|
-| 필수 환경 변수 | DB_*, TELEGRAM_BOT_TOKEN, JWT_SECRET, APP_URL | [x] |
+| 필수 환경 변수 | DB_*, TELEGRAM_BOT_TOKEN, JWT_SECRET, NEXT_PUBLIC_APP_URL | [x] |
 | DB             | schema.sql 적용, tenant·admin 최소 1건 | [x] |
 | 텔레그램       | /setdomain, 메뉴 버튼 URL(테넌트 포함) | [x] |
-| 배포           | Node 18, HTTPS, APP_URL과 동일 도메인 | [ ] |
+| 배포           | Node 18, HTTPS, NEXT_PUBLIC_APP_URL과 동일 도메인 | [ ] |
 | 보안           | JWT_SECRET 강한 값, .env 노출 금지 | [x] |
 
 위 항목을 순서대로 진행하면 서비스를 운영할 수 있습니다.

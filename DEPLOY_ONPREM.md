@@ -49,15 +49,16 @@ mysql -u moim -p moim_tailboard < /path/to/schema.sql
 ### 3.1 코드 올리기
 
 ```bash
-# 예: 서버에 클론 또는 rsync/scp로 backend 복사
+# 예: 서버에 클론(권장) 또는 rsync/scp로 프로젝트 복사
 git clone <저장소> /opt/moim-tailboard
 # 또는
-rsync -avz --exclude node_modules ./backend user@서버:/opt/moim-tailboard/
+rsync -avz --exclude node_modules ./ user@서버:/opt/moim-tailboard/
 ```
 
 ### 3.2 환경 변수
 
-`/opt/moim-tailboard/backend/.env` (또는 앱 디렉터리)에 다음을 설정합니다.
+온프렘에서는 보통 **환경 변수**(systemd/PM2/Nginx 단)로 주입하는 방식을 권장합니다.  
+파일로 관리하려면 프로젝트 루트에 `.env.production`을 두고(`NODE_ENV=production`), `next start`에서 읽히도록 구성할 수 있습니다.
 
 | 변수 | 예시 (온프레미스) |
 |------|-------------------|
@@ -69,19 +70,22 @@ rsync -avz --exclude node_modules ./backend user@서버:/opt/moim-tailboard/
 | `DB_PASSWORD` | (실제 비밀번호) |
 | `DB_NAME` | `moim_tailboard` |
 | `DB_SSL_CA` | 외부 DB+SSL일 때만 (예: `./ca.pem`) |
-| `TELEGRAM_BOT_TOKEN` | BotFather 토큰 |
-| `TELEGRAM_BOT_NAME` | 봇 사용자명 |
-| `APP_URL` | **https://실제도메인** (예: `https://tailboard.yourchurch.org`) |
+| `DB_SSL_CA_CONTENT` | 외부 DB+SSL에서 PEM 전체 문자열로 넣을 때 |
 | `JWT_SECRET` | 32자 이상 랜덤 문자열 |
+| `JWT_EXPIRY` | (선택) 기본 `90d` |
+| `TELEGRAM_BOT_TOKEN` | BotFather 토큰 |
+| `NEXT_PUBLIC_APP_URL` | **https://실제도메인** (예: `https://tailboard.yourchurch.org`) |
+| `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | 봇 사용자명 (예: `TailboardBot`) |
 
-`.env`와 `ca.pem`은 Git/배포 스크립트에서 제외하고, 서버에만 둡니다.
+`.env.production`과 `ca.pem`은 Git/배포 스크립트에서 제외하고, 서버에만 둡니다.
 
 ### 3.3 설치 및 실행
 
 ```bash
-cd /opt/moim-tailboard/backend
+cd /opt/moim-tailboard
 npm ci --omit=dev
-node src/server.js
+npm run build
+npm run start
 ```
 
 동작 확인 후 **Ctrl+C**로 중지하고, 아래처럼 프로세스 매니저로 상시 실행합니다.
@@ -94,8 +98,8 @@ node src/server.js
 
 ```bash
 sudo npm install -g pm2
-cd /opt/moim-tailboard/backend
-pm2 start src/server.js --name moim-tailboard
+cd /opt/moim-tailboard
+pm2 start npm --name moim-tailboard -- start
 pm2 save
 pm2 startup   # 출력된 명령을 그대로 실행해 부팅 시 자동 시작 등록
 ```
@@ -147,7 +151,7 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d tailboard.yourchurch.org
 ```
 
-이후 `APP_URL`은 **https://tailboard.yourchurch.org** 로 맞춰 두면 됩니다.
+이후 `NEXT_PUBLIC_APP_URL`은 **https://tailboard.yourchurch.org** 로 맞춰 두면 됩니다.
 
 ---
 
@@ -174,11 +178,11 @@ sudo ufw enable
 ## 8. 체크리스트
 
 - [ ] MySQL 설치 및 `schema.sql` 적용, tenant·admin 최소 1건
-- [ ] `backend/.env` 작성 (APP_URL은 **https** 포함)
-- [ ] `npm ci --omit=dev` 후 `node src/server.js` 로 동작 확인
+- [ ] 환경 변수 설정 (`DB_*`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_*`)
+- [ ] `npm ci --omit=dev` → `npm run build` → `npm run start` 로 동작 확인
 - [ ] PM2로 상시 실행 및 `pm2 startup`
 - [ ] Nginx 리버스 프록시 + HTTPS (Let's Encrypt)
 - [ ] BotFather `/setdomain` 및 메뉴 버튼 URL을 실제 도메인으로 변경
-- [ ] 브라우저에서 `APP_URL` 접속 → 로그인·이벤트 목록·참여 동작 확인
+- [ ] 브라우저에서 `NEXT_PUBLIC_APP_URL` 접속 → 로그인·이벤트 목록·참여 동작 확인
 
 추가로 **OPERATION_TODO.md** 의 “배포 인프라”, “보안”, “배포 후 확인” 항목도 참고하면 됩니다.
