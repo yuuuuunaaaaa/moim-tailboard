@@ -20,17 +20,20 @@ async function getLoggedInUsername(): Promise<string | null> {
 // POST /api/participants/update — 수정 또는 취소
 export async function POST(request: NextRequest) {
   try {
-    const username = await getLoggedInUsername();
-    if (!username) {
-      return new Response("로그인이 필요합니다.", { status: 401 });
-    }
-
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
     const participantId = Number(formData.get("participantId"));
     const name = String(formData.get("name") ?? "").trim();
     const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
     const mode = String(formData.get("mode") ?? "");
+    const isDevBypass =
+      process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
+    const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
+
+    const username = (await getLoggedInUsername()) ?? (isDevBypass ? usernameFromForm : null);
+    if (!username) {
+      return new Response("로그인이 필요합니다.", { status: 401 });
+    }
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
