@@ -3,9 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm --prefix backend install --omit=dev",
-    "dev": "npm --prefix backend run dev",
-    "start": "npm --prefix backend run start"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.11.3",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18",
