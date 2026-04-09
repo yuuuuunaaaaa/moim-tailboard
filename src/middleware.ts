@@ -11,13 +11,17 @@ const UNAUTH_MESSAGE =
 /**
  * JWT payload를 암호화 검증 없이 디코드 (라우팅 결정용).
  * 실제 보안 검증은 각 Route Handler / Server Component에서 수행.
+ * Edge 런타임(Vercel 미들웨어)에는 Node의 Buffer가 없으므로 atob 사용.
  */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
+    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = (4 - (base64.length % 4)) % 4;
+    if (pad) base64 += "=".repeat(pad);
+    const json = atob(base64);
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;
   }

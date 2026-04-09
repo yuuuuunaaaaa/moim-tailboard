@@ -15,6 +15,8 @@ interface Props {
 export default async function EventDetailPage({ params }: Props) {
   const { tenantSlug, eventId: eventIdStr } = await params;
   const eventId = Number(eventIdStr);
+  const isDevBypass =
+    process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
 
   const tenant = await findTenantBySlug(tenantSlug);
   if (!tenant) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
@@ -133,6 +135,21 @@ export default async function EventDetailPage({ params }: Props) {
                     />
                     <p className="form-hint">로그인한 계정으로 참여됩니다.</p>
                   </>
+                ) : isDevBypass ? (
+                  <>
+                    <input
+                      id="username"
+                      name="username"
+                      required
+                      placeholder="개발 모드: 사용자명을 입력하세요 (예: yourname)"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                    <p className="form-hint">
+                      개발 모드에서는 텔레그램 로그인 없이 테스트할 수 있습니다.
+                    </p>
+                  </>
                 ) : (
                   <p className="form-hint form-hint--warning">
                     로그인이 필요합니다.{" "}
@@ -179,8 +196,8 @@ export default async function EventDetailPage({ params }: Props) {
               <button
                 className="btn btn--primary"
                 type="submit"
-                disabled={!username}
-                title={!username ? "텔레그램에서 열어 로그인해 주세요" : undefined}
+                disabled={!username && !isDevBypass}
+                title={!username && !isDevBypass ? "텔레그램에서 열어 로그인해 주세요" : undefined}
               >
                 참여하기
               </button>
