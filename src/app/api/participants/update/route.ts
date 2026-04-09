@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/jwt";
+import { pool, findTenantBySlug } from "@/lib/db";
+import { loadAdminByUsername } from "@/lib/auth";
+import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
+import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
+
+async function getLoggedInUsername(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+  const usernameCookie = cookieStore.get("username")?.value?.trim() || null;
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload?.username) return payload.username;
+  }
+  return usernameCookie;
+}
+
+// POST /api/participants/update — 수정 또는 취소
+export async function POST(request: NextRequest) {
+  try {
+    const username = await getLoggedInUsername();
+    if (!username) {
+      return new Response("로그인이 필요합니다.", { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
+    const participantId = Number(formData.get("participantId"));
+    const name = String(formData.get("name") ?? "").trim();
+    const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
+    const mode = String(formData.get("mode") ?? "");
+
+    const tenant = await findTenantBySlug(tenantSlug);
+    if (!tenant) return new Response("Tenant not found", { status: 404 });
+
+    const cookieStore = await cookies();
+    const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+    const admin = await loadAdminByUsername(username);
+    const access = checkTenantAccess(admin, tenant, allowedSlug);
+    if (access === "forbidden") return new Response("접근이 거부되었습니다.", { status: 403 });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [[participant]] = await pool.query<any[]>(
+      "SELECT p.*, e.tenant_id, e.id AS event_id FROM participant p JOIN event e ON p.event_id = e.id WHERE p.id = ? LIMIT 1",
+      [participantId],
+    );
+    if (!participant || participant.tenant_id !== tenant.id) {
+      return new Response("Participant not found", { status: 404 });
+    }
+    if (participant.username !== username) {
+      return new Response("Not allowed to modify this participant", { status: 403 });
+    }
+
+    if (mode === "delete") {
+      await pool.query(
+        "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?))",
+        [tenant.id, participant.event_id, participant.id, "CANCEL_EVENT", participant.name],
+      );
+      await pool.query("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [participant.id]);
+      await pool.query("DELETE FROM participant WHERE id = ?", [participant.id]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [[{ cnt }]] = await pool.query<any[]>(
+        "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
+        [participant.event_id],
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [[ev]] = await pool.query<any[]>(
+        "SELECT title FROM event WHERE id = ? LIMIT 1",
+        [participant.event_id],
+      );
+      const link = eventDetailUrl(tenant.slug, participant.event_id);
+      const titleText = escapeHtml(ev?.title ?? "이벤트");
+      await sendMessage(
+        tenant.chat_room_id,
+        `👤 <b>${titleText}</b>\n신청자 수: ${cnt}명 (-1)\n<a href="${escapeHtml(link)}">바로가기</a>`,
+      );
+    } else {
+      const newName = name || participant.name;
+      const newStudentNo = studentNo;
+      await pool.query(
+        "UPDATE participant SET name = ?, student_no = ? WHERE id = ?",
+        [newName, newStudentNo, participant.id],
+      );
+      await pool.query(
+        "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('oldName', ?, 'oldStudentNo', ?, 'newName', ?, 'newStudentNo', ?))",
+        [tenant.id, participant.event_id, participant.id, "UPDATE_PARTICIPANT",
+          participant.name, participant.student_no, newName, newStudentNo],
+      );
+    }
+
+    return NextResponse.redirect(
+      new URL(`/t/${tenant.slug}/events/${participant.event_id}`, request.url),
+      303,
+    );
+  } catch (err) {
+    console.error("POST /api/participants/update:", err);
+    return new Response("Internal server error", { status: 500 });
+  }
+}

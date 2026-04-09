@@ -1,0 +1,91 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/jwt";
+import { pool, findTenantBySlug } from "@/lib/db";
+import { loadAdminByUsername } from "@/lib/auth";
+import { checkTenantAccess } from "@/lib/tenantRestrict";
+import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
+import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
+
+async function getLoggedInUsername(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+  const usernameCookie = cookieStore.get("username")?.value?.trim() || null;
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload?.username) return payload.username;
+  }
+  return usernameCookie;
+}
+
+// POST /api/participants — 참여 신청
+export async function POST(request: NextRequest) {
+  try {
+    const username = await getLoggedInUsername();
+    if (!username) {
+      return new Response("로그인이 필요합니다. 텔레그램에서 열어 주세요.", { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
+    const eventId = Number(formData.get("eventId"));
+    const name = String(formData.get("name") ?? "").trim();
+    const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
+    const optionItemIds = formData.getAll("optionItemIds").map(Number).filter(Boolean);
+
+    const tenant = await findTenantBySlug(tenantSlug);
+    if (!tenant) return new Response("Tenant not found", { status: 404 });
+
+    const cookieStore = await cookies();
+    const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+    const admin = await loadAdminByUsername(username);
+    const access = checkTenantAccess(admin, tenant, allowedSlug);
+    if (access === "forbidden") return new Response("접근이 거부되었습니다.", { status: 403 });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [[event]] = await pool.query<any[]>(
+      "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
+      [eventId, tenant.id],
+    );
+    if (!event) return new Response("Event not found", { status: 404 });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [participantResult] = await pool.query<any>(
+      "INSERT INTO participant (event_id, name, student_no, username) VALUES (?, ?, ?, ?)",
+      [event.id, name, studentNo, username],
+    );
+    const participantId = participantResult.insertId;
+
+    if (optionItemIds.length > 0) {
+      const values = optionItemIds.map((id) => [participantId, id]);
+      await pool.query(
+        "INSERT INTO participant_option (participant_id, option_item_id) VALUES ?",
+        [values],
+      );
+    }
+
+    await pool.query(
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?, 'studentNo', ?, 'username', ?, 'optionItemIds', ?))",
+      [tenant.id, event.id, participantId, "JOIN_EVENT", name, studentNo, username, JSON.stringify(optionItemIds)],
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [[{ cnt }]] = await pool.query<any[]>(
+      "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
+      [event.id],
+    );
+    const link = eventDetailUrl(tenant.slug, event.id);
+    await sendMessage(
+      tenant.chat_room_id,
+      `👤 <b>${escapeHtml(event.title)}</b>\n신청자 수: ${cnt}명 (+1)\n<a href="${escapeHtml(link)}">바로가기</a>`,
+    );
+
+    return NextResponse.redirect(
+      new URL(`/t/${tenant.slug}/events/${event.id}`, request.url),
+      303,
+    );
+  } catch (err) {
+    console.error("POST /api/participants:", err);
+    return new Response("Internal server error", { status: 500 });
+  }
+}
