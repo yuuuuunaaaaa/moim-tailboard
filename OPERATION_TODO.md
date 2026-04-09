@@ -17,7 +17,7 @@
   - [x] `JWT_SECRET` – 32자 이상 랜덤 문자열 (JWT 서명용)
   - [x] `JWT_EXPIRY` – (선택) 토큰 유효기간, 기본 `90d`
   - [x] `TELEGRAM_BOT_TOKEN` – BotFather에서 발급한 봇 토큰
-  - [x] `NEXT_PUBLIC_APP_URL` – 서비스 공개 URL (예: `https://tailboard.example.com`)
+  - [x] `NEXT_PUBLIC_APP_URL` – 서비스 공개 URL (예: `https://moim-tailboard.vercel.app`)
   - [x] `NEXT_PUBLIC_TELEGRAM_BOT_NAME` – 봇 사용자명 (예: `TailboardBot`)
 - [x] `.env.local.example` 과 동기화 여부 확인 (민감 정보 제외)
 - [ ] 프로덕션용 **NODE_ENV=production** 설정
@@ -43,7 +43,7 @@
 
 - [x] [@BotFather](https://t.me/BotFather)에서 봇 생성 및 **토큰** 발급
 - [x] **도메인 연결** (`/setdomain`)
-  - 운영 도메인 1개만 입력 (예: `tailboard.example.com`, `https` 없이)
+  - 운영 도메인 1개만 입력 (예: `moim-tailboard.vercel.app`, `https` 없이)
   - 로컬 테스트 시 ngrok 주소로 설정 후, 배포 시 실제 도메인으로 변경
 - [x] **메뉴 버튼** 설정 (BotFather 또는 Bot API)
   - [x] Menu Button → Configure → **Send URL**

@@ -74,7 +74,7 @@ rsync -avz --exclude node_modules ./ user@서버:/opt/moim-tailboard/
 | `JWT_SECRET` | 32자 이상 랜덤 문자열 |
 | `JWT_EXPIRY` | (선택) 기본 `90d` |
 | `TELEGRAM_BOT_TOKEN` | BotFather 토큰 |
-| `NEXT_PUBLIC_APP_URL` | **https://실제도메인** (예: `https://tailboard.yourchurch.org`) |
+| `NEXT_PUBLIC_APP_URL` | **https://실제도메인** (예: `https://moim-tailboard.vercel.app`) |
 | `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | 봇 사용자명 (예: `TailboardBot`) |
 
 `.env.production`과 `ca.pem`은 Git/배포 스크립트에서 제외하고, 서버에만 둡니다.
@@ -126,7 +126,7 @@ sudo apt install -y nginx
 ```nginx
 server {
     listen 80;
-    server_name tailboard.yourchurch.org;   # 실제 도메인으로 변경
+    server_name moim-tailboard.vercel.app;   # 실제 도메인으로 변경
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -148,17 +148,17 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d tailboard.yourchurch.org
+sudo certbot --nginx -d moim-tailboard.vercel.app
 ```
 
-이후 `NEXT_PUBLIC_APP_URL`은 **https://tailboard.yourchurch.org** 로 맞춰 두면 됩니다.
+이후 `NEXT_PUBLIC_APP_URL`은 **https://moim-tailboard.vercel.app** 로 맞춰 두면 됩니다.
 
 ---
 
 ## 6. 텔레그램 봇 설정
 
-- BotFather에서 **도메인 연결**: `/setdomain` → `tailboard.yourchurch.org` (https 없이)
-- **메뉴 버튼** URL을 실제 도메인·테넌트에 맞게 설정 (예: `https://tailboard.yourchurch.org/t/테넌트slug/events`)
+- BotFather에서 **도메인 연결**: `/setdomain` → `moim-tailboard.vercel.app` (https 없이)
+- **메뉴 버튼** URL을 실제 도메인·테넌트에 맞게 설정 (예: `https://moim-tailboard.vercel.app/t/테넌트slug/events`)
 
 ---
 

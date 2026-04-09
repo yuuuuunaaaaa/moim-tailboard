@@ -38,7 +38,7 @@ JWT_EXPIRY=90d
 TELEGRAM_BOT_TOKEN=
 
 # 공개 변수 (클라이언트·서버 공용)
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://moim-tailboard.vercel.app
 NEXT_PUBLIC_TELEGRAM_BOT_NAME=TailboardBot
 
 # 로컬 개발 시 인증 우회 (선택)
@@ -80,8 +80,8 @@ npm run dev
 
 - **BotFather 도메인 등록(필수)**: `/setdomain`으로 Web App을 열 도메인을 등록해야 “Bot domain invalid”를 피할 수 있습니다. (`https://` 없이 호스트만)
 - **메뉴 버튼 URL 권장**
-  - `https://your-domain.com/t/{tenantSlug}` (이벤트 목록으로 이동)
-  - `https://your-domain.com/t/{tenantSlug}/events/{eventId}` (특정 이벤트 바로 열기)
+  - `https://moim-tailboard.vercel.app/t/{tenantSlug}` (이벤트 목록으로 이동)
+  - `https://moim-tailboard.vercel.app/t/{tenantSlug}/events/{eventId}` (특정 이벤트 바로 열기)
 - **로컬 테스트**: Telegram WebApp은 HTTPS만 열 수 있어 ngrok 같은 터널이 필요합니다. 이때 `NEXT_PUBLIC_APP_URL`도 ngrok HTTPS 주소로 맞추세요.
 
 ### 배포
