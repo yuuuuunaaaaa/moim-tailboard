@@ -6,6 +6,7 @@ import {
 import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
+const JWT_READY = !!process.env.JWT_SECRET?.trim();
 
 const cookieOpts = {
   maxAge: COOKIE_MAX_AGE,
@@ -24,6 +25,12 @@ export async function POST(request: NextRequest) {
     if (!BOT_TOKEN.trim()) {
       return NextResponse.json(
         { success: false, error: "Server misconfiguration (TELEGRAM_BOT_TOKEN)" },
+        { status: 500 },
+      );
+    }
+    if (!JWT_READY) {
+      return NextResponse.json(
+        { success: false, error: "Server misconfiguration (JWT_SECRET is not set)" },
         { status: 500 },
       );
     }
@@ -63,6 +70,12 @@ export async function GET(request: NextRequest) {
     if (!BOT_TOKEN.trim()) {
       return new Response("Server misconfiguration (TELEGRAM_BOT_TOKEN)", { status: 500 });
     }
+    if (!JWT_READY) {
+      return new Response(
+        "Server misconfiguration: JWT_SECRET is not set. Add JWT_SECRET in Vercel Project → Settings → Environment Variables.",
+        { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+      );
+    }
 
     const { searchParams } = request.nextUrl;
     const telegramPayload: Record<string, unknown> = {};
@@ -86,7 +99,12 @@ export async function GET(request: NextRequest) {
     res.cookies.set("auth_token", token, cookieOpts);
     return res;
   } catch (err) {
-    console.error("GET /api/auth/telegram:", err);
-    return new Response("Internal server error", { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("GET /api/auth/telegram:", msg, err);
+    const hint =
+      msg.includes("JWT_SECRET") || msg.includes("secret")
+        ? "JWT signing failed. Set a strong JWT_SECRET in Vercel environment variables."
+        : "Internal server error";
+    return new Response(hint, { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 }

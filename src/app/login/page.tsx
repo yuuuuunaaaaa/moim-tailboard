@@ -1,6 +1,7 @@
 import Script from "next/script";
 import Header from "@/components/Header";
 import TelegramAuth from "@/components/TelegramAuth";
+import TelegramLoginWidget from "@/components/TelegramLoginWidget";
 
 interface Props {
   searchParams: Promise<{ tenantSlug?: string; tenant?: string }>;
@@ -25,39 +26,67 @@ export default async function LoginPage({ searchParams }: Props) {
       <Header />
       <main className="container">
         <div className="login-page">
-          <div className="card">
+          <div className="card login-card">
             <h1>텔레그램으로 로그인</h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle login-subtitle">
               참여 시 본인 확인·수정에 사용됩니다. 서비스는 텔레그램 <strong>공개 사용자명</strong>으로
-              로그인합니다. 사용자명이 없으면 아래 버튼으로 로그인하거나, 텔레그램 설정에서 먼저
-              사용자명을 만든 뒤 다시 시도해 주세요.
+              로그인합니다. 사용자명이 없으면 텔레그램 설정에서 먼저 사용자명을 만든 뒤 다시 시도해
+              주세요.
             </p>
             <TelegramAuth tenantSlug={tenantSlug} loginPage />
-            {/*
-              텔레그램 위젯은 반드시 서버가 렌더한 <script>로 로드해야 함.
-              클라이언트에서 createElement('script')로 넣으면 WebApp 자동 로그인 직후 cleanup에
-              스크립트가 지워져 버튼이 안 뜨는 경우가 있음.
-            */}
-            <div className="login-widget-wrap">
-              <Script
-                src="https://telegram.org/js/telegram-widget.js?22"
-                strategy="afterInteractive"
-                data-telegram-login={botName}
-                data-size="large"
-                data-auth-url={authUrl}
-                data-request-access="write"
-              />
+            <div className="login-widget-block">
+              <TelegramLoginWidget botName={botName} authUrl={authUrl} />
             </div>
-            <p style={{ marginTop: 16 }}>
+            <p className="login-back">
               <a href="/">← 돌아가기</a>
             </p>
           </div>
         </div>
       </main>
       <style>{`
-        .login-page { max-width: 400px; margin: 48px auto; text-align: center; }
-        .login-page .card { padding: 32px; }
-        .login-widget-wrap { display: flex; justify-content: center; margin: 24px 0; min-height: 44px; }
+        .login-page {
+          max-width: 420px;
+          margin: 48px auto;
+          padding: 0 16px;
+        }
+        .login-card {
+          padding: 28px 24px 32px;
+          text-align: center;
+        }
+        .login-subtitle {
+          text-align: left;
+          margin-bottom: 20px;
+          line-height: 1.55;
+          color: #4b5563;
+        }
+        .login-widget-block {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-height: 52px;
+          margin: 8px 0 4px;
+        }
+        /* 텔레그램이 넣는 iframe을 카드 가운데에 고정 */
+        .telegram-widget-mount {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          min-height: 44px;
+        }
+        .telegram-widget-mount iframe {
+          display: block !important;
+          margin: 0 auto !important;
+          max-width: 100%;
+          border: 0;
+          vertical-align: middle;
+        }
+        .login-back {
+          margin-top: 20px;
+          margin-bottom: 0;
+        }
       `}</style>
     </>
   );

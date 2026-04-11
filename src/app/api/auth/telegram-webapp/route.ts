@@ -6,6 +6,7 @@ import {
 import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
+const JWT_READY = !!process.env.JWT_SECRET?.trim();
 
 const cookieOpts = {
   maxAge: COOKIE_MAX_AGE,
@@ -24,6 +25,12 @@ export async function POST(request: NextRequest) {
     if (!BOT_TOKEN.trim()) {
       return NextResponse.json(
         { success: false, error: "Server misconfiguration (TELEGRAM_BOT_TOKEN)" },
+        { status: 500 },
+      );
+    }
+    if (!JWT_READY) {
+      return NextResponse.json(
+        { success: false, error: "Server misconfiguration (JWT_SECRET is not set)" },
         { status: 500 },
       );
     }
