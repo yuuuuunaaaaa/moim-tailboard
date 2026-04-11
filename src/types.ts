@@ -55,10 +55,9 @@ export interface ParticipantOption {
   option_group_id: number;
 }
 
+/** JWT 클레임 (로그인 API는 username만 저장) */
 export interface JwtPayload {
   username: string;
-  via_webapp?: boolean;
-  is_admin?: boolean;
   iat?: number;
   exp?: number;
 }

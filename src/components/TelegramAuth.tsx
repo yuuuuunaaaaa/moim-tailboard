@@ -28,65 +28,74 @@ export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramA
 
   const isLoginPage = !!(botName && authUrl);
 
+  // PC: Login Widget 스크립트는 React 렌더 후 DOM에 주입 (위젯이 data 속성을 읽도록)
+  useEffect(() => {
+    if (!isDesktop || !botName || !authUrl) return;
+    const root = document.getElementById("tg-widget-root");
+    if (!root) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.setAttribute("data-telegram-login", botName);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-auth-url", authUrl);
+    script.setAttribute("data-request-access", "write");
+    root.appendChild(script);
+    return () => {
+      root.removeChild(script);
+    };
+  }, [isDesktop, botName, authUrl]);
+
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
+    const loginQs = tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : "";
 
     if (tg?.initData) {
       setIsWebApp(true);
       if (isLoginPage) {
-        // 로그인 페이지: WebApp 자동 로그인
         setStatus("loading");
         tg.ready?.();
         fetch("/api/auth/telegram-webapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ initData: tg.initData, tenantSlug: tenantSlug || "" }),
         })
           .then((r) => r.json())
           .then((data) => {
-            if (!data.ok || !data.token) {
+            if (!data.success || typeof data.username !== "string") {
               setStatus("error");
               return;
             }
-            const maxAge = 90 * 24 * 60 * 60;
-            document.cookie = `auth_token=${data.token}; path=/; max-age=${maxAge}`;
-            const uname = data.user?.username || String(data.user?.id || "");
-            if (uname) document.cookie = `username=${uname}; path=/; max-age=${maxAge}`;
             window.location.href = "/";
           })
           .catch(() => setStatus("error"));
       } else {
-        // 이벤트 상세: WebApp 자동 로그인 후 페이지 새로고침
         setStatus("loading");
         tg.ready?.();
         tg.expand?.();
         fetch("/api/auth/telegram-webapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ initData: tg.initData, tenantSlug: tenantSlug || "" }),
         })
           .then((r) => r.json())
           .then((data) => {
-            if (!data.ok || !data.token) {
-              window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+            if (!data.success || typeof data.username !== "string") {
+              window.location.href = `/login${loginQs}`;
               return;
             }
-            const maxAge = 90 * 24 * 60 * 60;
-            document.cookie = `auth_token=${data.token}; path=/; max-age=${maxAge}`;
-            const uname = data.user?.username || String(data.user?.id || "");
-            if (uname) document.cookie = `username=${uname}; path=/; max-age=${maxAge}`;
             window.location.reload();
           })
           .catch(() => {
-            window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+            window.location.href = `/login${loginQs}`;
           });
       }
     } else if (isLoginPage) {
-      // 로그인 페이지 + 비WebApp → 위젯 표시
       setIsDesktop(true);
     } else {
-      // 이벤트 상세 + 비WebApp → 로그인 페이지로
-      window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+      window.location.href = `/login${loginQs}`;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -95,32 +104,21 @@ export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramA
 
   return (
     <>
-      {/* WebApp 자동 로그인 */}
       {isWebApp && (
         <div id="webapp-section">
           {status === "loading" && <p style={{ margin: "24px 0", color: "#6b7280" }}>로그인 중...</p>}
           {status === "error" && (
             <p style={{ margin: "24px 0", color: "var(--danger)" }}>
-              로그인에 실패했습니다. 텔레그램에서 다시 열어 주세요.
+              로그인에 실패했습니다. 텔레그램에 공개 사용자명(username)이 있어야 하며, 앱에서 다시 열어
+              주세요.
             </p>
           )}
         </div>
       )}
 
-      {/* PC 브라우저: Login Widget */}
       {isDesktop && (
         <div id="desktop-section">
-          <div className="login-widget-wrap">
-            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <script
-              async
-              src="https://telegram.org/js/telegram-widget.js?22"
-              data-telegram-login={botName}
-              data-size="large"
-              data-auth-url={authUrl}
-              data-request-access="write"
-            />
-          </div>
+          <div className="login-widget-wrap" id="tg-widget-root" />
           <p style={{ marginTop: "16px" }}>
             <a href="/">← 돌아가기</a>
           </p>

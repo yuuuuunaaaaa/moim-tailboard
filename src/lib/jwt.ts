@@ -1,22 +1,27 @@
-import jwt from "jsonwebtoken";
-import type { JwtPayload } from "@/types";
+import { SignJWT } from "jose/jwt/sign";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const JWT_EXPIRY = process.env.JWT_EXPIRY || "90d";
+export { verifyToken } from "./jwt-verify";
 
-export function signToken(payload: Omit<JwtPayload, "iat" | "exp">): string {
-  if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY } as jwt.SignOptions);
+const ALG = "HS256" as const;
+
+function getSecretKey(): Uint8Array {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET is not set");
+  return new TextEncoder().encode(s);
 }
 
-export function verifyToken(token: string): JwtPayload | null {
-  if (!JWT_SECRET) return null;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded as JwtPayload;
-  } catch {
-    return null;
-  }
-}
+/** httpOnly 쿠키 maxAge(초) — JWT 만료와 맞춤 */
+export const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
-export const COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // 90일 (초)
+/**
+ * JWT 발급. payload는 { username } 만 포함. 만료 7일.
+ */
+export async function signToken(username: string): Promise<string> {
+  const u = username.trim();
+  if (!u) throw new Error("username is required for signToken");
+  return new SignJWT({ username: u })
+    .setProtectedHeader({ alg: ALG })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(getSecretKey());
+}
