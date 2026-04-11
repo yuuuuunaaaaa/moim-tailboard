@@ -27,7 +27,11 @@ export default async function LoginPage({ searchParams }: Props) {
         <div className="login-page">
           <div className="card">
             <h1>텔레그램으로 로그인</h1>
-            <p className="page-subtitle">참여 시 본인 확인·수정에 사용됩니다.</p>
+            <p className="page-subtitle">
+              참여 시 본인 확인·수정에 사용됩니다. 서비스는 텔레그램 <strong>공개 사용자명</strong>으로
+              로그인합니다. 사용자명이 없으면 아래 버튼으로 로그인하거나, 텔레그램 설정에서 먼저
+              사용자명을 만든 뒤 다시 시도해 주세요.
+            </p>
             <TelegramAuth tenantSlug={tenantSlug} botName={botName} authUrl={authUrl} />
           </div>
         </div>
