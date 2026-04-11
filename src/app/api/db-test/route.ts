@@ -1,26 +1,21 @@
-import mysql from 'mysql2/promise';
+import { pool } from "@/lib/db";
 
 export async function GET() {
   try {
-    const pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 5,
-    });
-
-    const [rows] = await pool.query('SELECT 1 as test');
-
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [rows] = await pool.query<any[]>("SELECT 1 AS test");
     return Response.json({
       success: true,
       result: rows,
     });
-  } catch (err: any) {
-    return Response.json({
-      success: false,
-      error: err.message,
-    }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json(
+      {
+        success: false,
+        error: message,
+      },
+      { status: 500 },
+    );
   }
 }
