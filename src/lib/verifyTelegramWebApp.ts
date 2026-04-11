@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 /**
  * Telegram WebApp initData 검증 (Telegram.WebApp.initData).

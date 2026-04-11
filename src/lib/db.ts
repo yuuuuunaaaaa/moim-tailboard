@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import fs from "fs";
+import fs from "node:fs";
 import type { Tenant } from "@/types";
 
 function buildSslOption(): Record<string, unknown> {
