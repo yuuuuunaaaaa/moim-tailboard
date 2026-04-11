@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+// Avoid `next/server`: it eagerly loads ua-parser-js (uses __dirname), which breaks Middleware on Edge (e.g. Vercel).
+import { NextRequest } from "next/dist/server/web/spec-extension/request";
+import { NextResponse } from "next/dist/server/web/spec-extension/response";
 
 const UNAUTH_MESSAGE =
   '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">' +
