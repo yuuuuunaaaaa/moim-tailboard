@@ -14,7 +14,10 @@ export default async function LoginPage({ searchParams }: Props) {
   const qs = tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : "";
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const authUrl = `${appUrl}/api/auth/telegram${qs}`;
-  const botName = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME || "TailboardBot";
+  const botName =
+    process.env.TELEGRAM_BOT_NAME ||
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
+    "TailboardBot";
 
   return (
     <>
