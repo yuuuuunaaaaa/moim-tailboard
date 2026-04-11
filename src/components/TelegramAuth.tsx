@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 
 interface TelegramAuthProps {
   tenantSlug?: string;
-  /** 로그인 페이지에서만 사용 (Telegram Login Widget 표시용) */
-  botName?: string;
-  authUrl?: string;
+  /** true: /login 페이지 — 텔레그램 위젯은 부모에서 Script로 삽입 */
+  loginPage?: boolean;
 }
 
 declare global {
@@ -16,37 +15,15 @@ declare global {
         initData?: string;
         ready?: () => void;
         expand?: () => void;
+        openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
       };
     };
   }
 }
 
-export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramAuthProps) {
+export default function TelegramAuth({ tenantSlug, loginPage = false }: TelegramAuthProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [isWebApp, setIsWebApp] = useState(false);
-  /** WebApp 자동 로그인 시도 중에는 숨기고, 일반 브라우저·실패 시에는 위젯 표시 */
-  const isLoginPage = !!(botName && authUrl);
-  const [showLoginWidget, setShowLoginWidget] = useState(isLoginPage);
-
-  // Login Widget 스크립트 주입
-  useEffect(() => {
-    if (!showLoginWidget || !botName || !authUrl) return;
-    const root = document.getElementById("tg-widget-root");
-    if (!root) return;
-    root.innerHTML = "";
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.setAttribute("data-telegram-login", botName);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-auth-url", authUrl);
-    script.setAttribute("data-request-access", "write");
-    root.appendChild(script);
-    return () => {
-      if (script.parentNode === root) root.removeChild(script);
-      root.innerHTML = "";
-    };
-  }, [showLoginWidget, botName, authUrl]);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -54,8 +31,7 @@ export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramA
 
     if (tg?.initData) {
       setIsWebApp(true);
-      if (isLoginPage) {
-        setShowLoginWidget(false);
+      if (loginPage) {
         setStatus("loading");
         tg.ready?.();
         fetch("/api/auth/telegram-webapp", {
@@ -68,15 +44,11 @@ export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramA
           .then((data) => {
             if (!data.success || typeof data.username !== "string") {
               setStatus("error");
-              setShowLoginWidget(true);
               return;
             }
             window.location.href = "/";
           })
-          .catch(() => {
-            setStatus("error");
-            setShowLoginWidget(true);
-          });
+          .catch(() => setStatus("error"));
       } else {
         setStatus("loading");
         tg.ready?.();
@@ -99,46 +71,58 @@ export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramA
             window.location.href = `/login${loginQs}`;
           });
       }
-    } else if (isLoginPage) {
-      setShowLoginWidget(true);
-    } else {
+    } else if (!loginPage) {
       window.location.href = `/login${loginQs}`;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!isLoginPage) return null;
+  if (!loginPage) return null;
 
   return (
     <>
       {isWebApp && status === "loading" && (
-        <p style={{ margin: "24px 0", color: "#6b7280" }}>로그인 중...</p>
+        <p style={{ margin: "0 0 16px", color: "#6b7280" }}>로그인 중…</p>
       )}
 
       {isWebApp && status === "error" && (
-        <div style={{ margin: "20px 0", textAlign: "left" }}>
+        <div style={{ margin: "0 0 20px", textAlign: "left" }}>
           <p style={{ color: "var(--danger)", marginBottom: "12px" }}>
             텔레그램에 <strong>공개 사용자명(username)</strong>이 없으면 자동 로그인이 되지 않습니다.
           </p>
-          <p style={{ color: "#4b5563", fontSize: "0.95rem", lineHeight: 1.5 }}>
-            아래 <strong>Telegram으로 로그인</strong> 버튼을 눌러 로그인하거나, 텔레그램 설정 → 사용자명에서
-            공개 사용자명을 만든 뒤 이 페이지를 새로고침해 주세요.
+          <p style={{ color: "#4b5563", fontSize: "0.95rem", lineHeight: 1.5, marginBottom: "16px" }}>
+            아래 <strong>Log in with Telegram</strong> 버튼을 누르거나, 설정 → 사용자명에서 공개 사용자명을 만든 뒤
+            새로고침해 주세요. 미니 앱 안에서 버튼이 보이지 않으면 외부 브라우저에서 열어 주세요.
           </p>
+          <button
+            type="button"
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              fontSize: "0.95rem",
+              cursor: "pointer",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              background: "#f9fafb",
+            }}
+            onClick={() => {
+              const url = window.location.href;
+              if (window.Telegram?.WebApp?.openLink) {
+                window.Telegram.WebApp.openLink(url, { try_instant_view: false });
+              } else {
+                window.open(url, "_blank", "noopener,noreferrer");
+              }
+            }}
+          >
+            외부 브라우저에서 이 페이지 열기
+          </button>
         </div>
       )}
 
-      {showLoginWidget && (
-        <div id="login-widget-section">
-          {!isWebApp && (
-            <p style={{ margin: "8px 0 16px", color: "#6b7280", fontSize: "0.95rem" }}>
-              아래 버튼으로 텔레그램 계정에 로그인해 주세요. (공개 사용자명이 있어야 합니다.)
-            </p>
-          )}
-          <div className="login-widget-wrap" id="tg-widget-root" />
-          <p style={{ marginTop: "16px" }}>
-            <a href="/">← 돌아가기</a>
-          </p>
-        </div>
+      {!isWebApp && (
+        <p style={{ margin: "0 0 16px", color: "#6b7280", fontSize: "0.95rem" }}>
+          아래 버튼으로 텔레그램에 로그인해 주세요. (공개 사용자명 필요)
+        </p>
       )}
     </>
   );

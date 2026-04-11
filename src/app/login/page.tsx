@@ -32,7 +32,25 @@ export default async function LoginPage({ searchParams }: Props) {
               로그인합니다. 사용자명이 없으면 아래 버튼으로 로그인하거나, 텔레그램 설정에서 먼저
               사용자명을 만든 뒤 다시 시도해 주세요.
             </p>
-            <TelegramAuth tenantSlug={tenantSlug} botName={botName} authUrl={authUrl} />
+            <TelegramAuth tenantSlug={tenantSlug} loginPage />
+            {/*
+              텔레그램 위젯은 반드시 서버가 렌더한 <script>로 로드해야 함.
+              클라이언트에서 createElement('script')로 넣으면 WebApp 자동 로그인 직후 cleanup에
+              스크립트가 지워져 버튼이 안 뜨는 경우가 있음.
+            */}
+            <div className="login-widget-wrap">
+              <Script
+                src="https://telegram.org/js/telegram-widget.js?22"
+                strategy="afterInteractive"
+                data-telegram-login={botName}
+                data-size="large"
+                data-auth-url={authUrl}
+                data-request-access="write"
+              />
+            </div>
+            <p style={{ marginTop: 16 }}>
+              <a href="/">← 돌아가기</a>
+            </p>
           </div>
         </div>
       </main>
