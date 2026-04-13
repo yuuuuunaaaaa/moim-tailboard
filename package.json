@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "jose": "^6.2.2",
     "mysql2": "^3.11.3",
     "next": "^15.3.0",
