@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import type { Event, OptionGroup, OptionItem, Tenant } from "@/types";
+import { useMemo, useRef, useState } from "react";
+import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
 
 interface GroupWithItems extends OptionGroup {
   items: OptionItem[];
@@ -13,6 +13,9 @@ interface Props {
   events: Event[];
   groupsByEvent: Record<number, GroupWithItems[]>;
   username: string | null | undefined;
+  editEventId: number | null;
+  editParticipants: Participant[];
+  editParticipantOptions: ParticipantOption[];
 }
 
 interface NewOptionGroup {
@@ -22,12 +25,19 @@ interface NewOptionGroup {
   optionText: string;
 }
 
-export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent, username }: Props) {
-  const [openEditId, setOpenEditId] = useState<number | null>(null);
+export default function AdminEventEdit({
+  tenant,
+  tenants,
+  events,
+  groupsByEvent,
+  username,
+  editEventId,
+  editParticipants,
+  editParticipantOptions,
+}: Props) {
   const [createGroups, setCreateGroups] = useState<NewOptionGroup[]>([]);
-  const [editGroups, setEditGroups] = useState<Record<number, NewOptionGroup[]>>({});
   const createGroupIdx = useRef(0);
-  const editGroupIdx = useRef<Record<number, number>>({});
+  const [editGroupsDraft, setEditGroupsDraft] = useState<Record<number, { name: string; multiple: boolean; itemsText: string }>>({});
 
   function addCreateGroup() {
     const id = createGroupIdx.current++;
@@ -38,25 +48,9 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
     setCreateGroups((prev) => prev.filter((g) => g.id !== id));
   }
 
-  function addEditGroup(evId: number) {
-    if (!editGroupIdx.current[evId]) editGroupIdx.current[evId] = 0;
-    const id = editGroupIdx.current[evId]++;
-    setEditGroups((prev) => ({
-      ...prev,
-      [evId]: [...(prev[evId] || []), { id, name: "", multipleSelect: false, optionText: "" }],
-    }));
-  }
-
-  function removeEditGroup(evId: number, gId: number) {
-    setEditGroups((prev) => ({
-      ...prev,
-      [evId]: (prev[evId] || []).filter((g) => g.id !== gId),
-    }));
-  }
-
   return (
     <div className="admin-grid">
-      {/* 이벤트 목록 + 수정 */}
+      {/* 이벤트 목록 */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <h2 className="card__title">이벤트 목록</h2>
         {events.length === 0 ? (
@@ -65,8 +59,6 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
           <ul className="event-admin-list">
             {events.map((ev) => {
               const groups = groupsByEvent[ev.id] || [];
-              const isOpen = openEditId === ev.id;
-              const evEditGroups = editGroups[ev.id] || [];
               const eventDateVal = new Date(ev.event_date).toISOString().slice(0, 16);
 
               return (
@@ -95,18 +87,17 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
                         </svg>
                       </button>
                     </form>
-                    {/* 수정 토글 버튼 */}
-                    <button
-                      type="button"
+                    {/* 이벤트 수정(등록 폼 재사용) */}
+                    <a
                       className="icon-btn"
-                      onClick={() => setOpenEditId(isOpen ? null : ev.id)}
+                      href={`/admin?tenant=${encodeURIComponent(tenant.slug)}&edit=${ev.id}`}
                       title="수정"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
-                    </button>
+                    </a>
                     {/* 이벤트 보기 */}
                     <a href={`/t/${tenant.slug}/events/${ev.id}`} className="icon-btn" title="보기">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,170 +128,6 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
                     </form>
                   </div>
 
-                  {/* 수정 패널 */}
-                  {isOpen && (
-                    <div className="event-edit-wrapper" style={{ display: "block" }}>
-                      {/* 기존 옵션 그룹 목록 + 삭제 */}
-                      {groups.length > 0 && (
-                        <div style={{ marginBottom: "10px" }}>
-                          <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "6px", color: "var(--muted)" }}>
-                            현재 옵션 그룹
-                          </div>
-                          {groups.map((g) => (
-                            <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px", fontSize: "0.875rem" }}>
-                              <span style={{ flex: 1 }}>
-                                <b>{g.name}</b> · {g.items.map((i) => i.name).join(", ")}
-                              </span>
-                              <form
-                                method="post"
-                                action={`/api/admin/option-groups/${g.id}/delete`}
-                                style={{ display: "inline" }}
-                                onSubmit={(e) => {
-                                  if (!confirm("옵션 그룹을 삭제하시겠습니까?")) e.preventDefault();
-                                }}
-                              >
-                                <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                                <button
-                                  type="submit"
-                                  className="icon-btn"
-                                  style={{ color: "var(--danger)", fontSize: "0.75rem" }}
-                                  title="그룹 삭제"
-                                >
-                                  ✕
-                                </button>
-                              </form>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* 이벤트 수정 폼 */}
-                      <form
-                        className="event-edit-form"
-                        method="post"
-                        action={`/api/admin/events/${ev.id}/update`}
-                      >
-                        <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                        {/* 새 옵션 그룹 hidden inputs */}
-                        {evEditGroups.map((g) => (
-                          <span key={g.id}>
-                            <input type="hidden" name="groupName" value={g.name} />
-                            <input type="hidden" name="multipleSelect" value={g.multipleSelect ? "true" : "false"} />
-                            <input type="hidden" name="optionText" value={g.optionText} />
-                          </span>
-                        ))}
-                        <div className="row">
-                          <input type="text" name="title" defaultValue={ev.title} placeholder="제목" required />
-                          <input type="datetime-local" name="eventDate" defaultValue={eventDateVal} required />
-                        </div>
-                        <div className="row">
-                          <textarea name="description" placeholder="설명(선택)" defaultValue={ev.description ?? ""} />
-                        </div>
-                        <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
-                            <input
-                              type="text"
-                              name="eventTelegramJoinPrefix"
-                              maxLength={64}
-                              placeholder="비우면 👤"
-                              defaultValue={ev.telegram_participant_join_prefix ?? ""}
-                            />
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
-                            <input
-                              type="text"
-                              name="eventTelegramLeavePrefix"
-                              maxLength={64}
-                              placeholder="비우면 👤"
-                              defaultValue={ev.telegram_participant_leave_prefix ?? ""}
-                            />
-                          </div>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--muted)" }}>옵션 그룹 추가</span>
-                          <button
-                            type="button"
-                            className="btn btn--secondary btn--sm"
-                            onClick={() => addEditGroup(ev.id)}
-                          >
-                            + 추가
-                          </button>
-                        </div>
-
-                        {/* 새 옵션 그룹 입력 UI */}
-                        {evEditGroups.map((g) => (
-                          <div key={g.id} className="option-group-card">
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                              <input
-                                type="text"
-                                placeholder="그룹 이름"
-                                style={{ flex: 1 }}
-                                value={g.name}
-                                onChange={(e) =>
-                                  setEditGroups((prev) => ({
-                                    ...prev,
-                                    [ev.id]: (prev[ev.id] || []).map((x) =>
-                                      x.id === g.id ? { ...x, name: e.target.value } : x,
-                                    ),
-                                  }))
-                                }
-                              />
-                              <label style={{ whiteSpace: "nowrap", fontSize: "0.8125rem", margin: 0 }}>
-                                <input
-                                  type="checkbox"
-                                  style={{ width: "auto", marginRight: "4px" }}
-                                  checked={g.multipleSelect}
-                                  onChange={(e) =>
-                                    setEditGroups((prev) => ({
-                                      ...prev,
-                                      [ev.id]: (prev[ev.id] || []).map((x) =>
-                                        x.id === g.id ? { ...x, multipleSelect: e.target.checked } : x,
-                                      ),
-                                    }))
-                                  }
-                                />
-                                복수선택
-                              </label>
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                onClick={() => removeEditGroup(ev.id, g.id)}
-                                title="삭제"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            <textarea
-                              placeholder="항목 (한 줄에 하나)"
-                              style={{ height: "70px", width: "100%" }}
-                              value={g.optionText}
-                              onChange={(e) =>
-                                setEditGroups((prev) => ({
-                                  ...prev,
-                                  [ev.id]: (prev[ev.id] || []).map((x) =>
-                                    x.id === g.id ? { ...x, optionText: e.target.value } : x,
-                                  ),
-                                }))
-                              }
-                            />
-                          </div>
-                        ))}
-
-                        <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
-                          <button className="btn btn--primary btn--sm" type="submit">저장</button>
-                          <button
-                            className="btn btn--sm"
-                            type="button"
-                            onClick={() => setOpenEditId(null)}
-                          >
-                            닫기
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
                 </li>
               );
             })}
@@ -308,7 +135,244 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
         )}
       </div>
 
-      {/* 이벤트 만들기 */}
+      {/* 이벤트 수정 */}
+      <div className="card" style={{ gridColumn: "1 / -1" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+          <h2 className="card__title" style={{ marginBottom: 0 }}>이벤트 수정</h2>
+          <select
+            defaultValue={editEventId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) {
+                window.location.href = `/admin?tenant=${encodeURIComponent(tenant.slug)}`;
+                return;
+              }
+              window.location.href = `/admin?tenant=${encodeURIComponent(tenant.slug)}&edit=${encodeURIComponent(v)}`;
+            }}
+            style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid var(--border)" }}
+          >
+            <option value="">— 수정할 이벤트 선택 —</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={String(ev.id)}>{ev.title}</option>
+            ))}
+          </select>
+        </div>
+
+        {(() => {
+          if (!editEventId) return <p className="page-subtitle" style={{ marginTop: "10px" }}>위에서 이벤트를 선택하면 등록 폼 형태로 수정할 수 있습니다.</p>;
+          const ev = events.find((x) => x.id === editEventId);
+          if (!ev) return <p className="page-subtitle" style={{ marginTop: "10px" }}>선택한 이벤트를 찾을 수 없습니다.</p>;
+
+          const groups = groupsByEvent[ev.id] || [];
+          const participantOptMap: Record<number, Set<number>> = {};
+          editParticipantOptions.forEach((po) => {
+            if (!participantOptMap[po.participant_id]) participantOptMap[po.participant_id] = new Set();
+            participantOptMap[po.participant_id].add(po.option_item_id);
+          });
+
+          const eventDateVal = new Date(ev.event_date).toISOString().slice(0, 16);
+
+          return (
+            <div style={{ marginTop: "14px" }}>
+              <form method="post" action={`/api/admin/events/${ev.id}/update`}>
+                <input type="hidden" name="tenantSlug" value={tenant.slug} />
+                <div className="row">
+                  <input type="text" name="title" defaultValue={ev.title} placeholder="제목" required />
+                  <input type="datetime-local" name="eventDate" defaultValue={eventDateVal} required />
+                </div>
+                <div className="row">
+                  <textarea name="description" placeholder="설명(선택)" defaultValue={ev.description ?? ""} />
+                </div>
+                <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
+                    <input
+                      type="text"
+                      name="eventTelegramJoinPrefix"
+                      maxLength={64}
+                      placeholder="비우면 👤"
+                      defaultValue={ev.telegram_participant_join_prefix ?? ""}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
+                    <input
+                      type="text"
+                      name="eventTelegramLeavePrefix"
+                      maxLength={64}
+                      placeholder="비우면 👤"
+                      defaultValue={ev.telegram_participant_leave_prefix ?? ""}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                  <button className="btn btn--primary btn--sm" type="submit">저장</button>
+                  <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${ev.id}`}>이벤트 보기</a>
+                </div>
+              </form>
+
+              <div style={{ marginTop: "18px" }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "0.95rem" }}>옵션 그룹 수정</h3>
+                {groups.length === 0 ? (
+                  <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {groups.map((g) => {
+                      const draft = editGroupsDraft[g.id] ?? {
+                        name: g.name,
+                        multiple: !!g.multiple_select,
+                        itemsText: g.items.map((i) => i.name).join("\n"),
+                      };
+                      return (
+                        <div key={g.id} className="option-group-card">
+                          <form method="post" action={`/api/admin/option-groups/${g.id}/update`}>
+                            <input type="hidden" name="tenantSlug" value={tenant.slug} />
+                            <input type="hidden" name="eventId" value={ev.id} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                              <input
+                                type="text"
+                                name="groupName"
+                                value={draft.name}
+                                required
+                                style={{ flex: 1 }}
+                                onChange={(e) =>
+                                  setEditGroupsDraft((prev) => ({
+                                    ...prev,
+                                    [g.id]: { ...draft, name: e.target.value },
+                                  }))
+                                }
+                              />
+                              <label style={{ whiteSpace: "nowrap", fontSize: "0.8125rem", margin: 0 }}>
+                                <input
+                                  type="checkbox"
+                                  name="multipleSelect"
+                                  value="true"
+                                  checked={draft.multiple}
+                                  style={{ width: "auto", marginRight: "4px" }}
+                                  onChange={(e) =>
+                                    setEditGroupsDraft((prev) => ({
+                                      ...prev,
+                                      [g.id]: { ...draft, multiple: e.target.checked },
+                                    }))
+                                  }
+                                />
+                                복수선택
+                              </label>
+                              <button className="btn btn--secondary btn--sm" type="submit">저장</button>
+                              <button
+                                type="submit"
+                                className="btn btn--danger btn--sm"
+                                formMethod="post"
+                                formAction={`/api/admin/option-groups/${g.id}/delete`}
+                                name="tenantSlug"
+                                value={tenant.slug}
+                                onClick={(e) => {
+                                  if (!confirm("옵션 그룹을 삭제하시겠습니까? (선택 데이터도 함께 정리됩니다)")) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                            <textarea
+                              name="itemsText"
+                              value={draft.itemsText}
+                              placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"}
+                              style={{ height: "88px", width: "100%" }}
+                              onChange={(e) =>
+                                setEditGroupsDraft((prev) => ({
+                                  ...prev,
+                                  [g.id]: { ...draft, itemsText: e.target.value },
+                                }))
+                              }
+                            />
+                          </form>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: "18px" }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "0.95rem" }}>참여자 옵션 배치 수정</h3>
+                {editParticipants.length === 0 ? (
+                  <p className="empty-state mt-0 mb-0">참여자가 없습니다.</p>
+                ) : groups.length === 0 ? (
+                  <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
+                ) : (
+                  <form method="post" action={`/api/admin/events/${ev.id}/participants/batch-update`}>
+                    <input type="hidden" name="tenantSlug" value={tenant.slug} />
+                    <div className="participants-wrap">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: "220px" }}>참여자</th>
+                            {groups.map((gg) => <th key={gg.id}>{gg.name}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editParticipants.map((p) => (
+                            <tr key={p.id}>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{p.name}{p.student_no ? ` (${p.student_no})` : ""}</div>
+                                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}><code>{p.username}</code></div>
+                              </td>
+                              {groups.map((gg) => {
+                                const key = `p_${p.id}_g_${gg.id}`;
+                                const selected = participantOptMap[p.id] || new Set<number>();
+                                const hasAnyInGroup = gg.items.some((opt) => selected.has(opt.id));
+                                return (
+                                  <td key={gg.id} style={{ minWidth: "220px" }}>
+                                    {gg.items.length === 0 ? (
+                                      <span style={{ color: "var(--muted)" }}>—</span>
+                                    ) : gg.multiple_select ? (
+                                      <div className="checkbox-group">
+                                        {gg.items.map((opt) => (
+                                          <label key={opt.id} style={{ display: "block" }}>
+                                            <input type="checkbox" name={key} value={opt.id} defaultChecked={selected.has(opt.id)} />{" "}
+                                            {opt.name}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="radio-group">
+                                        <label style={{ display: "block", color: "var(--muted)" }}>
+                                          <input type="radio" name={key} value="" defaultChecked={!hasAnyInGroup} />{" "}
+                                          미선택
+                                        </label>
+                                        {gg.items.map((opt) => (
+                                          <label key={opt.id} style={{ display: "block" }}>
+                                            <input type="radio" name={key} value={opt.id} defaultChecked={selected.has(opt.id)} />{" "}
+                                            {opt.name}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ marginTop: "12px", display: "flex", gap: "8px", alignItems: "center" }}>
+                      <button className="btn btn--primary" type="submit">배치 저장</button>
+                      <span className="form-hint" style={{ margin: 0 }}>
+                        저장 시 기존 선택을 모두 지우고 화면 상태로 다시 저장합니다.
+                      </span>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* 이벤트 만들기(등록) */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <h2 className="card__title">이벤트 만들기</h2>
         <form method="post" action="/api/admin/events">
