@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
+import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { pool, findTenantBySlug } from "@/lib/db";
 import type { Admin, Tenant } from "@/types";
 
@@ -21,6 +22,7 @@ export async function POST(
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
+    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });

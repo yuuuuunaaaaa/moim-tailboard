@@ -26,15 +26,48 @@ export default async function AdminPage({ searchParams }: Props) {
       "SELECT id, slug, name FROM tenant ORDER BY name ASC",
     );
     tenants = rows as Tenant[];
-    const slugParam = sp.tenant;
-    tenant =
-      (slugParam ? tenants.find((t) => t.slug === slugParam) : undefined) ??
-      tenants[0];
-    if (!tenant) {
+    const slugParam = (sp.tenant ?? "").trim();
+
+    if (!slugParam) {
+      if (tenants.length === 0) {
+        return (
+          <div style={{ padding: "48px", textAlign: "center" }}>등록된 지역이 없습니다.</div>
+        );
+      }
       return (
-        <div style={{ padding: "48px", textAlign: "center" }}>등록된 지역이 없습니다.</div>
+        <>
+          <Header
+            username={username}
+            isAdmin={isAdmin}
+            canChooseTenant={canChooseTenant}
+            showAdminLink
+          />
+          <main className="container">
+            <h1>관리 — 지역 선택</h1>
+            <p className="page-subtitle">관리할 지역을 선택하세요. (최고 관리자)</p>
+            <ul className="event-list">
+              {tenants.map((t) => (
+                <li key={t.id} className="event-item">
+                  <a href={`/admin?tenant=${encodeURIComponent(t.slug)}`}>{t.name}</a>
+                  <div className="event-meta">{t.slug}</div>
+                </li>
+              ))}
+            </ul>
+            <p style={{ marginTop: "24px" }}>
+              <a href="/" className="back-link">← 참여용 지역 목록(메인)</a>
+            </p>
+          </main>
+        </>
       );
     }
+
+    const found = tenants.find((t) => t.slug === slugParam);
+    if (!found) {
+      return (
+        <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>
+      );
+    }
+    tenant = found;
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [[row]] = await pool.query<any[]>(
