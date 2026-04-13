@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, loadAdminByUsername } from "@/lib/auth";
+import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const cookieStore = request.cookies;
     const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
-    const admin = await loadAdminByUsername(username);
+    const admin = await loadAdminByUsernameCached(username);
     const access = checkTenantAccess(admin, tenant, allowedSlug);
     if (access === "forbidden") return new Response("접근이 거부되었습니다.", { status: 403 });
 
