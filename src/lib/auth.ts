@@ -1,8 +1,18 @@
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { pool } from "./db";
 import { verifyToken } from "./jwt-verify";
 import type { Admin } from "@/types";
+
+/** 0이면 캐시 비활성(개발 시 DB 변경 즉시 반영). 미설정 시 300초. */
+function adminCacheRevalidateSeconds(): number {
+  const raw = process.env.ADMIN_CACHE_REVALIDATE_SECONDS;
+  if (raw === undefined || raw === "") return 300;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 300;
+}
 
 /**
  * Route Handler에서 쿠키의 JWT를 검증해 username을 얻습니다.
@@ -60,10 +70,26 @@ export async function loadAdminByUsername(username: string): Promise<Admin | nul
   }
 }
 
+/**
+ * 관리자 행 조회 + Full Route Cache(데이터 캐시).
+ * 동일 username은 TTL 동안 DB를 다시 보지 않음(요청 간·서버리스 인스턴스 재사용 시 유효).
+ */
+export const loadAdminByUsernameCached = cache(async (username: string): Promise<Admin | null> => {
+  const u = username.trim();
+  if (!u) return null;
+  const ttl = adminCacheRevalidateSeconds();
+  if (ttl === 0) return loadAdminByUsername(u);
+  return unstable_cache(
+    async () => loadAdminByUsername(u),
+    ["loadAdminByUsername", u],
+    { revalidate: ttl },
+  )();
+});
+
 export async function getPageContext() {
   const authUser = await getAuthUser();
   const effectiveUsername = authUser?.username ?? null;
-  const admin = effectiveUsername ? await loadAdminByUsername(effectiveUsername) : null;
+  const admin = effectiveUsername ? await loadAdminByUsernameCached(effectiveUsername) : null;
   const isAdmin = !!admin;
   const canChooseTenant = isAdmin && !!admin?.is_superadmin;
 
