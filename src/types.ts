@@ -21,6 +21,10 @@ export interface Event {
   description: string | null;
   event_date: Date | string;
   is_active: number;
+  /** 참가 신청 방 알림 말머리. null/빈 문자열이면 기본 👤 */
+  telegram_participant_join_prefix?: string | null;
+  /** 참가 취소 방 알림 말머리. null/빈 문자열이면 기본 👤 */
+  telegram_participant_leave_prefix?: string | null;
 }
 
 export interface OptionGroup {

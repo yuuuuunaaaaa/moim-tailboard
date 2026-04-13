@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { checkTenantAccess } from "@/lib/tenantRestrict";
-import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
+import { sendMessage, eventDetailUrl, buildParticipantCountTelegramHtml } from "@/lib/telegram";
 import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 
 // POST /api/participants — 참여 신청 (JWT → username → DB)
@@ -68,9 +68,16 @@ export async function POST(request: NextRequest) {
       [event.id],
     );
     const link = eventDetailUrl(tenant.slug, event.id);
+    const joinPrefix = event.telegram_participant_join_prefix ?? "";
     await sendMessage(
       tenant.chat_room_id,
-      `👤 <b>${escapeHtml(event.title)}</b>\n신청자 수: ${cnt}명 (+1)\n<a href="${escapeHtml(link)}">바로가기</a>`,
+      buildParticipantCountTelegramHtml({
+        eventTitle: event.title,
+        link,
+        count: cnt,
+        deltaLabel: "+1",
+        prefix: joinPrefix,
+      }),
     );
 
     return NextResponse.redirect(

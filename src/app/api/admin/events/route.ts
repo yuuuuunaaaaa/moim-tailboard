@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { pool, findTenantBySlug } from "@/lib/db";
-import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
+import { sendMessage, eventDetailUrl, buildNewEventTelegramHtml } from "@/lib/telegram";
 import type { Admin, Tenant } from "@/types";
 
 function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
     const description = String(formData.get("description") ?? "").trim() || null;
     const eventDate = String(formData.get("eventDate") ?? "");
     const isActive = formData.get("isActive") !== "false" ? 1 : 0;
+    const telegramNotifyIcon = String(formData.get("telegramNotifyIcon") ?? "").trim().slice(0, 32) || null;
+    const telegramNotifyHeadline = String(formData.get("telegramNotifyHeadline") ?? "").trim().slice(0, 120) || null;
+    const telegramNotifyExtra = String(formData.get("telegramNotifyExtra") ?? "").trim().slice(0, 500) || null;
+    const eventJoinPrefix =
+      String(formData.get("eventTelegramJoinPrefix") ?? "").trim().slice(0, 64) || null;
+    const eventLeavePrefix =
+      String(formData.get("eventTelegramLeavePrefix") ?? "").trim().slice(0, 64) || null;
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
@@ -36,8 +43,8 @@ export async function POST(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [result] = await pool.query<any>(
-      "INSERT INTO event (tenant_id, title, description, event_date, is_active) VALUES (?, ?, ?, ?, ?)",
-      [tenant.id, title, description, when, isActive],
+      "INSERT INTO event (tenant_id, title, description, event_date, is_active, telegram_participant_join_prefix, telegram_participant_leave_prefix) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [tenant.id, title, description, when, isActive, eventJoinPrefix, eventLeavePrefix],
     );
     const eventId = result.insertId;
 
@@ -70,10 +77,14 @@ export async function POST(request: NextRequest) {
     );
 
     const link = eventDetailUrl(tenant.slug, eventId);
-    await sendMessage(
-      tenant.chat_room_id,
-      `📅 <b>새 이벤트가 생성되었습니다!</b>\n이벤트명: ${escapeHtml(title)}\n<a href="${escapeHtml(link)}">바로가기</a>`,
-    );
+    const telegramBody = buildNewEventTelegramHtml({
+      title,
+      link,
+      notifyIcon: telegramNotifyIcon,
+      notifyHeadline: telegramNotifyHeadline,
+      notifyExtra: telegramNotifyExtra,
+    });
+    await sendMessage(tenant.chat_room_id, telegramBody);
 
     return NextResponse.redirect(
       new URL(`/t/${tenant.slug}/events/${eventId}`, request.url),

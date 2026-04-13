@@ -196,6 +196,28 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
                         <div className="row">
                           <textarea name="description" placeholder="설명(선택)" defaultValue={ev.description ?? ""} />
                         </div>
+                        <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
+                            <input
+                              type="text"
+                              name="eventTelegramJoinPrefix"
+                              maxLength={64}
+                              placeholder="비우면 👤"
+                              defaultValue={ev.telegram_participant_join_prefix ?? ""}
+                            />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
+                            <input
+                              type="text"
+                              name="eventTelegramLeavePrefix"
+                              maxLength={64}
+                              placeholder="비우면 👤"
+                              defaultValue={ev.telegram_participant_leave_prefix ?? ""}
+                            />
+                          </div>
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                           <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--muted)" }}>옵션 그룹 추가</span>
                           <button
@@ -336,6 +358,51 @@ export default function AdminEventEdit({ tenant, tenants, events, groupsByEvent,
                   공개 (목록에 표시)
                 </label>
               </div>
+              <details className="form-group" style={{ marginTop: "12px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
+                  텔레그램 알림 커스텀 (이번 생성에만 적용)
+                </summary>
+                <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
+                  방에 보내는 1회 알림입니다. DB에 저장되지 않습니다. 비우면 기본 문구(📅·제목·링크)를 씁니다.
+                </p>
+                <div className="form-group">
+                  <label>말머리(이모지 등)</label>
+                  <input name="telegramNotifyIcon" maxLength={32} placeholder="기본: 📅" />
+                </div>
+                <div className="form-group">
+                  <label>굵은 제목 한 줄</label>
+                  <input
+                    name="telegramNotifyHeadline"
+                    maxLength={120}
+                    placeholder="기본: 새 이벤트가 생성되었습니다!"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>추가 문구</label>
+                  <textarea
+                    name="telegramNotifyExtra"
+                    maxLength={500}
+                    placeholder="이벤트명·링크 위·아래에 붙는 안내 (줄바꿈 가능)"
+                    style={{ minHeight: "72px" }}
+                  />
+                </div>
+              </details>
+              <details className="form-group" style={{ marginTop: "12px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
+                  참가/취소 방 알림 말머리 (이 이벤트에 저장)
+                </summary>
+                <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
+                  신청(+1)·취소(-1) 텔레그램 알림 앞 이모지/문구입니다. 비우면 👤. 이벤트마다 다르게 둘 수 있습니다.
+                </p>
+                <div className="form-group">
+                  <label>참가 신청 시</label>
+                  <input name="eventTelegramJoinPrefix" maxLength={64} placeholder="예: ✅" />
+                </div>
+                <div className="form-group">
+                  <label>참가 취소 시</label>
+                  <input name="eventTelegramLeavePrefix" maxLength={64} placeholder="예: 👋" />
+                </div>
+              </details>
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>

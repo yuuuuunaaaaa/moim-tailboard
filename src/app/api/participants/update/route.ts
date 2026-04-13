@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
-import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
+import { sendMessage, eventDetailUrl, buildParticipantCountTelegramHtml } from "@/lib/telegram";
 
 // POST /api/participants/update — 수정 또는 취소 (JWT → username → DB)
 export async function POST(request: NextRequest) {
@@ -61,14 +61,21 @@ export async function POST(request: NextRequest) {
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [[ev]] = await pool.query<any[]>(
-        "SELECT title FROM event WHERE id = ? LIMIT 1",
+        "SELECT title, telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
         [participant.event_id],
       );
       const link = eventDetailUrl(tenant.slug, participant.event_id);
-      const titleText = escapeHtml(ev?.title ?? "이벤트");
+      const titleText = ev?.title ?? "이벤트";
+      const leavePrefix = ev?.telegram_participant_leave_prefix ?? "";
       await sendMessage(
         tenant.chat_room_id,
-        `👤 <b>${titleText}</b>\n신청자 수: ${cnt}명 (-1)\n<a href="${escapeHtml(link)}">바로가기</a>`,
+        buildParticipantCountTelegramHtml({
+          eventTitle: titleText,
+          link,
+          count: cnt,
+          deltaLabel: "-1",
+          prefix: leavePrefix,
+        }),
       );
     } else {
       const newName = name || participant.name;
