@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
+import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
 import type { Admin, Tenant } from "@/types";
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
+    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim() || null;
     const eventDate = String(formData.get("eventDate") ?? "");

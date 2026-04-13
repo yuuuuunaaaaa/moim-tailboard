@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "jose": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.11.3",
     "next": "^15.3.0",
