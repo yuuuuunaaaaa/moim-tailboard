@@ -85,7 +85,7 @@ export default async function AdminPage({ searchParams }: Props) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [eventRows] = await pool.query<any[]>(
-    "SELECT id, title, description, event_date, is_active FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
+    "SELECT id, title, description, event_date, is_active, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
     [tenant.id],
   );
   const events = eventRows as Event[];

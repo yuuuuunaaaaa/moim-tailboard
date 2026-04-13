@@ -52,6 +52,9 @@ CREATE TABLE event (
   event_date DATETIME(3) NOT NULL,
   -- 이벤트 노출/비노출 여부
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  -- 참가/취소 방 알림 말머리(이모지 등). NULL 이면 기본 👤
+  telegram_participant_join_prefix VARCHAR(64) NULL DEFAULT NULL COMMENT '참가 신청 텔레그램 알림 말머리',
+  telegram_participant_leave_prefix VARCHAR(64) NULL DEFAULT NULL COMMENT '참가 취소 텔레그램 알림 말머리',
   -- 생성/수정 시각
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),

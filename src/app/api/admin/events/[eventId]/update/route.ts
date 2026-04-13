@@ -26,6 +26,10 @@ export async function POST(
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim() || null;
     const eventDate = String(formData.get("eventDate") ?? "");
+    const eventJoinPrefix =
+      String(formData.get("eventTelegramJoinPrefix") ?? "").trim().slice(0, 64) || null;
+    const eventLeavePrefix =
+      String(formData.get("eventTelegramLeavePrefix") ?? "").trim().slice(0, 64) || null;
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
@@ -37,8 +41,8 @@ export async function POST(
     }
 
     await pool.query(
-      "UPDATE event SET title = ?, description = ?, event_date = ? WHERE id = ? AND tenant_id = ?",
-      [title, description, when, eventId, tenant.id],
+      "UPDATE event SET title = ?, description = ?, event_date = ?, telegram_participant_join_prefix = ?, telegram_participant_leave_prefix = ? WHERE id = ? AND tenant_id = ?",
+      [title, description, when, eventJoinPrefix, eventLeavePrefix, eventId, tenant.id],
     );
 
     // 수정 폼에서 새 옵션 그룹 추가
