@@ -198,11 +198,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                             formAction={`/api/admin/option-groups/${g.id}/delete`}
                             name="tenantSlug"
                             value={tenant.slug}
-                            onClick={(e) => {
-                              if (!confirm("옵션 그룹을 삭제하시겠습니까? (선택 데이터도 함께 정리됩니다)")) {
-                                e.preventDefault();
-                              }
-                            }}
                           >
                             삭제
                           </button>
