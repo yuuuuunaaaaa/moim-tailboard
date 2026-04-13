@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 
 interface TelegramAuthProps {
   tenantSlug?: string;
-  /** 로그인 페이지에서만 사용 (Telegram Login Widget 표시용) */
-  botName?: string;
-  authUrl?: string;
+  /** true: /login 페이지 — 텔레그램 위젯은 부모에서 삽입 */
+  loginPage?: boolean;
 }
 
 declare global {
@@ -21,111 +20,120 @@ declare global {
   }
 }
 
-export default function TelegramAuth({ tenantSlug, botName, authUrl }: TelegramAuthProps) {
+export default function TelegramAuth({ tenantSlug, loginPage = false }: TelegramAuthProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [isWebApp, setIsWebApp] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  const isLoginPage = !!(botName && authUrl);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
+    const loginQs = tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : "";
 
     if (tg?.initData) {
       setIsWebApp(true);
-      if (isLoginPage) {
-        // 로그인 페이지: WebApp 자동 로그인
+      if (loginPage) {
         setStatus("loading");
         tg.ready?.();
         fetch("/api/auth/telegram-webapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ initData: tg.initData, tenantSlug: tenantSlug || "" }),
         })
           .then((r) => r.json())
           .then((data) => {
-            if (!data.ok || !data.token) {
+            if (!data.success || typeof data.username !== "string") {
               setStatus("error");
               return;
             }
-            const maxAge = 90 * 24 * 60 * 60;
-            document.cookie = `auth_token=${data.token}; path=/; max-age=${maxAge}`;
-            const uname = data.user?.username || String(data.user?.id || "");
-            if (uname) document.cookie = `username=${uname}; path=/; max-age=${maxAge}`;
             window.location.href = "/";
           })
           .catch(() => setStatus("error"));
       } else {
-        // 이벤트 상세: WebApp 자동 로그인 후 페이지 새로고침
         setStatus("loading");
         tg.ready?.();
         tg.expand?.();
         fetch("/api/auth/telegram-webapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ initData: tg.initData, tenantSlug: tenantSlug || "" }),
         })
           .then((r) => r.json())
           .then((data) => {
-            if (!data.ok || !data.token) {
-              window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+            if (!data.success || typeof data.username !== "string") {
+              window.location.href = `/login${loginQs}`;
               return;
             }
-            const maxAge = 90 * 24 * 60 * 60;
-            document.cookie = `auth_token=${data.token}; path=/; max-age=${maxAge}`;
-            const uname = data.user?.username || String(data.user?.id || "");
-            if (uname) document.cookie = `username=${uname}; path=/; max-age=${maxAge}`;
             window.location.reload();
           })
           .catch(() => {
-            window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+            window.location.href = `/login${loginQs}`;
           });
       }
-    } else if (isLoginPage) {
-      // 로그인 페이지 + 비WebApp → 위젯 표시
-      setIsDesktop(true);
-    } else {
-      // 이벤트 상세 + 비WebApp → 로그인 페이지로
-      window.location.href = `/login?tenant=${encodeURIComponent(tenantSlug || "")}`;
+    } else if (!loginPage) {
+      window.location.href = `/login${loginQs}`;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!isLoginPage) return null;
+  if (!loginPage) return null;
 
   return (
     <>
-      {/* WebApp 자동 로그인 */}
-      {isWebApp && (
-        <div id="webapp-section">
-          {status === "loading" && <p style={{ margin: "24px 0", color: "#6b7280" }}>로그인 중...</p>}
-          {status === "error" && (
-            <p style={{ margin: "24px 0", color: "var(--danger)" }}>
-              로그인에 실패했습니다. 텔레그램에서 다시 열어 주세요.
-            </p>
-          )}
-        </div>
+      {isWebApp && status === "loading" && (
+        <p className="login-webapp-status">로그인 중…</p>
       )}
 
-      {/* PC 브라우저: Login Widget */}
-      {isDesktop && (
-        <div id="desktop-section">
-          <div className="login-widget-wrap">
-            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <script
-              async
-              src="https://telegram.org/js/telegram-widget.js?22"
-              data-telegram-login={botName}
-              data-size="large"
-              data-auth-url={authUrl}
-              data-request-access="write"
-            />
-          </div>
-          <p style={{ marginTop: "16px" }}>
-            <a href="/">← 돌아가기</a>
+      {isWebApp && status === "error" && (
+        <div className="login-error-box">
+          <p className="login-error-title">
+            텔레그램에 <strong>공개 사용자명(username)</strong>이 없으면 자동 로그인이 되지 않습니다.
+          </p>
+          <p className="login-error-hint">
+            아래 <strong>Log in with Telegram</strong> 버튼으로 로그인하거나, 설정 → 사용자명에서 공개
+            사용자명을 만든 뒤 이 페이지를 새로고침해 주세요.
           </p>
         </div>
       )}
+
+      {!isWebApp && (
+        <p className="login-browser-hint">
+          아래 버튼으로 텔레그램에 로그인해 주세요. (공개 사용자명 필요)
+        </p>
+      )}
+      <style>{`
+        .login-webapp-status {
+          margin: 0 0 12px;
+          color: #6b7280;
+          font-size: 0.95rem;
+        }
+        .login-error-box {
+          margin: 0 0 16px;
+          text-align: left;
+          padding: 14px 16px;
+          background: #fef2f2;
+          border-radius: 10px;
+          border: 1px solid #fecaca;
+        }
+        .login-error-title {
+          color: #b91c1c;
+          margin: 0 0 10px;
+          font-size: 0.95rem;
+          line-height: 1.45;
+        }
+        .login-error-hint {
+          color: #57534e;
+          margin: 0;
+          font-size: 0.9rem;
+          line-height: 1.5;
+        }
+        .login-browser-hint {
+          margin: 0 0 16px;
+          color: #6b7280;
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+      `}</style>
     </>
   );
 }

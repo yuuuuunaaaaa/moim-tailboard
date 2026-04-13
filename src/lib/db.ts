@@ -1,20 +1,5 @@
 import mysql from "mysql2/promise";
-import fs from "node:fs";
 import type { Tenant } from "@/types";
-
-function buildSslOption(): Record<string, unknown> {
-  const content = process.env.DB_SSL_CA_CONTENT;
-  const caPath = process.env.DB_SSL_CA;
-  if (content?.trim()) return { ssl: { ca: content.trim() } };
-  if (caPath?.trim()) {
-    try {
-      return { ssl: { ca: fs.readFileSync(caPath.trim()) } };
-    } catch (e) {
-      console.warn("[db] DB_SSL_CA file not found, connecting without SSL:", (e as Error).message);
-    }
-  }
-  return {};
-}
 
 // Vercel Serverless 환경에서는 connectionLimit을 낮게 유지
 const pool = mysql.createPool({
@@ -29,7 +14,6 @@ const pool = mysql.createPool({
   connectTimeout: 15000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 30000,
-  ...buildSslOption(),
 });
 
 try {

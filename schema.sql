@@ -22,11 +22,12 @@ create table admin
 (
     id          int auto_increment
         primary key,
-    telegram_id int                                      null comment '텔레그램 사용자 ID (unique)',
-    username    varchar(20)                              not null comment '텔레그램 아이디',
-    name        varchar(255)                             null comment '관리자 표시 이름 (선택)',
-    tenant_id   int                                      not null,
-    created_at  datetime(3) default CURRENT_TIMESTAMP(3) not null,
+    tenant_id     int                                      not null,
+    username      varchar(20)                              not null comment '텔레그램 아이디',
+    telegram_id   int                                      null comment '텔레그램 사용자 ID (unique)',
+    name          varchar(255)                             null comment '관리자 표시 이름 (선택)',
+    created_at    datetime(3) default CURRENT_TIMESTAMP(3) not null,
+    is_superadmin bit         default b'0'                 not null comment '최고 관리자 여부',
     constraint uq_admin_telegram_id
         unique (telegram_id),
     constraint fk_admin_tenant

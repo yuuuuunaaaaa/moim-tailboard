@@ -2,29 +2,26 @@
   "name": "moim-tailboard",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
-    "jose": "^6.0.0",
-    "jsonwebtoken": "^9.0.3",
+    "jose": "^6.2.2",
     "mysql2": "^3.11.3",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {
-    "node": ">=18",
+    "node": ">=20.9.0",
     "npm": ">=10"
   }
 }

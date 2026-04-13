@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/jwt";
+import { getUserFromRequest, loadAdminByUsername } from "@/lib/auth";
 import { pool, findTenantBySlug } from "@/lib/db";
-import { loadAdminByUsername } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { sendMessage, eventDetailUrl, escapeHtml } from "@/lib/telegram";
 
-async function getLoggedInUsername(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth_token")?.value;
-  const usernameCookie = cookieStore.get("username")?.value?.trim() || null;
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload?.username) return payload.username;
-  }
-  return usernameCookie;
-}
-
-// POST /api/participants/update — 수정 또는 취소
+// POST /api/participants/update — 수정 또는 취소 (JWT → username → DB)
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -30,7 +17,10 @@ export async function POST(request: NextRequest) {
       process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
     const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
 
-    const username = (await getLoggedInUsername()) ?? (isDevBypass ? usernameFromForm : null);
+    const auth = await getUserFromRequest(request);
+    let username = auth?.username ?? null;
+    if (!username && isDevBypass) username = usernameFromForm;
+
     if (!username) {
       return new Response("로그인이 필요합니다.", { status: 401 });
     }
@@ -38,7 +28,7 @@ export async function POST(request: NextRequest) {
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
 
-    const cookieStore = await cookies();
+    const cookieStore = request.cookies;
     const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
     const admin = await loadAdminByUsername(username);
     const access = checkTenantAccess(admin, tenant, allowedSlug);
