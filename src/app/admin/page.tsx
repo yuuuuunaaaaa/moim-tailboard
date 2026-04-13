@@ -3,10 +3,10 @@ import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
-import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
+import type { Event, OptionGroup, OptionItem, Tenant } from "@/types";
 
 interface Props {
-  searchParams: Promise<{ tenant?: string; edit?: string }>;
+  searchParams: Promise<{ tenant?: string }>;
 }
 
 export const metadata = { title: "관리 · 꼬리달기" };
@@ -90,8 +90,6 @@ export default async function AdminPage({ searchParams }: Props) {
   );
   const events = eventRows as Event[];
   const eventIds = events.map((e) => e.id);
-  const editEventId = Number((sp.edit ?? "").trim());
-  const hasEdit = Number.isFinite(editEventId) && editEventId > 0;
 
   let optionGroups: (OptionGroup & { items: OptionItem[] })[] = [];
 
@@ -126,28 +124,6 @@ export default async function AdminPage({ searchParams }: Props) {
     groupsByEvent[g.event_id].push(g);
   });
 
-  let editParticipants: Participant[] = [];
-  let editParticipantOptions: ParticipantOption[] = [];
-  if (hasEdit) {
-    const target = events.find((e) => e.id === editEventId);
-    if (target) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [pRows] = await pool.query<any[]>(
-        "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
-        [editEventId],
-      );
-      editParticipants = pRows as Participant[];
-      if (editParticipants.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const [poRows] = await pool.query<any[]>(
-          "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
-          [editParticipants.map((p) => p.id)],
-        );
-        editParticipantOptions = poRows as ParticipantOption[];
-      }
-    }
-  }
-
   return (
     <>
       <Header
@@ -176,13 +152,8 @@ export default async function AdminPage({ searchParams }: Props) {
         </div>
         <AdminEventEdit
           tenant={tenant}
-          tenants={tenants}
           events={events}
           groupsByEvent={groupsByEvent}
-          username={username}
-          editEventId={hasEdit ? editEventId : null}
-          editParticipants={editParticipants}
-          editParticipantOptions={editParticipantOptions}
         />
       </main>
       <style>{`
