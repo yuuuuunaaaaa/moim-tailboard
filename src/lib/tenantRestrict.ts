@@ -18,11 +18,30 @@ export function checkTenantAccess(
 ): "allowed" | "forbidden" | "init" {
   if (admin) {
     if (admin.is_superadmin) return "allowed";
-    if (admin.tenant_id === tenant.id) return "allowed";
+    if (admin.tenant_id === tenant.id) {
+      // 비-superadmin: URL 테넌트는 DB 소속과 일치. 쿠키도 동일하게 맞춰 참여자·API와 완전히 분리.
+      if (allowedSlug !== tenant.slug) return "init";
+      return "allowed";
+    }
     return "forbidden";
   }
 
   if (allowedSlug && allowedSlug !== tenant.slug) return "forbidden";
   if (!allowedSlug) return "init";
   return "allowed";
+}
+
+/**
+ * Route Handler용. HTML은 `init`일 때 init-tenant로 보내고,
+ * 일반 관리자는 소속 테넌트면 쿠키 미동기 상태에서도 API는 허용(DB tenant_id가 최종 권한).
+ */
+export function isTenantAccessGrantedForApi(
+  admin: Admin | null,
+  tenant: Tenant,
+  allowedSlug: string | undefined,
+): boolean {
+  const access = checkTenantAccess(admin, tenant, allowedSlug);
+  if (access === "allowed") return true;
+  if (access === "forbidden") return false;
+  return !!(admin && !admin.is_superadmin && admin.tenant_id === tenant.id);
 }

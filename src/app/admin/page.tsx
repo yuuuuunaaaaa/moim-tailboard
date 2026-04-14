@@ -3,6 +3,7 @@ import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event, OptionGroup, OptionItem, Tenant } from "@/types";
 
 interface Props {
@@ -16,6 +17,7 @@ export default async function AdminPage({ searchParams }: Props) {
   if (!admin) redirect("/login");
 
   const sp = await searchParams;
+  const slugParam = (sp.tenant ?? "").trim();
 
   let tenant: Tenant;
   let tenants: Tenant[];
@@ -26,7 +28,6 @@ export default async function AdminPage({ searchParams }: Props) {
       "SELECT id, slug, name FROM tenant ORDER BY name ASC",
     );
     tenants = rows as Tenant[];
-    const slugParam = (sp.tenant ?? "").trim();
 
     if (!slugParam) {
       if (tenants.length === 0) {
@@ -81,6 +82,9 @@ export default async function AdminPage({ searchParams }: Props) {
     }
     tenant = row as Tenant;
     tenants = [tenant];
+    if (slugParam && slugParam !== tenant.slug) {
+      redirect(`/admin?tenant=${encodeURIComponent(tenant.slug)}`);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,10 +130,12 @@ export default async function AdminPage({ searchParams }: Props) {
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
+        tenantSlug={tenant.slug}
         showAdminLink
       />
       <main className="container container--wide">
@@ -137,10 +143,8 @@ export default async function AdminPage({ searchParams }: Props) {
         <div className="tenant-pills">
           {tenants.length > 1 && (
             <select
-              onChange={undefined}
               defaultValue={tenant.slug}
               style={{ padding: "8px 14px", borderRadius: "999px", border: "1px solid var(--border)", fontSize: "0.9375rem" }}
-              // Client-side tenant switch handled via AdminEventEdit
             >
               {tenants.map((t) => (
                 <option key={t.id} value={t.slug}>{t.name}</option>

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
+import OptionGroupNestedDeleteButton from "@/components/OptionGroupNestedDeleteButton";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
 
 interface Props {
@@ -53,6 +55,11 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     );
     if (!row) return <div style={{ padding: "48px", textAlign: "center" }}>소속 지역을 찾을 수 없습니다.</div>;
     tenant = row as Tenant;
+    if (slugParam && slugParam !== tenant.slug) {
+      redirect(
+        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}`,
+      );
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,6 +119,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}
@@ -178,29 +186,31 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                       <form method="post" action={`/api/admin/option-groups/${g.id}/update`}>
                         <input type="hidden" name="tenantSlug" value={tenant.slug} />
                         <input type="hidden" name="eventId" value={event.id} />
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                          <input type="text" name="groupName" defaultValue={g.name} required style={{ flex: 1 }} />
-                          <label style={{ whiteSpace: "nowrap", fontSize: "0.8125rem", margin: 0 }}>
-                            <input
-                              type="checkbox"
-                              name="multipleSelect"
-                              value="true"
-                              defaultChecked={!!g.multiple_select}
-                              style={{ width: "auto", marginRight: "4px" }}
-                            />
-                            복수선택
-                          </label>
-                          <button className="btn btn--secondary btn--sm" type="submit">저장</button>
-                          <button
-                            type="submit"
-                            className="btn btn--danger btn--sm"
-                            formMethod="post"
-                            formAction={`/api/admin/option-groups/${g.id}/delete`}
-                            name="tenantSlug"
-                            value={tenant.slug}
-                          >
-                            삭제
-                          </button>
+                        <div className="option-group-edit-head">
+                          <input
+                            type="text"
+                            name="groupName"
+                            className="option-group-edit-name"
+                            defaultValue={g.name}
+                            required
+                            placeholder="옵션 그룹 이름"
+                            autoComplete="off"
+                          />
+                          <div className="option-group-edit-actions">
+                            <label className="option-group-edit-check">
+                              <input
+                                type="checkbox"
+                                name="multipleSelect"
+                                value="true"
+                                defaultChecked={!!g.multiple_select}
+                              />
+                              복수선택
+                            </label>
+                            <button className="btn btn--secondary option-group-edit-btn" type="submit">
+                              저장
+                            </button>
+                            <OptionGroupNestedDeleteButton groupId={g.id} tenantSlug={tenant.slug} />
+                          </div>
                         </div>
                         <textarea
                           name="itemsText"
@@ -221,17 +231,28 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             <form method="post" action="/api/admin/options">
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <input type="hidden" name="eventId" value={event.id} />
-              <div className="row">
-                <input name="groupName" required placeholder="그룹 이름 (예: 식사)" />
-                <label style={{ whiteSpace: "nowrap", fontSize: "0.875rem", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                  <input type="checkbox" name="multipleSelect" value="true" style={{ width: "auto" }} />
-                  복수선택
-                </label>
+              <div className="option-group-edit-head">
+                <input
+                  type="text"
+                  name="groupName"
+                  className="option-group-edit-name"
+                  required
+                  placeholder="그룹 이름 (예: 식사)"
+                  autoComplete="off"
+                />
+                <div className="option-group-edit-actions">
+                  <label className="option-group-edit-check">
+                    <input type="checkbox" name="multipleSelect" value="true" />
+                    복수선택
+                  </label>
+                </div>
               </div>
-              <div className="row">
+              <div className="row" style={{ marginTop: "8px" }}>
                 <textarea name="options" placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"} />
               </div>
-              <button className="btn btn--secondary btn--sm" type="submit">추가</button>
+              <button className="btn btn--secondary option-group-edit-btn" type="submit" style={{ marginTop: "10px" }}>
+                추가
+              </button>
             </form>
           </div>
 

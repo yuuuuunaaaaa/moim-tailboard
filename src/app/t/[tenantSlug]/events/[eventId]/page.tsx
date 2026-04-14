@@ -4,6 +4,7 @@ import { pool, findTenantBySlug } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import TelegramAuth from "@/components/TelegramAuth";
 import ParticipantList from "@/components/ParticipantList";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
@@ -85,6 +86,7 @@ export default async function EventDetailPage({ params }: Props) {
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}

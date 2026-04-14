@@ -4,6 +4,7 @@ import { pool, findTenantBySlug } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
 
 interface Props {
@@ -43,6 +44,7 @@ export default async function EventListPage({ params }: Props) {
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}

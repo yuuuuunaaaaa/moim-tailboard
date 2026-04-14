@@ -314,12 +314,12 @@ input[type="radio"] {
   color: var(--primary);
   text-decoration: none;
 }
+/* 모바일 우선: 관리 화면은 단일 열 */
 .admin-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr;
+  gap: 20px;
 }
-@media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
 
 /* Participant list (mobile-first) */
 .p-list { list-style: none; padding: 0; margin: 0; }
@@ -370,6 +370,46 @@ input[type="radio"] {
   border-radius: var(--radius-sm);
   padding: 12px;
   margin-bottom: 10px;
+}
+
+/* 옵션 그룹 이름/액션 — 모바일 전용 터치 타깃, 이름 입력 전체 너비 */
+.option-group-edit-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.option-group-edit-name {
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+.option-group-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.option-group-edit-check {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.option-group-edit-check input[type="checkbox"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-right: 6px;
+}
+.option-group-edit-btn {
+  min-height: 44px;
+  padding: 10px 16px;
+  font-size: 0.9375rem;
 }
 
 /* Admin FAB */

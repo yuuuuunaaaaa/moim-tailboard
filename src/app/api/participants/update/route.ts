@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { pool, findTenantBySlug } from "@/lib/db";
-import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
+import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { sendMessage, eventDetailUrl, buildParticipantCountTelegramHtml } from "@/lib/telegram";
 
 // POST /api/participants/update — 수정 또는 취소 (JWT → username → DB)
@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
     const cookieStore = request.cookies;
     const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
     const admin = await loadAdminByUsernameCached(username);
-    const access = checkTenantAccess(admin, tenant, allowedSlug);
-    if (access === "forbidden") return new Response("접근이 거부되었습니다.", { status: 403 });
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug)) {
+      return new Response("접근이 거부되었습니다.", { status: 403 });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [[participant]] = await pool.query<any[]>(

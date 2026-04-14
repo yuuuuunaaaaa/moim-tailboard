@@ -3,6 +3,7 @@ import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import AdminEventCreateForm from "@/components/AdminEventCreateForm";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Tenant } from "@/types";
 
 interface Props {
@@ -61,11 +62,21 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
     if (!row) return <div style={{ padding: "48px", textAlign: "center" }}>소속 지역을 찾을 수 없습니다.</div>;
     tenant = row as Tenant;
     tenants = [tenant];
+    if (slugParam && slugParam !== tenant.slug) {
+      redirect(`/admin/events/new?tenant=${encodeURIComponent(tenant.slug)}`);
+    }
   }
 
   return (
     <>
-      <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
+      <TenantSlugPersist slug={tenant.slug} />
+      <Header
+        username={username}
+        isAdmin={isAdmin}
+        canChooseTenant={canChooseTenant}
+        tenantSlug={tenant.slug}
+        showAdminLink
+      />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>이벤트 등록 — {tenant.name}</h1>
