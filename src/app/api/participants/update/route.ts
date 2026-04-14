@@ -92,8 +92,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const toast = mode === "delete" ? "cancelled" : "updated";
     return NextResponse.redirect(
-      new URL(`/t/${tenant.slug}/events/${participant.event_id}`, request.url),
+      new URL(`/t/${tenant.slug}/events/${participant.event_id}?toast=${toast}`, request.url),
       303,
     );
   } catch (err) {
