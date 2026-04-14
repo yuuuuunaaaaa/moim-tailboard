@@ -34,12 +34,7 @@ export default async function LoginPage({ searchParams }: Props) {
       <main className="container">
         <div className="login-page">
           <div className="card login-card">
-            <h1>텔레그램으로 로그인</h1>
-            <p className="page-subtitle login-subtitle">
-              이 화면은 <strong>텔레그램 미니 앱</strong>에서 열리도록 되어 있습니다. 일반 브라우저로
-              들어오면 텔레그램 앱으로 안내합니다. 로그인에는 텔레그램{" "}
-              <strong>공개 사용자명</strong>이 필요합니다.
-            </p>
+            <h1 style={{ marginBottom: "30px" }}>텔레그램으로 로그인</h1>
             {invalidOpenUrlHint && (
               <div className="login-openurl-misconfig" role="alert">
                 <strong>환경 변수 안내</strong>
@@ -64,28 +59,6 @@ export default async function LoginPage({ searchParams }: Props) {
                 </div>
               </div>
             )}
-            <details className="login-telegram-help">
-              <summary>미니 앱·로그인이 안 될 때</summary>
-              <ul>
-                <li>
-                  BotFather에서 미니 앱 URL이 <code>https://</code>로 시작하는 이 사이트의{" "}
-                  <code>/login</code>(또는 동일 도메인)인지 확인하세요.{" "}
-                  <code>/setdomain</code> 도메인도 주소창 호스트와 같아야 합니다.
-                </li>
-                <li>
-                  환경 변수 <code>NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL</code>(t.me 전체 링크) 또는{" "}
-                  <code>NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME</code>이 봇 설정과 같아야 브라우저에서
-                  텔레그램으로 넘어갑니다.
-                </li>
-                <li>
-                  테넌트별로 들어온 경우 <code>startapp</code>으로 지역이 넘어갑니다. 봇 메뉴 URL만
-                  쓰는 경우에는 미니 앱 주소에 <code>?tenantSlug=…</code>를 넣을 수도 있습니다.
-                </li>
-                <li>
-                  로컬은 <code>localhost</code> 대신 ngrok 등 HTTPS 공개 URL로 테스트하세요.
-                </li>
-              </ul>
-            </details>
           </div>
         </div>
       </main>
