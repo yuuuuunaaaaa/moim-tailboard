@@ -59,40 +59,6 @@ export default function JoinParticipantForm({
         <input id="studentNo" name="studentNo" placeholder="선택 입력" />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="username">사용자명</label>
-        {username ? (
-          <>
-            <input
-              id="username"
-              type="text"
-              readOnly
-              className="input-readonly"
-              value={username}
-            />
-            <p className="form-hint">로그인한 계정으로 참여됩니다.</p>
-          </>
-        ) : isDevBypass ? (
-          <>
-            <input
-              id="username"
-              name="username"
-              required
-              placeholder="개발 모드: 사용자명을 입력하세요 (예: yourname)"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            <p className="form-hint">개발 모드에서는 텔레그램 로그인 없이 테스트할 수 있습니다.</p>
-          </>
-        ) : (
-          <p className="form-hint form-hint--warning">
-            로그인이 필요합니다. <a href={`/login?tenant=${encodeURIComponent(tenantSlug)}`}>로그인</a>하거나
-            텔레그램에서 열어 주세요.
-          </p>
-        )}
-      </div>
-
       {optionGroups.map((group) => {
         const groupOptions = groupedItems.get(group.id) || [];
         return (

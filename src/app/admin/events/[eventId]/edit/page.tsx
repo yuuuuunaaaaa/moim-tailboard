@@ -136,14 +136,14 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             <h2 className="card__title">이벤트 정보</h2>
             <form method="post" action={`/api/admin/events/${event.id}/update`}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <div className="row">
+              <div className="row admin-edit-row">
                 <input type="text" name="title" defaultValue={event.title} required placeholder="제목" />
                 <input type="datetime-local" name="eventDate" defaultValue={eventDateVal} required />
               </div>
-              <div className="row">
+              <div className="row admin-edit-row">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />
               </div>
-              <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
+              <div className="row admin-edit-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
                   <input
@@ -165,7 +165,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+              <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>
                 <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${event.id}`}>이벤트 보기</a>
               </div>
@@ -183,12 +183,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   return (
                     <div key={g.id} className="option-group-card">
                       <div
-                        style={{
-                          display: "flex",
-                          gap: "12px",
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                        }}
+                        className="admin-og-row"
                       >
                         <form
                           method="post"
@@ -289,7 +284,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             ) : (
               <form method="post" action={`/api/admin/events/${event.id}/participants/batch-update`}>
                 <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                <div className="participants-wrap">
+                <div className="participants-wrap admin-participants-wrap">
                   <table className="table">
                     <thead>
                       <tr>
@@ -354,6 +349,90 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
           </div>
         </div>
       </main>
+      <style>{`
+        /* Prevent page-level horizontal overflow on mobile.
+           Tables are allowed to scroll inside .participants-wrap. */
+        .container--wide {
+          overflow-x: hidden;
+        }
+        .admin-grid,
+        .card {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .admin-og-row {
+          min-width: 0;
+        }
+
+        .admin-edit-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+          flex-wrap: wrap;
+        }
+        .admin-edit-actions .btn {
+          min-height: 44px;
+        }
+
+        .admin-og-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .admin-og-row .option-group-edit-btn {
+          min-height: 44px;
+        }
+
+        .admin-participants-wrap {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .admin-participants-wrap .table {
+          min-width: 720px;
+        }
+
+        /* Mobile-first: stack rows and make inputs full width */
+        @media (max-width: 640px) {
+          .admin-edit-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .admin-edit-row input,
+          .admin-edit-row textarea {
+            width: 100%;
+          }
+          .admin-edit-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .admin-edit-actions .btn {
+            width: 100%;
+          }
+          .option-group-edit-head {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .option-group-edit-actions {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .option-group-edit-actions button,
+          .option-group-edit-actions .btn {
+            min-height: 44px;
+          }
+          .admin-og-row form {
+            width: 100%;
+          }
+          .admin-og-row > form:last-child {
+            width: 100%;
+          }
+          .admin-og-row > form:last-child .btn {
+            width: 100%;
+          }
+        }
+      `}</style>
     </>
   );
 }
