@@ -13,7 +13,6 @@ export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
   const tenantSlug = (sp.tenantSlug || sp.tenant || "").trim();
   const botName =
-    process.env.TELEGRAM_BOT_NAME ||
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
 
