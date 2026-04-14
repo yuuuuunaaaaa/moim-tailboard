@@ -49,14 +49,14 @@ export default function JoinParticipantForm({
 
       <div className="form-group">
         <label htmlFor="name">이름</label>
-        <input id="name" name="name" required placeholder="이름을 입력하세요" />
+        <input id="name" name="name" type="text" required placeholder="이름을 입력하세요" />
       </div>
 
       <div className="form-group">
         <label htmlFor="studentNo">
           학번 <span className="optional">(동명이인일 때만)</span>
         </label>
-        <input id="studentNo" name="studentNo" placeholder="선택 입력" />
+        <input id="studentNo" name="studentNo" type="text" placeholder="선택 입력" />
       </div>
 
       {optionGroups.map((group) => {

@@ -8,6 +8,7 @@ import TenantSlugPersist from "@/components/TenantSlugPersist";
 import TelegramAuth from "@/components/TelegramAuth";
 import ParticipantList from "@/components/ParticipantList";
 import JoinParticipantForm from "@/components/JoinParticipantForm";
+import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 
 interface Props {
@@ -111,12 +112,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       )}
       <main className="container container--wide">
         {toastText && (
-          <div className="toast-banner" role="status" aria-live="polite">
-            <span>{toastText}</span>
-            <a className="toast-close" href={`/t/${tenant.slug}/events/${event.id}`}>
-              닫기
-            </a>
-          </div>
+          <AutoToast message={toastText} clearHref={`/t/${tenant.slug}/events/${event.id}`} timeoutMs={2000} />
         )}
         <a href={`/t/${tenant.slug}/events`} className="back-link">
           ← 이벤트 목록
@@ -153,25 +149,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </div>
       </main>
       <style>{`
-        .toast-banner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 12px 14px;
-          border-radius: 12px;
-          border: 1px solid #bbf7d0;
-          background: #ecfdf5;
-          color: #065f46;
-          margin: 0 0 12px;
-          font-size: 0.95rem;
-        }
-        .toast-close {
-          flex: 0 0 auto;
-          text-decoration: underline;
-          color: inherit;
-          font-weight: 600;
-        }
         .card__title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .card__title-row .card__title { margin-bottom: 0; }
         .p-group-block { margin-bottom: 18px; }
