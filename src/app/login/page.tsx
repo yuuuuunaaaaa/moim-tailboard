@@ -34,9 +34,6 @@ export default async function LoginPage({ searchParams }: Props) {
             <div className="login-widget-block">
               <TelegramLoginWidget botName={botName} tenantSlug={tenantSlug || undefined} />
             </div>
-            <p className="login-back">
-              <a href="/">← 돌아가기</a>
-            </p>
           </div>
         </div>
       </main>

@@ -4,6 +4,7 @@ import {
   getWebAppUsernameFromInitData,
 } from "@/lib/verifyTelegram";
 import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
+import { assertLoginTenantContext } from "@/lib/authTenantLogin";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const JWT_READY = !!process.env.JWT_SECRET?.trim();
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = (await request.json()) as { initData?: string };
+    const body = (await request.json()) as { initData?: string; tenantSlug?: string };
     const initData = body?.initData;
     if (!initData || typeof initData !== "string") {
       return NextResponse.json({ success: false, error: "initData required" }, { status: 400 });
@@ -55,6 +56,12 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 },
       );
+    }
+
+    const tenantSlug = typeof body.tenantSlug === "string" ? body.tenantSlug.trim() : "";
+    const gate = await assertLoginTenantContext(username, tenantSlug);
+    if (!gate.ok) {
+      return NextResponse.json({ success: false, error: gate.error }, { status: gate.status });
     }
 
     const token = await signToken(username);
