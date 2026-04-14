@@ -2,7 +2,7 @@ import Script from "next/script";
 import Header from "@/components/Header";
 import TelegramAuth from "@/components/TelegramAuth";
 import TelegramLoginWidget from "@/components/TelegramLoginWidget";
-import { resolveTelegramWebAppOpenUrl } from "@/lib/telegramWebAppOpenUrl";
+import { resolveTelegramWebAppOpenConfig } from "@/lib/telegramWebAppOpenUrl";
 
 interface Props {
   searchParams: Promise<{ tenantSlug?: string; tenant?: string }>;
@@ -16,7 +16,8 @@ export default async function LoginPage({ searchParams }: Props) {
   const botName =
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
-  const webAppOpenUrl = resolveTelegramWebAppOpenUrl(botName);
+  const { openUrl: webAppOpenUrl, invalidOpenUrlHint } =
+    resolveTelegramWebAppOpenConfig(botName);
   const skipWebAppRedirect =
     process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
   const widgetFallback =
@@ -39,6 +40,12 @@ export default async function LoginPage({ searchParams }: Props) {
               들어오면 텔레그램 앱으로 안내합니다. 로그인에는 텔레그램{" "}
               <strong>공개 사용자명</strong>이 필요합니다.
             </p>
+            {invalidOpenUrlHint && (
+              <div className="login-openurl-misconfig" role="alert">
+                <strong>환경 변수 안내</strong>
+                <p>{invalidOpenUrlHint}</p>
+              </div>
+            )}
             <TelegramAuth
               tenantSlug={tenantSlug}
               loginPage
@@ -97,6 +104,25 @@ export default async function LoginPage({ searchParams }: Props) {
           margin-bottom: 20px;
           line-height: 1.55;
           color: #4b5563;
+        }
+        .login-openurl-misconfig {
+          text-align: left;
+          margin: 0 0 18px;
+          padding: 14px 16px;
+          background: #fffbeb;
+          border: 1px solid #fcd34d;
+          border-radius: 10px;
+          font-size: 0.9rem;
+          line-height: 1.55;
+          color: #78350f;
+        }
+        .login-openurl-misconfig strong {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 0.95rem;
+        }
+        .login-openurl-misconfig p {
+          margin: 0;
         }
         .login-widget-fallback {
           margin-top: 8px;
