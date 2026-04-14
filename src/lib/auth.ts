@@ -41,13 +41,30 @@ const ADMIN_SELECT_WITH_SUPER =
 const ADMIN_SELECT_BASE =
   "SELECT id, telegram_id, username, tenant_id, name FROM admin WHERE username = ? LIMIT 1";
 
+/**
+ * MySQL BIT(1) 등은 mysql2가 Buffer로 돌려줄 수 있음. Buffer는 바이트가 0이어도 객체로 truthy라
+ * `!!row.is_superadmin`만 쓰면 비-superadmin도 전원 superadmin처럼 동작할 수 있다.
+ */
+function normalizeIsSuperadmin(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value == null) return false;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+    return value.length > 0 && value[0] === 1;
+  }
+  if (typeof value === "string") {
+    const s = value.trim().toLowerCase();
+    return s === "1" || s === "true";
+  }
+  return false;
+}
+
 /** username으로 관리자 행 조회 (서비스 로직 전용; 로그인 시에는 호출하지 않음) */
 export async function loadAdminByUsername(username: string): Promise<Admin | null> {
   const u = username.trim();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRow = (row: any): Admin => ({
     ...row,
-    is_superadmin: !!row?.is_superadmin,
+    is_superadmin: normalizeIsSuperadmin(row?.is_superadmin),
   });
 
   try {
