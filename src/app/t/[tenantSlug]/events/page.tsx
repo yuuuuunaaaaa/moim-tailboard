@@ -81,15 +81,6 @@ export default async function EventListPage({ params }: Props) {
           </ul>
         )}
       </main>
-      {isAdmin && (
-        <a href={`/admin?tenant=${tenant.slug}`} className="admin-fab" title="관리 페이지">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M12 14c-5 0-8 2-8 3v1h16v-1c0-1-3-3-8-3z" />
-            <path d="M19 3l2 2-9 9-4 1 1-4z" />
-          </svg>
-        </a>
-      )}
     </>
   );
 }
