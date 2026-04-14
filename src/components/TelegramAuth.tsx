@@ -228,16 +228,8 @@ export default function TelegramAuth({
       {webViewNoInitData && (
         <div className="login-error-box">
           <p className="login-error-title">
-            텔레그램 안에서 열렸지만 로그인 정보(initData)를 받지 못했습니다.
+            텔레그램 안에서 열렸지만 로그인 정보를 받지 못했습니다.
           </p>
-          <p className="login-error-hint">
-            아래를 순서대로 시도해 보세요. BotFather 미니 앱 URL이 <code>https</code>인지,{" "}
-            <code>/setdomain</code>이 이 사이트 주소와 같은지 확인해 주세요.
-          </p>
-          <ul className="login-error-list">
-            <li>이 화면을 아래로 당겨 새로고침</li>
-            <li>봇 메뉴에서 미니 앱을 닫았다가 다시 열기</li>
-          </ul>
         </div>
       )}
 
@@ -246,21 +238,15 @@ export default function TelegramAuth({
           <p className="login-error-title">
             텔레그램에 <strong>공개 사용자명(username)</strong>이 없으면 자동 로그인이 되지 않습니다.
           </p>
-          <p className="login-error-hint">
-            텔레그램 설정 → 사용자명에서 공개 사용자명을 만든 뒤, 봇 메뉴에서 미니 앱을 다시 열어 주세요.
-          </p>
         </div>
       )}
 
       {!insideTelegram && webAppOpenUrl && !skipWebAppRedirect && !browserStuck && (
-        <p className="login-webapp-status">텔레그램 미니 앱으로 이동합니다…</p>
+        <p className="login-webapp-status">텔레그램으로 이동합니다…</p>
       )}
 
       {!insideTelegram && webAppOpenUrl && (skipWebAppRedirect || browserStuck) && (
         <div className="login-webapp-manual">
-          <p className="login-webapp-manual-lead">
-            로그인은 <strong>텔레그램 미니 앱</strong>에서 진행됩니다. 아래 버튼으로 텔레그램을 여세요.
-          </p>
           <a className="login-webapp-open-btn" href={manualOpenUrl}>
             텔레그램에서 열기
           </a>
@@ -269,12 +255,8 @@ export default function TelegramAuth({
 
       {!insideTelegram && !webAppOpenUrl && (
         <div className="login-error-box" style={{ textAlign: "left" }}>
-          <p className="login-error-title" style={{ marginBottom: 8 }}>
-            미니 앱 주소가 설정되어 있지 않습니다.
-          </p>
-          <p className="login-error-hint" style={{ margin: 0 }}>
-            배포 환경에 <code>NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL</code> 또는{" "}
-            <code>NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME</code>을 설정해 주세요.
+          <p className="login-error-title">
+            텔레그램에서 접근해주세요
           </p>
         </div>
       )}
@@ -295,7 +277,7 @@ export default function TelegramAuth({
         }
         .login-error-title {
           color: #b91c1c;
-          margin: 0 0 10px;
+          margin: 0;
           font-size: 0.95rem;
           line-height: 1.45;
         }

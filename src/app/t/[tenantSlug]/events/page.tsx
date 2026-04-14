@@ -1,11 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { pool, findTenantBySlug } from "@/lib/db";
+import { pool, findTenantBySlugCached } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
   params: Promise<{ tenantSlug: string }>;
@@ -13,7 +14,7 @@ interface Props {
 
 export default async function EventListPage({ params }: Props) {
   const { tenantSlug } = await params;
-  const tenant = await findTenantBySlug(tenantSlug);
+  const tenant = await findTenantBySlugCached(tenantSlug);
   if (!tenant) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
 
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -52,8 +53,7 @@ export default async function EventListPage({ params }: Props) {
         tenantSlug={tenantSlug}
       />
       <main className="container">
-        {canChooseTenant && <a href="/" className="back-link">← 지역 선택</a>}
-        <h1>{tenant.name}</h1>
+        {canChooseTenant && <a href="/?stay=1" className="back-link">← 지역 선택</a>}
         <p className="page-subtitle">진행 중인 이벤트에 참여할 수 있습니다.</p>
         {events.length === 0 ? (
           <div className="empty-state">
@@ -74,7 +74,7 @@ export default async function EventListPage({ params }: Props) {
                     <rect x="3" y="4" width="18" height="18" rx="2" />
                     <path d="M16 2v4M8 2v4M3 10h18" />
                   </svg>
-                  {new Date(event.event_date).toISOString().slice(0, 10)}
+                  {toDateInputValue(event.event_date)}
                 </div>
               </li>
             ))}

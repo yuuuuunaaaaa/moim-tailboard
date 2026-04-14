@@ -19,6 +19,7 @@ export interface Event {
   tenant_id: number;
   title: string;
   description: string | null;
+  /** DATE (YYYY-MM-DD) */
   event_date: Date | string;
   is_active: number;
   /** 참가 신청 방 알림 말머리. null/빈 문자열이면 기본 👤 */

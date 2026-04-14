@@ -16,12 +16,15 @@ export default async function LoginPage({ searchParams }: Props) {
   const botName =
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
+  const isLocalWeb =
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_LOCAL_PREFER_WEB_LOGIN !== "0";
   const { openUrl: webAppOpenUrl, invalidOpenUrlHint } =
     resolveTelegramWebAppOpenConfig(botName);
   const skipWebAppRedirect =
-    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
+    isLocalWeb || process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
   const widgetFallback =
-    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_WIDGET_FALLBACK === "1";
+    isLocalWeb || process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_WIDGET_FALLBACK === "1";
   const widgetRequestAccess =
     process.env.NEXT_PUBLIC_TELEGRAM_WIDGET_REQUEST_ACCESS === "write"
       ? ("write" as const)
@@ -29,32 +32,38 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <>
-      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      {!isLocalWeb && (
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      )}
       <Header />
       <main className="container">
         <div className="login-page">
           <div className="card login-card">
-            <h1>텔레그램으로 로그인</h1>
-            <p className="page-subtitle login-subtitle">
-              이 화면은 <strong>텔레그램 미니 앱</strong>에서 열리도록 되어 있습니다. 일반 브라우저로
-              들어오면 텔레그램 앱으로 안내합니다. 로그인에는 텔레그램{" "}
-              <strong>공개 사용자명</strong>이 필요합니다.
-            </p>
+            <h1 style={{ marginBottom: "30px" }}>텔레그램으로 로그인</h1>
             {invalidOpenUrlHint && (
               <div className="login-openurl-misconfig" role="alert">
                 <strong>환경 변수 안내</strong>
                 <p>{invalidOpenUrlHint}</p>
               </div>
             )}
-            <TelegramAuth
-              tenantSlug={tenantSlug}
-              loginPage
-              webAppOpenUrl={webAppOpenUrl}
-              skipWebAppRedirect={skipWebAppRedirect}
-            />
+            {!isLocalWeb && (
+              <TelegramAuth
+                tenantSlug={tenantSlug}
+                loginPage
+                webAppOpenUrl={webAppOpenUrl}
+                skipWebAppRedirect={skipWebAppRedirect}
+              />
+            )}
+            {isLocalWeb && (
+              <p className="login-openurl-misconfig" style={{ marginBottom: "18px" }}>
+                로컬 개발 모드에서는 웹앱 이동 없이 브라우저 위젯으로 로그인합니다.
+              </p>
+            )}
             {widgetFallback && (
               <div className="login-widget-fallback">
-                <p className="login-widget-fallback-label">브라우저 위젯으로 로그인 (비상용)</p>
+                <p className="login-widget-fallback-label">
+                  브라우저 위젯으로 로그인{isLocalWeb ? "" : " (비상용)"}
+                </p>
                 <div className="login-widget-block">
                   <TelegramLoginWidget
                     botName={botName}
@@ -64,28 +73,6 @@ export default async function LoginPage({ searchParams }: Props) {
                 </div>
               </div>
             )}
-            <details className="login-telegram-help">
-              <summary>미니 앱·로그인이 안 될 때</summary>
-              <ul>
-                <li>
-                  BotFather에서 미니 앱 URL이 <code>https://</code>로 시작하는 이 사이트의{" "}
-                  <code>/login</code>(또는 동일 도메인)인지 확인하세요.{" "}
-                  <code>/setdomain</code> 도메인도 주소창 호스트와 같아야 합니다.
-                </li>
-                <li>
-                  환경 변수 <code>NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL</code>(t.me 전체 링크) 또는{" "}
-                  <code>NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME</code>이 봇 설정과 같아야 브라우저에서
-                  텔레그램으로 넘어갑니다.
-                </li>
-                <li>
-                  테넌트별로 들어온 경우 <code>startapp</code>으로 지역이 넘어갑니다. 봇 메뉴 URL만
-                  쓰는 경우에는 미니 앱 주소에 <code>?tenantSlug=…</code>를 넣을 수도 있습니다.
-                </li>
-                <li>
-                  로컬은 <code>localhost</code> 대신 ngrok 등 HTTPS 공개 URL로 테스트하세요.
-                </li>
-              </ul>
-            </details>
           </div>
         </div>
       </main>

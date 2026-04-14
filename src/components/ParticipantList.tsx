@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
+import Spinner from "@/components/Spinner";
 
 interface Props {
   participants: Participant[];
@@ -22,6 +23,7 @@ export default function ParticipantList({
 }: Props) {
   const [showFlat, setShowFlat] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
 
   const hasOptions = optionGroups.length > 0;
 
@@ -166,6 +168,10 @@ export default function ParticipantList({
                         className="p-edit-form"
                         method="post"
                         action="/api/participants/update"
+                        onSubmit={() => {
+                          if (submittingId != null) return;
+                          setSubmittingId(p.id);
+                        }}
                       >
                         <input type="hidden" name="tenantSlug" value={tenantSlug} />
                         <input type="hidden" name="participantId" value={p.id} />
@@ -179,13 +185,23 @@ export default function ParticipantList({
                           />
                         </div>
                         <div className="p-edit-actions">
-                          <button className="btn btn--secondary btn--sm" type="submit" name="mode" value="update">
-                            저장
+                          <button
+                            className="btn btn--secondary btn--sm"
+                            type="submit"
+                            name="mode"
+                            value="update"
+                            disabled={submittingId === p.id}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              {submittingId === p.id && <Spinner size={14} label="저장 중" />}
+                              {submittingId === p.id ? "저장 중..." : "저장"}
+                            </span>
                           </button>
                           <button
                             className="btn btn--sm"
                             type="button"
                             onClick={() => setEditingId(null)}
+                            disabled={submittingId === p.id}
                           >
                             닫기
                           </button>
@@ -194,11 +210,15 @@ export default function ParticipantList({
                             type="submit"
                             name="mode"
                             value="delete"
+                            disabled={submittingId === p.id}
                             onClick={(e) => {
                               if (!confirm("참여를 취소하시겠습니까?")) e.preventDefault();
                             }}
                           >
-                            삭제
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              {submittingId === p.id && <Spinner size={14} label="삭제 중" />}
+                              {submittingId === p.id ? "처리 중..." : "삭제"}
+                            </span>
                           </button>
                         </div>
                       </form>

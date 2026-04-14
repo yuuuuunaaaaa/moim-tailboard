@@ -3,14 +3,17 @@ import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
+import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
+import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
   params: Promise<{ eventId: string }>;
-  searchParams: Promise<{ tenant?: string }>;
+  searchParams: Promise<{ tenant?: string; toast?: string }>;
 }
 
-export const metadata = { title: "이벤트 수정 · 꼬리달기" };
+export const metadata = { title: "이벤트 수정" };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -24,6 +27,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
 
   const sp = await searchParams;
   const slugParam = (sp.tenant ?? "").trim();
+  const toast = (sp.toast ?? "").trim();
 
   let tenant: Tenant;
   if (admin.is_superadmin) {
@@ -108,13 +112,17 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     if (!participantOptMap[po.participant_id]) participantOptMap[po.participant_id] = new Set();
     participantOptMap[po.participant_id].add(po.option_item_id);
   });
+  const participantOptIds: Record<number, number[]> = {};
+  participants.forEach((p) => {
+    participantOptIds[p.id] = Array.from(participantOptMap[p.id] ?? []);
+  });
 
   const groupsWithItems = optionGroups.map((g) => ({
     ...g,
     items: optionItems.filter((oi) => oi.option_group_id === g.id),
   }));
 
-  const eventDateVal = new Date(event.event_date).toISOString().slice(0, 16);
+  const eventDateVal = toDateInputValue(event.event_date);
 
   return (
     <>
@@ -129,21 +137,28 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>이벤트 수정 — {tenant.name}</h1>
+        <h1>이벤트 수정</h1>
+        {toast === "row_saved" && (
+          <AutoToast
+            message="저장되었습니다."
+            clearHref={`/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`}
+            timeoutMs={2000}
+          />
+        )}
 
         <div className="admin-grid" style={{ marginTop: "12px" }}>
           <div className="card" style={{ gridColumn: "1 / -1" }}>
             <h2 className="card__title">이벤트 정보</h2>
             <form method="post" action={`/api/admin/events/${event.id}/update`}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <div className="row">
+              <div className="row admin-edit-row">
                 <input type="text" name="title" defaultValue={event.title} required placeholder="제목" />
-                <input type="datetime-local" name="eventDate" defaultValue={eventDateVal} required />
+                <input type="date" name="eventDate" defaultValue={eventDateVal} required />
               </div>
-              <div className="row">
+              <div className="row admin-edit-row">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />
               </div>
-              <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
+              <div className="row admin-edit-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
                   <input
@@ -165,7 +180,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+              <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>
                 <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${event.id}`}>이벤트 보기</a>
               </div>
@@ -183,12 +198,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   return (
                     <div key={g.id} className="option-group-card">
                       <div
-                        style={{
-                          display: "flex",
-                          gap: "12px",
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                        }}
+                        className="admin-og-row"
                       >
                         <form
                           method="post"
@@ -287,73 +297,106 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             ) : groupsWithItems.length === 0 ? (
               <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
             ) : (
-              <form method="post" action={`/api/admin/events/${event.id}/participants/batch-update`}>
-                <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                <div className="participants-wrap">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: "220px" }}>참여자</th>
-                        {groupsWithItems.map((g) => <th key={g.id}>{g.name}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {participants.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>{p.name}{p.student_no ? ` (${p.student_no})` : ""}</div>
-                            <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}><code>{p.username}</code></div>
-                          </td>
-                          {groupsWithItems.map((g) => {
-                            const key = `p_${p.id}_g_${g.id}`;
-                            const selected = participantOptMap[p.id] || new Set<number>();
-                            const hasAnyInGroup = g.items.some((opt) => selected.has(opt.id));
-                            return (
-                              <td key={g.id} style={{ minWidth: "220px" }}>
-                                {g.items.length === 0 ? (
-                                  <span style={{ color: "var(--muted)" }}>—</span>
-                                ) : g.multiple_select ? (
-                                  <div className="checkbox-group">
-                                    {g.items.map((opt) => (
-                                      <label key={opt.id} style={{ display: "block" }}>
-                                        <input type="checkbox" name={key} value={opt.id} defaultChecked={selected.has(opt.id)} />{" "}
-                                        {opt.name}
-                                      </label>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="radio-group">
-                                    <label style={{ display: "block", color: "var(--muted)" }}>
-                                      <input type="radio" name={key} value="" defaultChecked={!hasAnyInGroup} />{" "}
-                                      미선택
-                                    </label>
-                                    {g.items.map((opt) => (
-                                      <label key={opt.id} style={{ display: "block" }}>
-                                        <input type="radio" name={key} value={opt.id} defaultChecked={selected.has(opt.id)} />{" "}
-                                        {opt.name}
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ marginTop: "12px", display: "flex", gap: "8px", alignItems: "center" }}>
-                  <button className="btn btn--primary" type="submit">배치 저장</button>
-                  <span className="form-hint" style={{ margin: 0 }}>
-                    저장 시 기존 선택을 모두 지우고 화면 상태로 다시 저장합니다.
-                  </span>
-                </div>
-              </form>
+              <>
+                <p className="form-hint" style={{ marginTop: 0 }}>
+                  각 행 맨 오른쪽 <strong>수정</strong> 버튼을 누르면 해당 참여자만 저장됩니다.
+                </p>
+                <AdminParticipantOptionsGrid
+                  eventId={event.id}
+                  tenantSlug={tenant.slug}
+                  groups={groupsWithItems}
+                  participants={participants}
+                  participantOptMap={participantOptIds}
+                />
+              </>
             )}
           </div>
         </div>
       </main>
+      <style>{`
+        /* Prevent page-level horizontal overflow on mobile.
+           Tables are allowed to scroll inside .participants-wrap. */
+        .container--wide {
+          overflow-x: hidden;
+        }
+        .admin-grid,
+        .card {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .admin-og-row {
+          min-width: 0;
+        }
+
+        .admin-edit-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+          flex-wrap: wrap;
+        }
+        .admin-edit-actions .btn {
+          min-height: 44px;
+        }
+
+        .admin-og-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .admin-og-row .option-group-edit-btn {
+          min-height: 44px;
+        }
+
+        .admin-participants-wrap {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .admin-participants-wrap .table {
+          min-width: 720px;
+        }
+
+        /* Mobile-first: stack rows and make inputs full width */
+        @media (max-width: 640px) {
+          .admin-edit-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .admin-edit-row input,
+          .admin-edit-row textarea {
+            width: 100%;
+          }
+          .admin-edit-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .admin-edit-actions .btn {
+            width: 100%;
+          }
+          .option-group-edit-head {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .option-group-edit-actions {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .option-group-edit-actions button,
+          .option-group-edit-actions .btn {
+            min-height: 44px;
+          }
+          .admin-og-row form {
+            width: 100%;
+          }
+          .admin-og-row > form:last-child {
+            width: 100%;
+          }
+          .admin-og-row > form:last-child .btn {
+            width: 100%;
+          }
+        }
+      `}</style>
     </>
   );
 }

@@ -31,7 +31,7 @@ export default async function HomePage() {
               <ul className="event-list">
                 {tenants.map((t) => (
                   <li key={t.id} className="event-item">
-                    <a href={`/${t.slug}`}>{t.name}</a>
+                    <a href={`/t/${t.slug}/events`}>{t.name}</a>
                     <div className="event-meta">{t.slug}</div>
                   </li>
                 ))}

@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 import { pool } from "./db";
 import { verifyToken } from "./jwt-verify";
 import type { Admin } from "@/types";
+import { getDevDefaultUsername, isDevBypassEnabled } from "@/lib/dev";
 
 /** 0이면 캐시 비활성(개발 시 DB 변경 즉시 반영). 미설정 시 300초. */
 function adminCacheRevalidateSeconds(): number {
@@ -24,16 +25,24 @@ export async function getUserFromRequest(
   request: NextRequest,
 ): Promise<{ username: string } | null> {
   const token = request.cookies.get("auth_token")?.value;
-  if (!token) return null;
-  return verifyToken(token);
+  if (token) return verifyToken(token);
+  if (isDevBypassEnabled()) {
+    const u = getDevDefaultUsername();
+    if (u) return { username: u };
+  }
+  return null;
 }
 
 /** Server Component / Server Action: 쿠키에서 JWT 검증 */
 export async function getAuthUser(): Promise<{ username: string } | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value;
-  if (!token) return null;
-  return verifyToken(token);
+  if (token) return verifyToken(token);
+  if (isDevBypassEnabled()) {
+    const u = getDevDefaultUsername();
+    if (u) return { username: u };
+  }
+  return null;
 }
 
 const ADMIN_SELECT_WITH_SUPER =
@@ -103,7 +112,7 @@ export const loadAdminByUsernameCached = cache(async (username: string): Promise
   )();
 });
 
-export async function getPageContext() {
+export const getPageContext = cache(async () => {
   const authUser = await getAuthUser();
   const effectiveUsername = authUser?.username ?? null;
   const admin = effectiveUsername ? await loadAdminByUsernameCached(effectiveUsername) : null;
@@ -117,4 +126,4 @@ export async function getPageContext() {
     isAdmin,
     canChooseTenant,
   };
-}
+});

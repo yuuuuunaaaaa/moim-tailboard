@@ -1,25 +1,29 @@
+import { toDateInputValue } from "@/lib/dateOnly";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { pool, findTenantBySlug } from "@/lib/db";
+import { pool, findTenantBySlugCached } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import TelegramAuth from "@/components/TelegramAuth";
 import ParticipantList from "@/components/ParticipantList";
+import JoinParticipantForm from "@/components/JoinParticipantForm";
+import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 
 interface Props {
   params: Promise<{ tenantSlug: string; eventId: string }>;
+  searchParams?: Promise<{ toast?: string }>;
 }
 
-export default async function EventDetailPage({ params }: Props) {
+export default async function EventDetailPage({ params, searchParams }: Props) {
   const { tenantSlug, eventId: eventIdStr } = await params;
   const eventId = Number(eventIdStr);
   const isDevBypass =
     process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
 
-  const tenant = await findTenantBySlug(tenantSlug);
+  const tenant = await findTenantBySlugCached(tenantSlug);
   if (!tenant) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
 
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -81,8 +85,17 @@ export default async function EventDetailPage({ params }: Props) {
     participantOptions = poRows as ParticipantOption[];
   }
 
-  const eventDate = new Date(event.event_date);
-  const eventDateStr = eventDate.toISOString().slice(0, 16).replace("T", " ");
+  const eventDateStr = toDateInputValue(event.event_date);
+  const sp = (await searchParams) ?? {};
+  const toast = typeof sp.toast === "string" ? sp.toast : "";
+  const toastText =
+    toast === "joined"
+      ? "참여 신청이 완료되었습니다."
+      : toast === "updated"
+        ? "수정이 완료되었습니다."
+        : toast === "cancelled"
+          ? "참여가 취소되었습니다."
+          : "";
 
   return (
     <>
@@ -98,8 +111,11 @@ export default async function EventDetailPage({ params }: Props) {
         <TelegramAuth tenantSlug={tenantSlug} />
       )}
       <main className="container container--wide">
+        {toastText && (
+          <AutoToast message={toastText} clearHref={`/t/${tenant.slug}/events/${event.id}`} timeoutMs={2000} />
+        )}
         <a href={`/t/${tenant.slug}/events`} className="back-link">
-          ← {tenant.name} 이벤트 목록
+          ← 이벤트 목록
         </a>
         <h1>{event.title}</h1>
         <p className="page-subtitle">
@@ -111,99 +127,14 @@ export default async function EventDetailPage({ params }: Props) {
           {/* 참여 신청 폼 */}
           <div className="card">
             <h2 className="card__title">참여 신청</h2>
-            <form method="post" action="/api/participants">
-              <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <input type="hidden" name="eventId" value={event.id} />
-              <div className="form-group">
-                <label htmlFor="name">이름</label>
-                <input id="name" name="name" required placeholder="이름을 입력하세요" />
-              </div>
-              <div className="form-group">
-                <label htmlFor="studentNo">
-                  학번 <span className="optional">(동명이인일 때만)</span>
-                </label>
-                <input id="studentNo" name="studentNo" placeholder="선택 입력" />
-              </div>
-              <div className="form-group">
-                <label htmlFor="username">사용자명</label>
-                {username ? (
-                  <>
-                    <input
-                      id="username"
-                      type="text"
-                      readOnly
-                      className="input-readonly"
-                      value={username}
-                    />
-                    <p className="form-hint">로그인한 계정으로 참여됩니다.</p>
-                  </>
-                ) : isDevBypass ? (
-                  <>
-                    <input
-                      id="username"
-                      name="username"
-                      required
-                      placeholder="개발 모드: 사용자명을 입력하세요 (예: yourname)"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                    />
-                    <p className="form-hint">
-                      개발 모드에서는 텔레그램 로그인 없이 테스트할 수 있습니다.
-                    </p>
-                  </>
-                ) : (
-                  <p className="form-hint form-hint--warning">
-                    로그인이 필요합니다.{" "}
-                    <a href={`/login?tenant=${encodeURIComponent(tenant.slug)}`}>로그인</a>하거나
-                    텔레그램에서 열어 주세요.
-                  </p>
-                )}
-              </div>
-
-              {optionGroups.map((group) => {
-                const groupOptions = optionItems.filter((o) => o.option_group_id === group.id);
-                return (
-                  <div key={group.id} className="form-group option-group">
-                    <div className="option-group__name">{group.name}</div>
-                    {group.multiple_select ? (
-                      <div className="checkbox-group">
-                        {groupOptions.map((opt) => (
-                          <label key={opt.id}>
-                            <input type="checkbox" name="optionItemIds" value={opt.id} />
-                            {opt.name}
-                            {opt.limit_enabled && opt.limit_count
-                              ? ` (정원 ${opt.limit_count}명)`
-                              : ""}
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="radio-group">
-                        {groupOptions.map((opt) => (
-                          <label key={opt.id}>
-                            <input type="radio" name="optionItemIds" value={opt.id} />
-                            {opt.name}
-                            {opt.limit_enabled && opt.limit_count
-                              ? ` (정원 ${opt.limit_count}명)`
-                              : ""}
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              <button
-                className="btn btn--primary"
-                type="submit"
-                disabled={!username && !isDevBypass}
-                title={!username && !isDevBypass ? "텔레그램에서 열어 로그인해 주세요" : undefined}
-              >
-                참여하기
-              </button>
-            </form>
+            <JoinParticipantForm
+              tenantSlug={tenant.slug}
+              eventId={event.id}
+              username={username}
+              isDevBypass={isDevBypass}
+              optionGroups={optionGroups}
+              optionItems={optionItems}
+            />
           </div>
 
           {/* 참여자 목록 */}

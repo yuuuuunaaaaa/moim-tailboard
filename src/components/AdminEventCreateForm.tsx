@@ -70,8 +70,8 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
             <textarea name="description" placeholder="이벤트 설명" />
           </div>
           <div className="form-group">
-            <label>일시</label>
-            <input name="eventDate" type="datetime-local" required />
+            <label>날짜</label>
+            <input name="eventDate" type="date" required />
           </div>
           <div className="form-group">
             <label>
@@ -82,7 +82,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
 
           <details className="form-group" style={{ marginTop: "12px" }}>
             <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
-              텔레그램 알림 커스텀 (이번 생성에만 적용)
+              텔레그램 알림 메세지
             </summary>
             <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
               방에 보내는 1회 알림입니다. DB에 저장되지 않습니다. 비우면 기본 문구(📅·제목·링크)를 씁니다.

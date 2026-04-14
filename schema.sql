@@ -48,8 +48,8 @@ CREATE TABLE event (
   title VARCHAR(255) NOT NULL,
   -- 선택 설명
   description TEXT NULL,
-  -- 실제 진행 일시
-  event_date DATETIME(3) NOT NULL,
+  -- 실제 진행 일시 (DATE only)
+  event_date DATE NOT NULL,
   -- 이벤트 노출/비노출 여부
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   -- 참가/취소 방 알림 말머리(이모지 등). NULL 이면 기본 👤

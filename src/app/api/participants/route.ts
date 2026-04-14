@@ -80,10 +80,7 @@ export async function POST(request: NextRequest) {
       }),
     );
 
-    return NextResponse.redirect(
-      new URL(`/t/${tenant.slug}/events/${event.id}`, request.url),
-      303,
-    );
+    return NextResponse.redirect(new URL(`/t/${tenant.slug}/events/${event.id}?toast=joined`, request.url), 303);
   } catch (err) {
     console.error("POST /api/participants:", err);
     return new Response("Internal server error", { status: 500 });

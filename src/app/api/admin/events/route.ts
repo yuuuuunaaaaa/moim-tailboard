@@ -4,6 +4,7 @@ import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { sendMessage, eventDetailUrl, buildNewEventTelegramHtml } from "@/lib/telegram";
 import type { Admin, Tenant } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
   return admin.is_superadmin || admin.tenant_id === tenant.id;
@@ -36,15 +37,13 @@ export async function POST(request: NextRequest) {
       return new Response("소속 지역만 등록할 수 있습니다.", { status: 403 });
     }
 
-    const when = new Date(eventDate);
-    if (Number.isNaN(when.getTime())) {
-      return new Response("일시 형식이 올바르지 않습니다.", { status: 400 });
-    }
+    const dateOnly = toDateInputValue(eventDate);
+    if (!dateOnly) return new Response("날짜 형식이 올바르지 않습니다.", { status: 400 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [result] = await pool.query<any>(
       "INSERT INTO event (tenant_id, title, description, event_date, is_active, telegram_participant_join_prefix, telegram_participant_leave_prefix) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [tenant.id, title, description, when, isActive, eventJoinPrefix, eventLeavePrefix],
+      [tenant.id, title, description, dateOnly, isActive, eventJoinPrefix, eventLeavePrefix],
     );
     const eventId = result.insertId;
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import mysql from "mysql2/promise";
 import type { Tenant } from "@/types";
 
@@ -28,12 +29,6 @@ try {
   // ignore
 }
 
-export async function testConnection() {
-  const conn = await pool.getConnection();
-  await conn.ping();
-  conn.release();
-}
-
 export async function findTenantBySlug(slug: string): Promise<Tenant | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [rows] = await pool.query<any[]>(
@@ -42,5 +37,7 @@ export async function findTenantBySlug(slug: string): Promise<Tenant | null> {
   );
   return (rows[0] as Tenant) ?? null;
 }
+
+export const findTenantBySlugCached = cache(findTenantBySlug);
 
 export { pool };

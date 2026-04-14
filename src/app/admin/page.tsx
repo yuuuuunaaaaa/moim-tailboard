@@ -4,7 +4,7 @@ import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
-import type { Event, OptionGroup, OptionItem, Tenant } from "@/types";
+import type { Event, Tenant } from "@/types";
 
 interface Props {
   searchParams: Promise<{ tenant?: string }>;
@@ -93,40 +93,6 @@ export default async function AdminPage({ searchParams }: Props) {
     [tenant.id],
   );
   const events = eventRows as Event[];
-  const eventIds = events.map((e) => e.id);
-
-  let optionGroups: (OptionGroup & { items: OptionItem[] })[] = [];
-
-  if (eventIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [groupRows] = await pool.query<any[]>(
-      "SELECT * FROM option_group WHERE event_id IN (?) ORDER BY event_id, sort_order",
-      [eventIds],
-    );
-    const groups = groupRows as OptionGroup[];
-    const groupIds = groups.map((g) => g.id);
-
-    let items: OptionItem[] = [];
-    if (groupIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [itemRows] = await pool.query<any[]>(
-        "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY option_group_id, sort_order",
-        [groupIds],
-      );
-      items = itemRows as OptionItem[];
-    }
-
-    optionGroups = groups.map((g) => ({
-      ...g,
-      items: items.filter((i) => i.option_group_id === g.id),
-    }));
-  }
-
-  const groupsByEvent: Record<number, (OptionGroup & { items: OptionItem[] })[]> = {};
-  optionGroups.forEach((g) => {
-    if (!groupsByEvent[g.event_id]) groupsByEvent[g.event_id] = [];
-    groupsByEvent[g.event_id].push(g);
-  });
 
   return (
     <>
@@ -139,7 +105,7 @@ export default async function AdminPage({ searchParams }: Props) {
         showAdminLink
       />
       <main className="container container--wide">
-        <h1>관리 — {tenant.name}</h1>
+        <h1>관리</h1>
         <div className="tenant-pills">
           {tenants.length > 1 && (
             <select
@@ -157,7 +123,6 @@ export default async function AdminPage({ searchParams }: Props) {
         <AdminEventEdit
           tenant={tenant}
           events={events}
-          groupsByEvent={groupsByEvent}
         />
       </main>
       <style>{`
