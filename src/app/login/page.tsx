@@ -2,6 +2,7 @@ import Script from "next/script";
 import Header from "@/components/Header";
 import TelegramAuth from "@/components/TelegramAuth";
 import TelegramLoginWidget from "@/components/TelegramLoginWidget";
+import { resolveTelegramWebAppOpenUrl } from "@/lib/telegramWebAppOpenUrl";
 
 interface Props {
   searchParams: Promise<{ tenantSlug?: string; tenant?: string }>;
@@ -15,6 +16,11 @@ export default async function LoginPage({ searchParams }: Props) {
   const botName =
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
+  const webAppOpenUrl = resolveTelegramWebAppOpenUrl(botName);
+  const skipWebAppRedirect =
+    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
+  const widgetFallback =
+    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_WIDGET_FALLBACK === "1";
   const widgetRequestAccess =
     process.env.NEXT_PUBLIC_TELEGRAM_WIDGET_REQUEST_ACCESS === "write"
       ? ("write" as const)
@@ -29,41 +35,47 @@ export default async function LoginPage({ searchParams }: Props) {
           <div className="card login-card">
             <h1>텔레그램으로 로그인</h1>
             <p className="page-subtitle login-subtitle">
-              참여 시 본인 확인·수정에 사용됩니다. 서비스는 텔레그램 <strong>공개 사용자명</strong>으로
-              로그인합니다. 사용자명이 없으면 텔레그램 설정에서 먼저 사용자명을 만든 뒤 다시 시도해
-              주세요.
+              이 화면은 <strong>텔레그램 미니 앱</strong>에서 열리도록 되어 있습니다. 일반 브라우저로
+              들어오면 텔레그램 앱으로 안내합니다. 로그인에는 텔레그램{" "}
+              <strong>공개 사용자명</strong>이 필요합니다.
             </p>
-            <TelegramAuth tenantSlug={tenantSlug} loginPage />
-            <div className="login-widget-block">
-              <TelegramLoginWidget
-                botName={botName}
-                tenantSlug={tenantSlug || undefined}
-                requestAccess={widgetRequestAccess}
-              />
-            </div>
+            <TelegramAuth
+              tenantSlug={tenantSlug}
+              loginPage
+              webAppOpenUrl={webAppOpenUrl}
+              skipWebAppRedirect={skipWebAppRedirect}
+            />
+            {widgetFallback && (
+              <div className="login-widget-fallback">
+                <p className="login-widget-fallback-label">브라우저 위젯으로 로그인 (비상용)</p>
+                <div className="login-widget-block">
+                  <TelegramLoginWidget
+                    botName={botName}
+                    tenantSlug={tenantSlug || undefined}
+                    requestAccess={widgetRequestAccess}
+                  />
+                </div>
+              </div>
+            )}
             <details className="login-telegram-help">
-              <summary>번호 입력 후 텔레그램에 승인 요청이 안 올 때</summary>
+              <summary>미니 앱·로그인이 안 될 때</summary>
               <ul>
                 <li>
-                  <strong>@BotFather</strong>에서 <code>/setdomain</code>에 등록한 도메인이{" "}
-                  <strong>지금 주소창의 사이트 주소(호스트)</strong>와 같아야 합니다. (
-                  <code>https://</code> 없이 호스트만)
+                  BotFather에서 미니 앱 URL이 <code>https://</code>로 시작하는 이 사이트의{" "}
+                  <code>/login</code>(또는 동일 도메인)인지 확인하세요.{" "}
+                  <code>/setdomain</code> 도메인도 주소창 호스트와 같아야 합니다.
                 </li>
                 <li>
-                  <code>NEXT_PUBLIC_TELEGRAM_BOT_NAME</code>은 BotFather에 보이는 봇 사용자명(
-                  <code>@</code> 제외)과 같아야 합니다.
+                  환경 변수 <code>NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL</code>(t.me 전체 링크) 또는{" "}
+                  <code>NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME</code>이 봇 설정과 같아야 브라우저에서
+                  텔레그램으로 넘어갑니다.
                 </li>
                 <li>
-                  입력한 번호로 <strong>텔레그램 앱에 로그인된 계정</strong>이 맞는지, 알림·배터리
-                  절전으로 푸시가 막히지 않았는지 확인해 주세요.
+                  테넌트별로 들어온 경우 <code>startapp</code>으로 지역이 넘어갑니다. 봇 메뉴 URL만
+                  쓰는 경우에는 미니 앱 주소에 <code>?tenantSlug=…</code>를 넣을 수도 있습니다.
                 </li>
                 <li>
-                  카카오톡·문자·다른 앱 <strong>인앱 브라우저</strong>에서는 위젯이 불안정할 수
-                  있습니다. Safari·Chrome 등에서 주소를 직접 열어 다시 시도해 보세요.
-                </li>
-                <li>
-                  로컬 <code>localhost</code>는 도메인 등록이 어렵습니다. ngrok 등 HTTPS 공개 URL로
-                  접속해 테스트하세요.
+                  로컬은 <code>localhost</code> 대신 ngrok 등 HTTPS 공개 URL로 테스트하세요.
                 </li>
               </ul>
             </details>
@@ -86,6 +98,16 @@ export default async function LoginPage({ searchParams }: Props) {
           line-height: 1.55;
           color: #4b5563;
         }
+        .login-widget-fallback {
+          margin-top: 8px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .login-widget-fallback-label {
+          margin: 0 0 12px;
+          font-size: 0.8rem;
+          color: #9ca3af;
+        }
         .login-widget-block {
           display: flex;
           flex-direction: column;
@@ -95,7 +117,6 @@ export default async function LoginPage({ searchParams }: Props) {
           min-height: 52px;
           margin: 8px 0 4px;
         }
-        /* 텔레그램이 넣는 iframe을 카드 가운데에 고정 */
         .telegram-widget-mount {
           display: flex;
           justify-content: center;
@@ -109,10 +130,6 @@ export default async function LoginPage({ searchParams }: Props) {
           max-width: 100%;
           border: 0;
           vertical-align: middle;
-        }
-        .login-back {
-          margin-top: 20px;
-          margin-bottom: 0;
         }
         .login-telegram-help {
           margin-top: 24px;
