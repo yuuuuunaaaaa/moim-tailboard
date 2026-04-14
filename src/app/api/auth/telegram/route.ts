@@ -4,6 +4,7 @@ import {
   getLoginWidgetUsername,
 } from "@/lib/verifyTelegram";
 import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
+import { assertLoginTenantContext } from "@/lib/authTenantLogin";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const JWT_READY = !!process.env.JWT_SECRET?.trim();
@@ -35,20 +36,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = (await request.json()) as Record<string, unknown>;
-    if (!verifyTelegramLoginWidget(body, BOT_TOKEN)) {
+    const raw = (await request.json()) as Record<string, unknown>;
+    const tenantSlug =
+      typeof raw.tenantSlug === "string"
+        ? raw.tenantSlug.trim()
+        : typeof raw.tenant === "string"
+          ? raw.tenant.trim()
+          : "";
+    const telegramPayload = { ...raw };
+    delete telegramPayload.tenantSlug;
+    delete telegramPayload.tenant;
+
+    if (!verifyTelegramLoginWidget(telegramPayload, BOT_TOKEN)) {
       return NextResponse.json(
         { success: false, error: "Invalid Telegram login or expired auth_date" },
         { status: 400 },
       );
     }
 
-    const username = getLoginWidgetUsername(body);
+    const username = getLoginWidgetUsername(telegramPayload);
     if (!username) {
       return NextResponse.json(
         { success: false, error: "Telegram username is required for this service" },
         { status: 400 },
       );
+    }
+
+    const gate = await assertLoginTenantContext(username, tenantSlug);
+    if (!gate.ok) {
+      return NextResponse.json({ success: false, error: gate.error }, { status: gate.status });
     }
 
     const token = await signToken(username);
@@ -98,6 +114,14 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("tenantSlug")?.trim() ||
       request.nextUrl.searchParams.get("tenant")?.trim() ||
       "";
+
+    const gate = await assertLoginTenantContext(username, tenantSlug);
+    if (!gate.ok) {
+      return new Response(gate.error, {
+        status: gate.status,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
 
     const token = await signToken(username);
     const destination =

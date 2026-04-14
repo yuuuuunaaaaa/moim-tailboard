@@ -2,32 +2,62 @@
 
 import { useLayoutEffect, useRef } from "react";
 
+declare global {
+  interface Window {
+    /** 텔레그램 위젯 iframe이 부모 창에서 호출 (data-onauth) */
+    moimOnTelegramAuth?: (user: Record<string, unknown>) => void;
+  }
+}
+
 /**
  * 텔레그램 Login Widget — 스크립트를 이 컨테이너 안에만 넣어 카드 레이아웃이 깨지지 않게 함.
- * (next/script는 종종 body 끝에 붙어 iframe이 이상한 위치에 그려짐)
  *
- * data-auth-url 은 반드시 실제 접속 origin 과 일치해야 함. 서버에서 NEXT_PUBLIC_APP_URL 만으로
- * 조립하면 Vercel 배포 URL과 불일치해 oauth.telegram.org 에서 인증 후 넘어가지 않거나 /login 으로만
- * 머무는 경우가 있다. 그래서 브라우저의 location.origin 을 쓴다.
+ * data-auth-url(리다이렉트)만 쓰면 oauth.telegram.org iframe 안에서 인증 후
+ * 부모 창으로 넘어가지 못하고 “메시지를 보냈습니다…” 화면에서 멈추는 경우가 많다(특히 모바일).
+ * data-onauth 로 부모 페이지에서 POST /api/auth/telegram 한 뒤 이동한다.
+ *
+ * @see https://core.telegram.org/widgets/login
  */
 export default function TelegramLoginWidget({
   botName,
   tenantSlug,
 }: {
   botName: string;
-  /** 로그인 콜백에 붙일 쿼리 (?tenantSlug=) — 선택 */
+  /** 로그인 성공 후 init-tenant / 이벤트 목록 이동에 사용 — 선택 */
   tenantSlug?: string;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const tenantRef = useRef(tenantSlug);
+  tenantRef.current = tenantSlug;
 
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host || !botName || typeof window === "undefined") return;
 
-    const qs = tenantSlug?.trim()
-      ? `?tenantSlug=${encodeURIComponent(tenantSlug.trim())}`
-      : "";
-    const authUrl = `${window.location.origin}/api/auth/telegram${qs}`;
+    window.moimOnTelegramAuth = async (user: Record<string, unknown>) => {
+      try {
+        const slug = tenantRef.current?.trim() ?? "";
+        const res = await fetch("/api/auth/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ ...user, tenantSlug: slug }),
+        });
+        const data = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !data.success) {
+          window.alert(data.error || "로그인에 실패했습니다. 공개 사용자명(username)이 있는지 확인해 주세요.");
+          return;
+        }
+        if (slug) {
+          const nextPath = `/t/${encodeURIComponent(slug)}/events`;
+          window.location.href = `/api/init-tenant?slug=${encodeURIComponent(slug)}&next=${encodeURIComponent(nextPath)}`;
+          return;
+        }
+        window.location.href = "/";
+      } catch {
+        window.alert("로그인 요청 중 오류가 발생했습니다.");
+      }
+    };
 
     host.replaceChildren();
     const script = document.createElement("script");
@@ -35,11 +65,12 @@ export default function TelegramLoginWidget({
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.setAttribute("data-telegram-login", botName);
     script.setAttribute("data-size", "large");
-    script.setAttribute("data-auth-url", authUrl);
+    script.setAttribute("data-onauth", "moimOnTelegramAuth(user)");
     script.setAttribute("data-request-access", "write");
     host.appendChild(script);
 
     return () => {
+      delete window.moimOnTelegramAuth;
       host.replaceChildren();
     };
   }, [botName, tenantSlug]);
