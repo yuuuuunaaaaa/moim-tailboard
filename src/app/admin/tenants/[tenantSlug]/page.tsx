@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { pool, findTenantBySlug } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Admin } from "@/types";
 
 interface Props {
@@ -21,8 +22,15 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
     return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
   }
 
-  const canAccess = admin.is_superadmin || admin.tenant_id === tenant.id;
-  if (!canAccess) {
+  if (!admin.is_superadmin && admin.tenant_id !== tenant.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [[row]] = await pool.query<any[]>("SELECT slug FROM tenant WHERE id = ? LIMIT 1", [
+      admin.tenant_id,
+    ]);
+    const mySlug = row?.slug as string | undefined;
+    if (mySlug) {
+      redirect(`/admin/tenants/${encodeURIComponent(mySlug)}`);
+    }
     return (
       <div style={{ padding: "48px", textAlign: "center" }}>
         <h2>소속 지역만 조회할 수 있습니다.</h2>
@@ -50,16 +58,17 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
-        tenantSlug={tenantSlug}
+        tenantSlug={tenant.slug}
         showAdminLink
         showEventsLink
       />
       <main className="container container--wide">
-        <a href="/admin" className="back-link">← 관리</a>
+        <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>{tenant.name} · 관리자</h1>
         <p className="page-subtitle">
           이 지역의 관리자를 추가·삭제할 수 있습니다. 사용자명으로 식별됩니다.

@@ -3,6 +3,7 @@ import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import OptionGroupNestedDeleteButton from "@/components/OptionGroupNestedDeleteButton";
+import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
 
 interface Props {
@@ -54,6 +55,11 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     );
     if (!row) return <div style={{ padding: "48px", textAlign: "center" }}>소속 지역을 찾을 수 없습니다.</div>;
     tenant = row as Tenant;
+    if (slugParam && slugParam !== tenant.slug) {
+      redirect(
+        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}`,
+      );
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,6 +119,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
 
   return (
     <>
+      <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
         isAdmin={isAdmin}

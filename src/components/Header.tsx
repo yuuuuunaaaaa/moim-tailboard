@@ -19,6 +19,11 @@ export default function Header({
 }: HeaderProps) {
   const brandHref = canChooseTenant ? "/" : tenantSlug ? `/t/${tenantSlug}/events` : "/";
 
+  const adminHref =
+    isAdmin && !canChooseTenant && tenantSlug
+      ? `/admin?tenant=${encodeURIComponent(tenantSlug)}`
+      : "/admin";
+
   return (
     <header className="page-header">
       <div className="container">
@@ -34,7 +39,7 @@ export default function Header({
             <a href={`/t/${tenantSlug}/events`}>이벤트</a>
           )}
           {canChooseTenant && <a href="/">지역 선택</a>}
-          {isAdmin && (showAdminLink ? <a href="/admin">관리</a> : <a href="/admin">관리</a>)}
+          {isAdmin && (showAdminLink ? <a href={adminHref}>관리</a> : <a href={adminHref}>관리</a>)}
         </nav>
       </div>
     </header>
