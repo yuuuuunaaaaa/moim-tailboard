@@ -54,7 +54,7 @@ export default function JoinParticipantForm({
 
       <div className="form-group">
         <label htmlFor="studentNo">
-          학번 <span className="optional">(동명이인일 때만)</span>
+          학번 <span className="optional">(동명이인 있을 경우 입력)</span>
         </label>
         <input id="studentNo" name="studentNo" type="text" placeholder="선택 입력" />
       </div>

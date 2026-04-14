@@ -112,7 +112,7 @@ export const loadAdminByUsernameCached = cache(async (username: string): Promise
   )();
 });
 
-export async function getPageContext() {
+export const getPageContext = cache(async () => {
   const authUser = await getAuthUser();
   const effectiveUsername = authUser?.username ?? null;
   const admin = effectiveUsername ? await loadAdminByUsernameCached(effectiveUsername) : null;
@@ -126,4 +126,4 @@ export async function getPageContext() {
     isAdmin,
     canChooseTenant,
   };
-}
+});

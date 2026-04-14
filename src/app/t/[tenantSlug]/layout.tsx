@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { findTenantBySlug } from "@/lib/db";
+import { findTenantBySlugCached } from "@/lib/db";
 
 export async function generateMetadata(
   { params }: { params: Promise<{ tenantSlug: string }> },
 ): Promise<Metadata> {
   const { tenantSlug } = await params;
-  const tenant = await findTenantBySlug(tenantSlug);
+  const tenant = await findTenantBySlugCached(tenantSlug);
   const base = "꼬리달기";
   const title = tenant?.name ? `${tenant.name} ${base}` : base;
   return { title };

@@ -1,7 +1,7 @@
 import { toDateInputValue } from "@/lib/dateOnly";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { pool, findTenantBySlug } from "@/lib/db";
+import { pool, findTenantBySlugCached } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
@@ -23,7 +23,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const isDevBypass =
     process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
 
-  const tenant = await findTenantBySlug(tenantSlug);
+  const tenant = await findTenantBySlugCached(tenantSlug);
   if (!tenant) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
 
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();

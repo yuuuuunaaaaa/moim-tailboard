@@ -1,19 +1,11 @@
-"use client";
-
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
-import type { Event, OptionGroup, OptionItem, Tenant } from "@/types";
-
-interface GroupWithItems extends OptionGroup {
-  items: OptionItem[];
-}
+import type { Event, Tenant } from "@/types";
 
 interface Props {
   tenant: Tenant;
   events: Event[];
-  groupsByEvent: Record<number, GroupWithItems[]>;
 }
-export default function AdminEventEdit({ tenant, events, groupsByEvent }: Props) {
-
+export default function AdminEventEdit({ tenant, events }: Props) {
   return (
     <div className="admin-grid">
       {/* 이벤트 목록 */}
@@ -29,9 +21,6 @@ export default function AdminEventEdit({ tenant, events, groupsByEvent }: Props)
         ) : (
           <ul className="event-admin-list">
             {events.map((ev) => {
-              const groups = groupsByEvent[ev.id] || [];
-              const eventDateVal = new Date(ev.event_date).toISOString().slice(0, 16);
-
               return (
                 <li key={ev.id}>
                   <div className="event-admin-item">

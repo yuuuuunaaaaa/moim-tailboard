@@ -1,47 +1,38 @@
 import { getPageContext } from "@/lib/auth";
-import { pool } from "@/lib/db";
 
 interface HeaderProps {
   username?: string | null;
   isAdmin?: boolean;
   canChooseTenant?: boolean;
   tenantSlug?: string;
+  adminHref?: string;
   showEventListLink?: boolean;
   showAdminLink?: boolean;
   showEventsLink?: boolean;
 }
 
-async function tenantSlugById(tenantId: number): Promise<string | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [[row]] = await pool.query<any[]>("SELECT slug FROM tenant WHERE id = ? LIMIT 1", [tenantId]);
-  return (row?.slug as string | undefined) ?? null;
-}
-
 export default async function Header({
   username,
+  isAdmin,
   canChooseTenant,
   tenantSlug,
+  adminHref,
   showEventListLink,
   showAdminLink,
   showEventsLink,
 }: HeaderProps) {
-  const ctx = await getPageContext();
-  const admin = ctx.admin;
-  const displayUsername = username ?? ctx.username;
-  const isSuperAdmin = !!admin?.is_superadmin;
-  const canPickRegion = canChooseTenant ?? isSuperAdmin;
+  const needsContext = username === undefined || isAdmin === undefined || canChooseTenant === undefined;
+  const ctx = needsContext ? await getPageContext() : null;
+  const displayUsername = username ?? ctx?.username ?? null;
+  const hasAdminAccess = isAdmin ?? ctx?.isAdmin ?? false;
+  const canPickRegion = canChooseTenant ?? ctx?.canChooseTenant ?? false;
 
   const isDevBypass = process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1" && process.env.NODE_ENV === "development";
   const regionHref = isDevBypass ? "/?stay=1" : "/";
   const brandHref = canPickRegion ? regionHref : tenantSlug ? `/t/${tenantSlug}/events` : "/";
-
-  let adminHref = "/admin";
-  if (admin && !isSuperAdmin) {
-    const slug = await tenantSlugById(admin.tenant_id);
-    adminHref = slug ? `/admin?tenant=${encodeURIComponent(slug)}` : "/admin";
-  }
-
-  const showManageLink = !!admin && (showAdminLink !== false);
+  const resolvedAdminHref =
+    adminHref ?? (!canPickRegion && tenantSlug ? `/admin?tenant=${encodeURIComponent(tenantSlug)}` : "/admin");
+  const showManageLink = hasAdminAccess && showAdminLink !== false;
 
   return (
     <header className="page-header">
@@ -58,7 +49,7 @@ export default async function Header({
             <a href={`/t/${tenantSlug}/events`}>이벤트</a>
           )}
           {canPickRegion && <a href={regionHref}>지역 선택</a>}
-          {showManageLink && <a href={adminHref}>관리</a>}
+          {showManageLink && <a href={resolvedAdminHref}>관리</a>}
         </nav>
       </div>
     </header>
