@@ -137,10 +137,8 @@ export default async function AdminPage({ searchParams }: Props) {
         <div className="tenant-pills">
           {tenants.length > 1 && (
             <select
-              onChange={undefined}
               defaultValue={tenant.slug}
               style={{ padding: "8px 14px", borderRadius: "999px", border: "1px solid var(--border)", fontSize: "0.9375rem" }}
-              // Client-side tenant switch handled via AdminEventEdit
             >
               {tenants.map((t) => (
                 <option key={t.id} value={t.slug}>{t.name}</option>

@@ -127,13 +127,8 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                             method="post"
                             action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
                             style={{ display: "inline" }}
-                            onSubmit={undefined}
                           >
-                            <button
-                              type="submit"
-                              className="btn btn--danger"
-                              onClick={undefined}
-                            >
+                            <button type="submit" className="btn btn--danger">
                               삭제
                             </button>
                           </form>
