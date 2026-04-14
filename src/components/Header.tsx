@@ -31,7 +31,9 @@ export default async function Header({
   const isSuperAdmin = !!admin?.is_superadmin;
   const canPickRegion = canChooseTenant ?? isSuperAdmin;
 
-  const brandHref = canPickRegion ? "/" : tenantSlug ? `/t/${tenantSlug}/events` : "/";
+  const isDevBypass = process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1" && process.env.NODE_ENV === "development";
+  const regionHref = isDevBypass ? "/?stay=1" : "/";
+  const brandHref = canPickRegion ? regionHref : tenantSlug ? `/t/${tenantSlug}/events` : "/";
 
   let adminHref = "/admin";
   if (admin && !isSuperAdmin) {
@@ -55,7 +57,7 @@ export default async function Header({
           {showEventsLink && tenantSlug && (
             <a href={`/t/${tenantSlug}/events`}>이벤트</a>
           )}
-          {canPickRegion && <a href="/">지역 선택</a>}
+          {canPickRegion && <a href={regionHref}>지역 선택</a>}
           {showManageLink && <a href={adminHref}>관리</a>}
         </nav>
       </div>

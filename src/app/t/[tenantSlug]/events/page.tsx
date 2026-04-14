@@ -52,8 +52,7 @@ export default async function EventListPage({ params }: Props) {
         tenantSlug={tenantSlug}
       />
       <main className="container">
-        {canChooseTenant && <a href="/" className="back-link">← 지역 선택</a>}
-        <h1>{tenant.name}</h1>
+        {canChooseTenant && <a href="/?stay=1" className="back-link">← 지역 선택</a>}
         <p className="page-subtitle">진행 중인 이벤트에 참여할 수 있습니다.</p>
         {events.length === 0 ? (
           <div className="empty-state">

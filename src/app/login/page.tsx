@@ -16,12 +16,15 @@ export default async function LoginPage({ searchParams }: Props) {
   const botName =
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
+  const isLocalWeb =
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_LOCAL_PREFER_WEB_LOGIN !== "0";
   const { openUrl: webAppOpenUrl, invalidOpenUrlHint } =
     resolveTelegramWebAppOpenConfig(botName);
   const skipWebAppRedirect =
-    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
+    isLocalWeb || process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_SKIP_WEBAPP_REDIRECT === "1";
   const widgetFallback =
-    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_WIDGET_FALLBACK === "1";
+    isLocalWeb || process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_WIDGET_FALLBACK === "1";
   const widgetRequestAccess =
     process.env.NEXT_PUBLIC_TELEGRAM_WIDGET_REQUEST_ACCESS === "write"
       ? ("write" as const)
@@ -29,7 +32,9 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <>
-      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      {!isLocalWeb && (
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      )}
       <Header />
       <main className="container">
         <div className="login-page">
@@ -41,15 +46,24 @@ export default async function LoginPage({ searchParams }: Props) {
                 <p>{invalidOpenUrlHint}</p>
               </div>
             )}
-            <TelegramAuth
-              tenantSlug={tenantSlug}
-              loginPage
-              webAppOpenUrl={webAppOpenUrl}
-              skipWebAppRedirect={skipWebAppRedirect}
-            />
+            {!isLocalWeb && (
+              <TelegramAuth
+                tenantSlug={tenantSlug}
+                loginPage
+                webAppOpenUrl={webAppOpenUrl}
+                skipWebAppRedirect={skipWebAppRedirect}
+              />
+            )}
+            {isLocalWeb && (
+              <p className="login-openurl-misconfig" style={{ marginBottom: "18px" }}>
+                로컬 개발 모드에서는 웹앱 이동 없이 브라우저 위젯으로 로그인합니다.
+              </p>
+            )}
             {widgetFallback && (
               <div className="login-widget-fallback">
-                <p className="login-widget-fallback-label">브라우저 위젯으로 로그인 (비상용)</p>
+                <p className="login-widget-fallback-label">
+                  브라우저 위젯으로 로그인{isLocalWeb ? "" : " (비상용)"}
+                </p>
                 <div className="login-widget-block">
                   <TelegramLoginWidget
                     botName={botName}

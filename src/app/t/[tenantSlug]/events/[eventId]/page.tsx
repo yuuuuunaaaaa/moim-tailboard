@@ -119,7 +119,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           </div>
         )}
         <a href={`/t/${tenant.slug}/events`} className="back-link">
-          ← {tenant.name} 이벤트 목록
+          ← 이벤트 목록
         </a>
         <h1>{event.title}</h1>
         <p className="page-subtitle">
