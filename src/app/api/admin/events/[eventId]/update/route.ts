@@ -3,6 +3,7 @@ import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { pool, findTenantBySlug } from "@/lib/db";
 import type { Admin, Tenant } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
   return admin.is_superadmin || admin.tenant_id === tenant.id;
@@ -35,14 +36,12 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    const when = new Date(eventDate);
-    if (Number.isNaN(when.getTime())) {
-      return new Response("일시 형식이 올바르지 않습니다.", { status: 400 });
-    }
+    const dateOnly = toDateInputValue(eventDate);
+    if (!dateOnly) return new Response("날짜 형식이 올바르지 않습니다.", { status: 400 });
 
     await pool.query(
       "UPDATE event SET title = ?, description = ?, event_date = ?, telegram_participant_join_prefix = ?, telegram_participant_leave_prefix = ? WHERE id = ? AND tenant_id = ?",
-      [title, description, when, eventJoinPrefix, eventLeavePrefix, eventId, tenant.id],
+      [title, description, dateOnly, eventJoinPrefix, eventLeavePrefix, eventId, tenant.id],
     );
 
     // 수정 폼에서 새 옵션 그룹 추가

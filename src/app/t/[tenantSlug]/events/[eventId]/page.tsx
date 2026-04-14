@@ -1,3 +1,4 @@
+import { toDateInputValue } from "@/lib/dateOnly";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { pool, findTenantBySlug } from "@/lib/db";
@@ -84,8 +85,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     participantOptions = poRows as ParticipantOption[];
   }
 
-  const eventDate = new Date(event.event_date);
-  const eventDateStr = eventDate.toISOString().slice(0, 16).replace("T", " ");
+  const eventDateStr = toDateInputValue(event.event_date);
   const sp = (await searchParams) ?? {};
   const toast = typeof sp.toast === "string" ? sp.toast : "";
   const toastText =

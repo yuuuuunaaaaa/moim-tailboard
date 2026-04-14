@@ -6,6 +6,7 @@ import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
   params: Promise<{ tenantSlug: string }>;
@@ -73,7 +74,7 @@ export default async function EventListPage({ params }: Props) {
                     <rect x="3" y="4" width="18" height="18" rx="2" />
                     <path d="M16 2v4M8 2v4M3 10h18" />
                   </svg>
-                  {new Date(event.event_date).toISOString().slice(0, 10)}
+                  {toDateInputValue(event.event_date)}
                 </div>
               </li>
             ))}

@@ -41,7 +41,6 @@ a:hover { text-decoration: underline; }
 .page-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
 }
 .page-header .container {
   display: flex;

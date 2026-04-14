@@ -79,7 +79,7 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>이벤트 등록 — {tenant.name}</h1>
+        <h1>이벤트 등록</h1>
         <div className="card" style={{ marginTop: "12px" }}>
           <h2 className="card__title">이벤트 만들기</h2>
           <AdminEventCreateForm tenant={tenant} tenants={tenants} username={username} />

@@ -139,7 +139,7 @@ export default async function AdminPage({ searchParams }: Props) {
         showAdminLink
       />
       <main className="container container--wide">
-        <h1>관리 — {tenant.name}</h1>
+        <h1>관리</h1>
         <div className="tenant-pills">
           {tenants.length > 1 && (
             <select

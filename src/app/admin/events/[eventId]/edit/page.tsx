@@ -6,13 +6,14 @@ import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
 import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
+import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
   params: Promise<{ eventId: string }>;
   searchParams: Promise<{ tenant?: string; toast?: string }>;
 }
 
-export const metadata = { title: "이벤트 수정 · 꼬리달기" };
+export const metadata = { title: "이벤트 수정" };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -121,7 +122,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     items: optionItems.filter((oi) => oi.option_group_id === g.id),
   }));
 
-  const eventDateVal = new Date(event.event_date).toISOString().slice(0, 16);
+  const eventDateVal = toDateInputValue(event.event_date);
 
   return (
     <>
@@ -136,7 +137,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>이벤트 수정 — {tenant.name}</h1>
+        <h1>이벤트 수정</h1>
         {toast === "row_saved" && (
           <AutoToast
             message="저장되었습니다."
@@ -152,7 +153,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <div className="row admin-edit-row">
                 <input type="text" name="title" defaultValue={event.title} required placeholder="제목" />
-                <input type="datetime-local" name="eventDate" defaultValue={eventDateVal} required />
+                <input type="date" name="eventDate" defaultValue={eventDateVal} required />
               </div>
               <div className="row admin-edit-row">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />

@@ -69,7 +69,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>{tenant.name} · 관리자</h1>
+        <h1>관리자</h1>
         <p className="page-subtitle">
           이 지역의 관리자를 추가·삭제할 수 있습니다. 사용자명으로 식별됩니다.
         </p>
@@ -92,15 +92,16 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                 <input
                   id="username"
                   name="username"
+                  type="text"
                   required
-                  placeholder="예: yuna9354 (@ 없이)"
+                  placeholder="예: ebcblue (@ 없이)"
                 />
               </div>
               <div className="form-group">
                 <label htmlFor="adminName">
                   표시 이름 <span className="optional">(선택)</span>
                 </label>
-                <input id="adminName" name="name" placeholder="예: 홍길동" />
+                <input id="adminName" name="name" type="text" placeholder="예: 홍길동" />
               </div>
               <button className="btn btn--primary" type="submit">관리자 추가</button>
             </form>
@@ -113,40 +114,70 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                 등록된 관리자가 없습니다. 위 폼에서 추가해 주세요.
               </p>
             ) : (
-              <div className="participants-wrap">
-                <table className="table admin-list-table">
-                  <thead>
-                    <tr>
-                      <th>사용자명</th>
-                      <th>이름</th>
-                      <th>추가일</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {admins.map((a) => (
-                      <tr key={a.id}>
-                        <td>
-                          <code>{a.username}</code>
-                        </td>
-                        <td>{a.name || "—"}</td>
-                        <td>{new Date(a.created_at).toLocaleDateString("ko-KR")}</td>
-                        <td className="actions">
-                          <form
-                            method="post"
-                            action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
-                            style={{ display: "inline" }}
-                          >
-                            <button type="submit" className="btn btn--danger">
-                              삭제
-                            </button>
-                          </form>
-                        </td>
+              <>
+                {/* Desktop/tablet: table */}
+                <div className="participants-wrap admin-only-desktop">
+                  <table className="table admin-list-table">
+                    <thead>
+                      <tr>
+                        <th>사용자명</th>
+                        <th>이름</th>
+                        <th>추가일</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {admins.map((a) => (
+                        <tr key={a.id}>
+                          <td>
+                            <code>{a.username}</code>
+                          </td>
+                          <td>{a.name || "—"}</td>
+                          <td>{new Date(a.created_at).toLocaleDateString("ko-KR")}</td>
+                          <td className="actions">
+                            <form
+                              method="post"
+                              action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
+                              style={{ display: "inline" }}
+                            >
+                              <button type="submit" className="btn btn--danger btn--sm">
+                                삭제
+                              </button>
+                            </form>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile: card list */}
+                <ul className="admin-card-list admin-only-mobile">
+                  {admins.map((a) => (
+                    <li key={a.id} className="admin-card">
+                      <div className="admin-card-head">
+                        <div className="admin-card-title">
+                          <div className="admin-card-username">
+                            <code>{a.username}</code>
+                          </div>
+                          <div className="admin-card-meta">
+                            {a.name ? a.name : "이름 없음"} ·{" "}
+                            {new Date(a.created_at).toLocaleDateString("ko-KR")}
+                          </div>
+                        </div>
+                        <form
+                          method="post"
+                          action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
+                        >
+                          <button type="submit" className="btn btn--danger btn--sm admin-card-btn">
+                            삭제
+                          </button>
+                        </form>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </div>
@@ -156,6 +187,42 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
         .alert--error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
         .alert--success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
         .admin-list-table .actions { white-space: nowrap; }
+
+        .admin-card-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+        .admin-card {
+          background: var(--bg);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-sm);
+          padding: 10px 12px;
+          margin: 3px 0;
+        }
+        .admin-card-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .admin-card-username { font-weight: 700; }
+        .admin-card-meta { margin-top: 4px; font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
+        .admin-card-btn { min-height: 44px; }
+
+        /* 모바일 전용 UI: 테이블 숨기고 카드로 */
+        @media (max-width: 640px) {
+          .admin-only-desktop { display: none; }
+          .admin-only-mobile { display: block; }
+          .btn { width: 100%; }
+        }
+        @media (min-width: 641px) {
+          .admin-only-desktop { display: block; }
+          .admin-only-mobile { display: none; }
+        }
       `}</style>
     </>
   );
