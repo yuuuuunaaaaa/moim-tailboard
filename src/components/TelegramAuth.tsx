@@ -45,6 +45,12 @@ export default function TelegramAuth({ tenantSlug, loginPage = false }: Telegram
               setStatus("error");
               return;
             }
+            const slug = tenantSlug?.trim();
+            if (slug) {
+              const nextPath = `/t/${encodeURIComponent(slug)}/events`;
+              window.location.href = `/api/init-tenant?slug=${encodeURIComponent(slug)}&next=${encodeURIComponent(nextPath)}`;
+              return;
+            }
             window.location.href = "/";
           })
           .catch(() => setStatus("error"));

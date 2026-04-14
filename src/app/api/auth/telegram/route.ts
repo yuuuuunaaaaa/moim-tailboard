@@ -94,8 +94,17 @@ export async function GET(request: NextRequest) {
       return new Response("Telegram username is required for this service", { status: 400 });
     }
 
+    const tenantSlug =
+      request.nextUrl.searchParams.get("tenantSlug")?.trim() ||
+      request.nextUrl.searchParams.get("tenant")?.trim() ||
+      "";
+
     const token = await signToken(username);
-    const res = NextResponse.redirect(new URL("/", request.url));
+    const destination =
+      tenantSlug !== ""
+        ? `/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${encodeURIComponent(`/t/${encodeURIComponent(tenantSlug)}/events`)}`
+        : "/";
+    const res = NextResponse.redirect(new URL(destination, request.url));
     res.cookies.set("auth_token", token, cookieOpts);
     return res;
   } catch (err) {

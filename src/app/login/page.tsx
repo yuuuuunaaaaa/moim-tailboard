@@ -12,9 +12,6 @@ export const metadata = { title: "할 일 산더미" };
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
   const tenantSlug = (sp.tenantSlug || sp.tenant || "").trim();
-  const qs = tenantSlug ? `?tenantSlug=${encodeURIComponent(tenantSlug)}` : "";
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  const authUrl = `${appUrl}/api/auth/telegram${qs}`;
   const botName =
     process.env.TELEGRAM_BOT_NAME ||
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
@@ -35,7 +32,7 @@ export default async function LoginPage({ searchParams }: Props) {
             </p>
             <TelegramAuth tenantSlug={tenantSlug} loginPage />
             <div className="login-widget-block">
-              <TelegramLoginWidget botName={botName} authUrl={authUrl} />
+              <TelegramLoginWidget botName={botName} tenantSlug={tenantSlug || undefined} />
             </div>
             <p className="login-back">
               <a href="/">← 돌아가기</a>
