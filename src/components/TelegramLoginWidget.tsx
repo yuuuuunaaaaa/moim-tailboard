@@ -16,15 +16,21 @@ declare global {
  * 부모 창으로 넘어가지 못하고 “메시지를 보냈습니다…” 화면에서 멈추는 경우가 많다(특히 모바일).
  * data-onauth 로 부모 페이지에서 POST /api/auth/telegram 한 뒤 이동한다.
  *
+ * `data-request-access="write"`는 로그인 검증과 무관하며, OAuth 단계에서 봇 DM 권한까지 묻는다.
+ * 승인 알림이 늦거나 막히는 환경이 있어 기본은 생략한다. 필요 시 env로만 켠다.
+ *
  * @see https://core.telegram.org/widgets/login
  */
 export default function TelegramLoginWidget({
   botName,
   tenantSlug,
+  requestAccess,
 }: {
   botName: string;
   /** 로그인 성공 후 init-tenant / 이벤트 목록 이동에 사용 — 선택 */
   tenantSlug?: string;
+  /** `"write"`일 때만 data-request-access 설정 (봇이 사용자에게 메시지 보낼 권한 요청) */
+  requestAccess?: "write";
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const tenantRef = useRef(tenantSlug);
@@ -66,14 +72,16 @@ export default function TelegramLoginWidget({
     script.setAttribute("data-telegram-login", botName);
     script.setAttribute("data-size", "large");
     script.setAttribute("data-onauth", "moimOnTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
+    if (requestAccess === "write") {
+      script.setAttribute("data-request-access", "write");
+    }
     host.appendChild(script);
 
     return () => {
       delete window.moimOnTelegramAuth;
       host.replaceChildren();
     };
-  }, [botName, tenantSlug]);
+  }, [botName, tenantSlug, requestAccess]);
 
   return <div ref={hostRef} className="telegram-widget-mount" aria-label="Telegram 로그인" />;
 }
