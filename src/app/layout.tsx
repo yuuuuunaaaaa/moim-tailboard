@@ -3,7 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "꼬리달기",
-  description: "텔레그램으로 관리하는 지역 이벤트 참여 보드",
+  description: "꼬리달러 가보자고",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

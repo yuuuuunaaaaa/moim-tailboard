@@ -7,7 +7,7 @@ interface Props {
   searchParams: Promise<{ tenantSlug?: string; tenant?: string }>;
 }
 
-export const metadata = { title: "텔레그램 로그인 · 꼬리달기" };
+export const metadata = { title: "할 일 산더미" };
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
