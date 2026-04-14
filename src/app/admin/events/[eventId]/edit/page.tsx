@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { pool } from "@/lib/db";
 import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
-import OptionGroupNestedDeleteButton from "@/components/OptionGroupNestedDeleteButton";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
 
@@ -183,42 +182,67 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   const itemsText = g.items.map((i) => i.name).join("\n");
                   return (
                     <div key={g.id} className="option-group-card">
-                      <form method="post" action={`/api/admin/option-groups/${g.id}/update`}>
-                        <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                        <input type="hidden" name="eventId" value={event.id} />
-                        <div className="option-group-edit-head">
-                          <input
-                            type="text"
-                            name="groupName"
-                            className="option-group-edit-name"
-                            defaultValue={g.name}
-                            required
-                            placeholder="옵션 그룹 이름"
-                            autoComplete="off"
-                          />
-                          <div className="option-group-edit-actions">
-                            <label className="option-group-edit-check">
-                              <input
-                                type="checkbox"
-                                name="multipleSelect"
-                                value="true"
-                                defaultChecked={!!g.multiple_select}
-                              />
-                              복수선택
-                            </label>
-                            <button className="btn btn--secondary option-group-edit-btn" type="submit">
-                              저장
-                            </button>
-                            <OptionGroupNestedDeleteButton groupId={g.id} tenantSlug={tenant.slug} />
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          alignItems: "flex-start",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <form
+                          method="post"
+                          action={`/api/admin/option-groups/${g.id}/update`}
+                          style={{ flex: "1 1 240px", minWidth: 0 }}
+                        >
+                          <input type="hidden" name="tenantSlug" value={tenant.slug} />
+                          <input type="hidden" name="eventId" value={event.id} />
+                          <div className="option-group-edit-head">
+                            <input
+                              type="text"
+                              name="groupName"
+                              className="option-group-edit-name"
+                              defaultValue={g.name}
+                              required
+                              placeholder="옵션 그룹 이름"
+                              autoComplete="off"
+                            />
+                            <div className="option-group-edit-actions">
+                              <label className="option-group-edit-check">
+                                <input
+                                  type="checkbox"
+                                  name="multipleSelect"
+                                  value="true"
+                                  defaultChecked={!!g.multiple_select}
+                                />
+                                복수선택
+                              </label>
+                              <button className="btn btn--secondary option-group-edit-btn" type="submit">
+                                저장
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <textarea
-                          name="itemsText"
-                          defaultValue={itemsText}
-                          placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"}
-                          style={{ height: "88px", width: "100%" }}
-                        />
-                      </form>
+                          <textarea
+                            name="itemsText"
+                            defaultValue={itemsText}
+                            placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"}
+                            style={{ height: "88px", width: "100%" }}
+                          />
+                        </form>
+                        <form
+                          method="post"
+                          action={`/api/admin/option-groups/${g.id}/delete`}
+                          style={{ flexShrink: 0 }}
+                        >
+                          <input type="hidden" name="tenantSlug" value={tenant.slug} />
+                          <button
+                            type="submit"
+                            className="btn btn--danger option-group-edit-btn"
+                          >
+                            삭제
+                          </button>
+                        </form>
+                      </div>
                     </div>
                   );
                 })}
