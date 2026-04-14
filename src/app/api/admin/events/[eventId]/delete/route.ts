@@ -14,7 +14,7 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { admin } = await getPageContext();
+    const { admin, username } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { eventId: eventIdStr } = await params;
@@ -28,7 +28,42 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    await pool.query("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [[evRow]] = await conn.query<any[]>(
+        "SELECT id, title FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
+        [eventId, tenant.id],
+      );
+      if (!evRow) {
+        await conn.rollback();
+        return new Response("이벤트를 찾을 수 없습니다.", { status: 404 });
+      }
+
+      await conn.query("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
+
+      // 이벤트 삭제 후 기록 — DB FK 가 ON DELETE SET NULL 이면 기존 로그의 event_id/participant_id 는 NULL 로 유지됨
+      await conn.query(
+        `INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata)
+         VALUES (?, NULL, NULL, ?, JSON_OBJECT('deletedEventId', ?, 'title', ?, 'username', ?))`,
+        [
+          tenant.id,
+          "ADMIN_DELETE_EVENT",
+          eventId,
+          evRow.title ?? "",
+          username ?? admin.username ?? null,
+        ],
+      );
+
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
 
     return NextResponse.redirect(
       new URL(`/admin?tenant=${tenant.slug}`, request.url),
