@@ -6,6 +6,7 @@ import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
+import EasterEggTrigger from "@/components/EasterEggTrigger";
 import type { Event } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
 
@@ -58,7 +59,9 @@ export default async function EventListPage({ params }: Props) {
       />
       <main className="container">
         {canChooseTenant && <a href="/?stay=1" className="back-link">← 지역 선택</a>}
-        <p className="page-subtitle">진행 중인 꼬리달기에 참여할 수 있습니다.</p>
+        <p className="page-subtitle">
+          진행 중인 꼬리달기에 참여할 수 있습니다<EasterEggTrigger>.</EasterEggTrigger>
+        </p>
         {events.length === 0 ? (
           <div className="empty-state">
             진행 중인 꼬리달기가 없습니다.

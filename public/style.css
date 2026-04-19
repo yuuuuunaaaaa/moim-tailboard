@@ -669,3 +669,223 @@ input[type="radio"] {
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .mt-0 { margin-top: 0; }
 .mb-0 { margin-bottom: 0; }
+
+/* ======================================================
+   Easter Egg — 인천 청대 짱!
+   ====================================================== */
+.easter-egg-trigger {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  cursor: default;
+  transition: color 120ms ease, text-shadow 120ms ease, transform 120ms ease;
+}
+.easter-egg-trigger.is-holding {
+  color: var(--primary);
+  text-shadow: 0 0 6px rgba(13, 148, 136, 0.55), 0 0 14px rgba(13, 148, 136, 0.35);
+  transform: scale(1.25);
+  animation: ee-hold-pulse 800ms ease-in-out infinite;
+}
+@keyframes ee-hold-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* 본문 영역 안에 들어가는 레트로 CRT 스테이지 */
+.egg-stage {
+  position: relative;
+  margin: 12px 0 32px;
+  padding: 28px 16px;
+  min-height: min(640px, 75vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at center, #1a0033 0%, #04000f 65%, #000 100%);
+  color: #f8f8ff;
+  font-family: "Press Start 2P", "Courier New", "Pretendard", monospace;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+}
+
+.egg-starfield {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+    radial-gradient(1px 1px at 80% 35%, #fff, transparent),
+    radial-gradient(1px 1px at 40% 70%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 65% 85%, #fff, transparent),
+    radial-gradient(1px 1px at 25% 90%, #fff, transparent),
+    radial-gradient(1px 1px at 90% 10%, #fff, transparent),
+    radial-gradient(1px 1px at 5% 55%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 55% 25%, #fff, transparent);
+  opacity: 0.8;
+  animation: ee-twinkle 3s ease-in-out infinite alternate;
+}
+@keyframes ee-twinkle {
+  from { opacity: 0.35; }
+  to   { opacity: 0.95; }
+}
+
+.egg-scanlines {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.04) 0,
+    rgba(255,255,255,0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  animation: ee-scan 8s linear infinite;
+}
+@keyframes ee-scan {
+  from { background-position: 0 0; }
+  to   { background-position: 0 300px; }
+}
+
+.egg-crt {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  padding: 36px 20px;
+  text-align: center;
+  border: 3px solid rgba(255, 0, 200, 0.5);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 4px rgba(0,0,0,0.6),
+    0 0 40px rgba(255, 0, 200, 0.25) inset,
+    0 0 60px rgba(0, 255, 255, 0.2);
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(1px);
+}
+
+.egg-sub {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  color: #00ffd0;
+  text-shadow: 0 0 6px #00ffd0, 0 0 16px #009f80;
+}
+.egg-sub--top { margin-bottom: 22px; }
+.egg-sub--bottom { margin-top: 22px; color: #fffa77; text-shadow: 0 0 6px #ffde3a, 0 0 18px #a88f00; }
+.egg-blink { animation: ee-blink 1.05s steps(2, end) infinite; }
+@keyframes ee-blink {
+  50% { opacity: 0; }
+}
+
+.egg-poster {
+  margin: 18px auto 6px;
+  width: 100%;
+  padding: 10px;
+  background: #000;
+  border: 3px solid rgba(255, 59, 212, 0.55);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 3px rgba(0,0,0,0.7),
+    0 0 22px rgba(255, 59, 212, 0.35),
+    0 0 44px rgba(0, 229, 255, 0.2);
+  animation: ee-poster-float 4.2s ease-in-out infinite;
+}
+.egg-poster img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  image-rendering: auto;
+}
+@keyframes ee-poster-float {
+  0%, 100% { transform: translateY(0) rotate(-0.3deg); }
+  50%      { transform: translateY(-4px) rotate(0.3deg); }
+}
+
+.egg-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  font-size: clamp(2.6rem, 14vw, 6rem);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  animation: ee-shake 4.5s ease-in-out infinite;
+}
+.egg-title--small {
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: clamp(8px, 2vw, 14px);
+  margin-top: 18px;
+  font-size: clamp(1.1rem, 5vw, 2.2rem);
+}
+@keyframes ee-shake {
+  0%, 100% { transform: translate(0,0); }
+  45%      { transform: translate(0,0); }
+  48%      { transform: translate(-2px, 1px); }
+  50%      { transform: translate(2px, -1px); }
+  52%      { transform: translate(-1px, -2px); }
+  54%      { transform: translate(0,0); }
+}
+
+.egg-glow {
+  color: #00e5ff;
+  text-shadow:
+    0 0 6px  #00e5ff,
+    0 0 14px #00e5ff,
+    0 0 28px #00a7c4,
+    0 0 46px #003c6b;
+}
+.egg-glow--pink {
+  color: #ff3bd4;
+  text-shadow:
+    0 0 6px  #ff3bd4,
+    0 0 16px #ff3bd4,
+    0 0 32px #a00d7e,
+    0 0 48px #5b0044;
+}
+.egg-glow--yellow {
+  color: #ffe04a;
+  text-shadow:
+    0 0 6px  #ffe04a,
+    0 0 14px #ffa600,
+    0 0 32px #a85c00;
+}
+
+.egg-marquee {
+  margin-top: 26px;
+  padding: 10px 0;
+  border-top: 2px dashed rgba(255, 0, 200, 0.45);
+  border-bottom: 2px dashed rgba(0, 229, 255, 0.45);
+  overflow: hidden;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 0 6px #ff3bd4;
+}
+.egg-marquee-track {
+  display: inline-flex;
+  gap: 48px;
+  white-space: nowrap;
+  animation: ee-marquee 18s linear infinite;
+  padding-left: 100%;
+}
+@keyframes ee-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .egg-starfield,
+  .egg-scanlines,
+  .egg-title,
+  .egg-blink,
+  .egg-marquee-track,
+  .easter-egg-trigger.is-holding {
+    animation: none !important;
+  }
+}
