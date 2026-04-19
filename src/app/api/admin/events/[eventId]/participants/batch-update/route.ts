@@ -28,7 +28,7 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    // 이벤트 소유 확인
+    // 꼬리달기 소유 확인
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [[ev]] = await pool.query<any[]>(
       "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",

@@ -117,7 +117,7 @@ export default async function AdminPage({ searchParams }: Props) {
               ))}
             </select>
           )}
-          <a href={`/t/${tenant.slug}/events`}>이벤트 목록</a>
+          <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
           <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
         </div>
         <AdminEventEdit

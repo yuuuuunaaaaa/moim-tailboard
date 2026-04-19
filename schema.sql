@@ -38,19 +38,19 @@ create table admin
 create index idx_admin_tenant
     on admin (tenant_id);
 
--- 이벤트 정보
+-- 꼬리달기 정보
 -- 예: 3/7 인천 수련회, 3/22 찬양 콘서트 등
 CREATE TABLE event (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  -- 어떤 테넌트 소속 이벤트인지
+  -- 어떤 테넌트 소속 꼬리달기인지
   tenant_id INT NOT NULL,
-  -- 이벤트 제목
+  -- 꼬리달기 제목
   title VARCHAR(255) NOT NULL,
   -- 선택 설명
   description TEXT NULL,
   -- 실제 진행 일시 (DATE only)
   event_date DATE NOT NULL,
-  -- 이벤트 노출/비노출 여부
+  -- 꼬리달기 노출/비노출 여부
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   -- 참가/취소 방 알림 말머리(이모지 등). NULL 이면 기본 👤
   telegram_participant_join_prefix VARCHAR(64) NULL DEFAULT NULL COMMENT '참가 신청 텔레그램 알림 말머리',
@@ -68,7 +68,7 @@ CREATE TABLE event (
 -- 예: "식사", "이동", "파트", "스태프" 등의 그룹
 CREATE TABLE option_group (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  -- 어느 이벤트에 속한 그룹인지
+  -- 어느 꼬리달기에 속한 그룹인지
   event_id INT NOT NULL,
   -- 그룹 이름 (식사, 이동 등)
   name VARCHAR(255) NOT NULL,
@@ -102,11 +102,11 @@ CREATE TABLE option_item (
   INDEX idx_option_item_group_order (option_group_id, sort_order)
 );
 
--- 이벤트 참여자
+-- 꼬리달기 참여자
 -- 이름/학번/텔레그램 ID 기준으로 식별
 CREATE TABLE participant (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  -- 어느 이벤트에 참여하는지
+  -- 어느 꼬리달기에 참여하는지
   event_id INT NOT NULL,
   -- 이름 (중복 가능)
   name VARCHAR(255) NOT NULL,
@@ -140,13 +140,13 @@ CREATE TABLE participant_option (
 );
 
 -- 액션 로그
--- JOIN_EVENT, CANCEL_EVENT, UPDATE_PARTICIPANT, ADMIN_CREATE_EVENT 등
+-- JOIN_EVENT, CANCEL_EVENT, UPDATE_PARTICIPANT, ADMIN_DELETE_PARTICIPANT, ADMIN_CREATE_EVENT 등
 -- 주로 감사/히스토리 확인용으로 사용
 CREATE TABLE action_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
   -- 어떤 테넌트에서 발생한 액션인지
   tenant_id INT NOT NULL,
-  -- 어떤 이벤트에 대한 액션인지 (없을 수도 있음)
+  -- 어떤 꼬리달기에 대한 액션인지 (없을 수도 있음)
   event_id INT NULL,
   -- 어떤 참여자에 대한 액션인지 (없을 수도 있음)
   participant_id INT NULL,

@@ -1,6 +1,6 @@
 "use client";
 
-/** 이벤트 목록 삭제 — confirm은 클라이언트에서만 처리 */
+/** 꼬리달기 목록 삭제 — confirm은 클라이언트에서만 처리 */
 export default function AdminEventDeleteForm({
   eventId,
   tenantSlug,
@@ -14,7 +14,7 @@ export default function AdminEventDeleteForm({
       action={`/api/admin/events/${eventId}/delete`}
       style={{ display: "inline" }}
       onSubmit={(e) => {
-        if (!confirm("이벤트와 모든 참여자 데이터가 삭제됩니다. 계속하시겠습니까?")) {
+        if (!confirm("꼬리달기와 모든 참여자 데이터가 삭제됩니다. 계속하시겠습니까?")) {
           e.preventDefault();
         }
       }}

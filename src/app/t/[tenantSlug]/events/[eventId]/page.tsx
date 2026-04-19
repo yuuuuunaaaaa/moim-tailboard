@@ -6,7 +6,7 @@ import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
-import TelegramAuth from "@/components/TelegramAuth";
+import TelegramAuth from "@/components/TelegramAuthNoSsr";
 import ParticipantList from "@/components/ParticipantList";
 import JoinParticipantForm from "@/components/JoinParticipantForm";
 import AutoToast from "@/components/AutoToast";
@@ -49,7 +49,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
     [eventId, tenant.id],
   );
-  if (!event) return <div style={{ padding: "48px", textAlign: "center" }}>이벤트를 찾을 수 없습니다.</div>;
+  if (!event) return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [optionGroupRows] = await pool.query<any[]>(
@@ -95,6 +95,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         ? "수정이 완료되었습니다."
         : toast === "cancelled"
           ? "참여가 취소되었습니다."
+          : toast === "participant_deleted"
+            ? "참여 기록을 삭제했습니다."
           : "";
 
   return (
@@ -115,12 +117,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <AutoToast message={toastText} clearHref={`/t/${tenant.slug}/events/${event.id}`} timeoutMs={2000} />
         )}
         <a href={`/t/${tenant.slug}/events`} className="back-link">
-          ← 이벤트 목록
+          ← 꼬리달기 목록
         </a>
         <h1>{event.title}</h1>
         <p className="page-subtitle">
           {eventDateStr} ·{" "}
-          {event.description ? event.description : "이벤트에 참여해 주세요."}
+          {event.description ? event.description : "꼬리달기에 참여해 주세요."}
         </p>
 
         <div className="layout-half">
@@ -145,6 +147,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             participantOptions={participantOptions}
             username={username}
             tenantSlug={tenant.slug}
+            eventId={event.id}
+            isAdmin={isAdmin}
           />
         </div>
       </main>

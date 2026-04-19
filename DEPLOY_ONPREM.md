@@ -183,6 +183,6 @@ sudo ufw enable
 - [ ] PM2로 상시 실행 및 `pm2 startup`
 - [ ] Nginx 리버스 프록시 + HTTPS (Let's Encrypt)
 - [ ] BotFather `/setdomain` 및 메뉴 버튼 URL을 실제 도메인으로 변경
-- [ ] 브라우저에서 `NEXT_PUBLIC_APP_URL` 접속 → 로그인·이벤트 목록·참여 동작 확인
+- [ ] 브라우저에서 `NEXT_PUBLIC_APP_URL` 접속 → 로그인·꼬리달기 목록·참여 동작 확인
 
 추가로 **OPERATION_TODO.md** 의 “배포 인프라”, “보안”, “배포 후 확인” 항목도 참고하면 됩니다.

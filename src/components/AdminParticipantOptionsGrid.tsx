@@ -20,6 +20,7 @@ export default function AdminParticipantOptionsGrid({
   participantOptMap: Record<number, number[]>; // option_item_id list
 }) {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const selectedSetByPid = useMemo(() => {
     const m = new Map<number, Set<number>>();
@@ -31,6 +32,7 @@ export default function AdminParticipantOptionsGrid({
 
   const saveRow = async (pid: number) => {
     if (submittingId != null) return;
+    setPendingDeleteId(null);
     setSubmittingId(pid);
     try {
       const row = document.querySelector<HTMLTableRowElement>(`tr[data-pid="${pid}"]`);
@@ -74,6 +76,30 @@ export default function AdminParticipantOptionsGrid({
     }
   };
 
+  const deleteRow = async (pid: number) => {
+    if (submittingId != null) return;
+    setSubmittingId(pid);
+    try {
+      const fd = new FormData();
+      fd.set("tenantSlug", tenantSlug);
+      const res = await fetch(`/api/admin/events/${eventId}/participants/${pid}/delete`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `삭제 실패 (${res.status})`);
+      }
+      window.location.href = `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenantSlug)}&toast=participant_deleted`;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "삭제 중 오류가 발생했습니다.";
+      window.alert(msg);
+      setSubmittingId(null);
+      setPendingDeleteId(null);
+    }
+  };
+
   return (
     <div className="participants-wrap admin-participants-wrap">
       <table className="table admin-grid-table">
@@ -83,7 +109,7 @@ export default function AdminParticipantOptionsGrid({
             {groups.map((g) => (
               <th key={g.id}>{g.name}</th>
             ))}
-            <th className="sticky-col sticky-col--right">수정</th>
+            <th className="sticky-col sticky-col--right">관리</th>
           </tr>
         </thead>
         <tbody>
@@ -155,18 +181,54 @@ export default function AdminParticipantOptionsGrid({
                 })}
 
                 <td className="sticky-col sticky-col--right" style={{ verticalAlign: "top" }}>
-                  <button
-                    type="button"
-                    className="btn btn--primary btn--sm"
-                    onClick={() => void saveRow(p.id)}
-                    disabled={submittingId != null}
-                    style={{ minWidth: 92 }}
-                  >
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      {isSubmitting && <Spinner size={14} color="#fff" label="저장 중" />}
-                      {isSubmitting ? "저장 중" : "수정"}
-                    </span>
-                  </button>
+                  <div className="admin-actions-col">
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--sm"
+                      onClick={() => void saveRow(p.id)}
+                      disabled={submittingId != null}
+                    >
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        {isSubmitting && <Spinner size={14} color="#fff" label="저장 중" />}
+                        {isSubmitting ? "저장 중" : "수정"}
+                      </span>
+                    </button>
+                    {pendingDeleteId === p.id ? (
+                      <div className="p-delete-confirm" role="group" aria-label="참여 삭제 확인">
+                        <span className="p-delete-confirm-text">
+                          이 참여를 삭제할까요? (방 알림 없음)
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn--secondary btn--sm"
+                          onClick={() => setPendingDeleteId(null)}
+                          disabled={submittingId != null}
+                        >
+                          아니오
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--danger btn--sm"
+                          onClick={() => void deleteRow(p.id)}
+                          disabled={submittingId != null}
+                        >
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            {isSubmitting && <Spinner size={14} label="삭제 중" />}
+                            {isSubmitting ? "삭제 중" : "네, 삭제"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn--danger btn--sm"
+                        onClick={() => setPendingDeleteId(p.id)}
+                        disabled={submittingId != null}
+                      >
+                        참여 삭제
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
@@ -175,6 +237,21 @@ export default function AdminParticipantOptionsGrid({
       </table>
 
       <style>{`
+        .admin-actions-col {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: stretch;
+          min-width: 108px;
+        }
+        .admin-actions-col > .btn {
+          width: 100%;
+          min-height: 44px;
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
         .admin-grid-table .sticky-col {
           position: sticky;
           background: var(--surface);
@@ -188,7 +265,7 @@ export default function AdminParticipantOptionsGrid({
         .admin-grid-table .sticky-col--right {
           right: 0;
           z-index: 3;
-          min-width: 120px;
+          min-width: 128px;
           text-align: right;
         }
         .admin-grid-table th.sticky-col {

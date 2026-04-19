@@ -1,4 +1,4 @@
-/* moim-tailboard — 지역 이벤트 참여 보드 */
+/* moim-tailboard — 지역 꼬리달기 참여 보드 */
 :root {
   --bg: #f8f6f3;
   --surface: #ffffff;
@@ -359,7 +359,39 @@ input[type="radio"] {
 .p-edit-form { padding: 8px 0 4px 1.8em; }
 .p-edit-fields { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .p-edit-fields input { flex: 1; min-width: 100px; }
-.p-edit-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.p-edit-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+/* 안내 문구는 한 줄 전체, 아니오·확인은 같은 줄 2열 */
+.p-delete-confirm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+  padding: 10px 0 2px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+}
+.p-delete-confirm-text {
+  grid-column: 1 / -1;
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+/* 인접 버튼 규칙(.btn + .btn { margin-left }) 무력화 */
+.p-delete-confirm .btn {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.p-delete-confirm .btn + .btn {
+  margin-left: 0;
+}
+.p-edit-actions .p-delete-confirm {
+  flex: 1 1 100%;
+}
 .btn--sm { padding: 6px 12px; font-size: 0.8125rem; }
 
 /* Admin option group card */

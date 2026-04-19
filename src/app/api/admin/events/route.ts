@@ -10,7 +10,7 @@ function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
   return admin.is_superadmin || admin.tenant_id === tenant.id;
 }
 
-// POST /api/admin/events — 이벤트 생성
+// POST /api/admin/events — 꼬리달기 생성
 export async function POST(request: NextRequest) {
   try {
     const { admin, username } = await getPageContext();

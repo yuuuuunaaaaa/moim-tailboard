@@ -16,7 +16,7 @@ export function escapeHtml(s: string | number | null | undefined): string {
     .replace(/>/g, "&gt;");
 }
 
-const DEFAULT_NEW_EVENT_HEADLINE = "새 이벤트가 생성되었습니다!";
+const DEFAULT_NEW_EVENT_HEADLINE = "새 꼬리달기가 생성되었습니다!";
 const DEFAULT_PARTICIPANT_PREFIX = "👤 ";
 
 function participantLeadPrefix(raw: string | null | undefined): string {
@@ -25,7 +25,7 @@ function participantLeadPrefix(raw: string | null | undefined): string {
   return t.endsWith(" ") ? t : `${t} `;
 }
 
-/** 이벤트 최초 생성 시 1회 발송(폼 값만 사용, DB 저장 없음) */
+/** 꼬리달기 최초 생성 시 1회 발송(폼 값만 사용, DB 저장 없음) */
 export function buildNewEventTelegramHtml(opts: {
   title: string;
   link: string;
@@ -39,7 +39,7 @@ export function buildNewEventTelegramHtml(opts: {
   const extra = extraRaw
     ? `${escapeHtml(extraRaw).replace(/\r\n/g, "\n").replace(/\r/g, "\n")}\n`
     : "";
-  return `${escapeHtml(lead)}<b>${headline}</b>\n이벤트명: ${escapeHtml(opts.title)}\n${extra}<a href="${escapeHtml(opts.link)}">바로가기</a>`;
+  return `${escapeHtml(lead)}<b>${headline}</b>\n꼬리달기명: ${escapeHtml(opts.title)}\n${extra}<a href="${escapeHtml(opts.link)}">바로가기</a>`;
 }
 
 /** 참가 인원 변동 알림 */

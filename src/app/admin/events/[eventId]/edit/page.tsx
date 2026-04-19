@@ -13,7 +13,7 @@ interface Props {
   searchParams: Promise<{ tenant?: string; toast?: string }>;
 }
 
-export const metadata = { title: "이벤트 수정" };
+export const metadata = { title: "수정 · 꼬리달기" };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -22,7 +22,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   const { eventId: eventIdStr } = await params;
   const eventId = Number(eventIdStr);
   if (!Number.isFinite(eventId)) {
-    return <div style={{ padding: "48px", textAlign: "center" }}>이벤트 ID가 올바르지 않습니다.</div>;
+    return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기 ID가 올바르지 않습니다.</div>;
   }
 
   const sp = await searchParams;
@@ -36,7 +36,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
         <>
           <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
           <main className="container">
-            <h1>이벤트 수정</h1>
+            <h1>꼬리달기 수정</h1>
             <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
             <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
           </main>
@@ -70,7 +70,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
     [eventId, tenant.id],
   );
-  if (!eventRow) return <div style={{ padding: "48px", textAlign: "center" }}>이벤트를 찾을 수 없습니다.</div>;
+  if (!eventRow) return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
   const event = eventRow as Event;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -137,7 +137,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>이벤트 수정</h1>
+        <h1>꼬리달기 수정</h1>
         {toast === "row_saved" && (
           <AutoToast
             message="저장되었습니다."
@@ -145,10 +145,17 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             timeoutMs={2000}
           />
         )}
+        {toast === "participant_deleted" && (
+          <AutoToast
+            message="참여 기록을 삭제했습니다."
+            clearHref={`/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`}
+            timeoutMs={2000}
+          />
+        )}
 
         <div className="admin-grid" style={{ marginTop: "12px" }}>
           <div className="card" style={{ gridColumn: "1 / -1" }}>
-            <h2 className="card__title">이벤트 정보</h2>
+            <h2 className="card__title">꼬리달기 정보</h2>
             <form method="post" action={`/api/admin/events/${event.id}/update`}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
               <div className="row admin-edit-row">
@@ -182,7 +189,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               </div>
               <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>
-                <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${event.id}`}>이벤트 보기</a>
+                <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${event.id}`}>꼬리달기 보기</a>
               </div>
             </form>
           </div>
@@ -299,7 +306,8 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             ) : (
               <>
                 <p className="form-hint" style={{ marginTop: 0 }}>
-                  각 행 맨 오른쪽 <strong>수정</strong> 버튼을 누르면 해당 참여자만 저장됩니다.
+                  맨 오른쪽 <strong>수정</strong>은 해당 참여자 옵션만 저장하고,{" "}
+                  <strong>참여 삭제</strong>는 목록에서 제거합니다(텔레그램 방 알림은 가지 않습니다).
                 </p>
                 <AdminParticipantOptionsGrid
                   eventId={event.id}

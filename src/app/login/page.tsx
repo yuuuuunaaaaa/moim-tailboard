@@ -1,7 +1,7 @@
 import Script from "next/script";
 import Header from "@/components/Header";
-import TelegramAuth from "@/components/TelegramAuth";
-import TelegramLoginWidget from "@/components/TelegramLoginWidget";
+import TelegramAuth from "@/components/TelegramAuthNoSsr";
+import TelegramLoginWidget from "@/components/TelegramLoginWidgetNoSsr";
 import { resolveTelegramWebAppOpenConfig } from "@/lib/telegramWebAppOpenUrl";
 
 interface Props {

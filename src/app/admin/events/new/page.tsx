@@ -10,7 +10,7 @@ interface Props {
   searchParams: Promise<{ tenant?: string }>;
 }
 
-export const metadata = { title: "이벤트 등록 · 꼬리달기" };
+export const metadata = { title: "등록 · 꼬리달기" };
 
 export default async function AdminEventNewPage({ searchParams }: Props) {
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -31,7 +31,7 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
         <>
           <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
           <main className="container">
-            <h1>이벤트 등록</h1>
+            <h1>꼬리달기 등록</h1>
             <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
             <ul className="event-list">
               {tenants.map((t) => (
@@ -79,9 +79,9 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>이벤트 등록</h1>
+        <h1>꼬리달기 등록</h1>
         <div className="card" style={{ marginTop: "12px" }}>
-          <h2 className="card__title">이벤트 만들기</h2>
+          <h2 className="card__title">꼬리달기 만들기</h2>
           <AdminEventCreateForm tenant={tenant} tenants={tenants} username={username} />
         </div>
       </main>

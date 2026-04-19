@@ -45,7 +45,7 @@ export default async function HomePage() {
           <>
             <p className="page-subtitle">
               일반 관리자는 루트에서 지역을 고를 수 없습니다. 소속 지역의 텔레그램에서 공유된
-              이벤트·지역 링크로 접속해 주세요.
+              꼬리달기·지역 링크로 접속해 주세요.
             </p>
             <p className="form-hint" style={{ marginTop: "12px" }}>
               관리 작업은 해당 링크로 들어온 뒤 <a href="/admin">관리자 페이지</a>에서 진행할 수
@@ -55,7 +55,7 @@ export default async function HomePage() {
         ) : (
           <>
             <p className="page-subtitle">지역 선택과 관리는 로그인된 관리자만 가능합니다.</p>
-            <p className="form-hint">참여할 이벤트 링크로 접속해 주세요.</p>
+            <p className="form-hint">참여할 꼬리달기 링크로 접속해 주세요.</p>
             <p style={{ marginTop: "24px" }}>
               <a href="/login" className="btn btn--secondary">관리자 로그인</a>
             </p>

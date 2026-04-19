@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         [participant.event_id],
       );
       const link = eventDetailUrl(tenant.slug, participant.event_id);
-      const titleText = ev?.title ?? "이벤트";
+      const titleText = ev?.title ?? "꼬리달기";
       const leavePrefix = ev?.telegram_participant_leave_prefix ?? "";
       await sendMessage(
         tenant.chat_room_id,

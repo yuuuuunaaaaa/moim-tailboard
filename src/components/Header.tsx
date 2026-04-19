@@ -43,10 +43,10 @@ export default async function Header({
         </div>
         <nav className="nav-links">
           {showEventListLink && tenantSlug && (
-            <a href={`/t/${tenantSlug}/events`}>이벤트 목록</a>
+            <a href={`/t/${tenantSlug}/events`}>꼬리달기 목록</a>
           )}
           {showEventsLink && tenantSlug && (
-            <a href={`/t/${tenantSlug}/events`}>이벤트</a>
+            <a href={`/t/${tenantSlug}/events`}>꼬리달기</a>
           )}
           {canPickRegion && <a href={regionHref}>지역 선택</a>}
           {showManageLink && <a href={resolvedAdminHref}>관리</a>}

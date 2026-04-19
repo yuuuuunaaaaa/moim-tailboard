@@ -33,7 +33,7 @@ export async function POST(
       return new Response("Invalid participantId", { status: 400 });
     }
 
-    // 이벤트/참여자 소유 확인
+    // 꼬리달기/참여자 소유 확인
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [[ev]] = await pool.query<any[]>(
       "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",

@@ -39,12 +39,12 @@ export async function POST(
       );
       if (!evRow) {
         await conn.rollback();
-        return new Response("이벤트를 찾을 수 없습니다.", { status: 404 });
+        return new Response("꼬리달기를 찾을 수 없습니다.", { status: 404 });
       }
 
       await conn.query("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
 
-      // 이벤트 삭제 후 기록 — DB FK 가 ON DELETE SET NULL 이면 기존 로그의 event_id/participant_id 는 NULL 로 유지됨
+      // 꼬리달기 삭제 후 기록 — DB FK 가 ON DELETE SET NULL 이면 기존 로그의 event_id/participant_id 는 NULL 로 유지됨
       await conn.query(
         `INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata)
          VALUES (?, NULL, NULL, ?, JSON_OBJECT('deletedEventId', ?, 'title', ?, 'username', ?))`,

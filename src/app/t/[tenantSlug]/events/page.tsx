@@ -54,13 +54,13 @@ export default async function EventListPage({ params }: Props) {
       />
       <main className="container">
         {canChooseTenant && <a href="/?stay=1" className="back-link">← 지역 선택</a>}
-        <p className="page-subtitle">진행 중인 이벤트에 참여할 수 있습니다.</p>
+        <p className="page-subtitle">진행 중인 꼬리달기에 참여할 수 있습니다.</p>
         {events.length === 0 ? (
           <div className="empty-state">
-            진행 중인 이벤트가 없습니다.
+            진행 중인 꼬리달기가 없습니다.
             {isAdmin && (
               <div style={{ marginTop: "16px" }}>
-                <a href={`/admin?tenant=${tenant.slug}`} className="btn btn--primary">이벤트 만들기</a>
+                <a href={`/admin?tenant=${tenant.slug}`} className="btn btn--primary">꼬리달기 만들기</a>
               </div>
             )}
           </div>
