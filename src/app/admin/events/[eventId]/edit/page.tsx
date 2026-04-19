@@ -158,11 +158,13 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             <h2 className="card__title">꼬리달기 정보</h2>
             <form method="post" action={`/api/admin/events/${event.id}/update`}>
               <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <div className="row admin-edit-row">
+              <div className="row admin-edit-row admin-event-field">
                 <input type="text" name="title" defaultValue={event.title} required placeholder="제목" />
+              </div>
+              <div className="row admin-edit-row admin-event-field">
                 <input type="date" name="eventDate" defaultValue={eventDateVal} required />
               </div>
-              <div className="row admin-edit-row">
+              <div className="row admin-edit-row admin-event-field">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />
               </div>
               <div className="row admin-edit-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
@@ -176,7 +178,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                     defaultValue={event.telegram_participant_join_prefix ?? ""}
                   />
                 </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
+                <div className="form-group" style={{ marginBottom: 0 , marginTop: 10 }}>
                   <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
                   <input
                     type="text"
@@ -189,7 +191,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               </div>
               <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>
-                <a className="btn btn--secondary btn--sm" href={`/t/${tenant.slug}/events/${event.id}`}>꼬리달기 보기</a>
               </div>
             </form>
           </div>
@@ -336,10 +337,17 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
           min-width: 0;
         }
 
+        .admin-event-field {
+          margin-top: 12px;
+          margin-bottom: 12px;
+        }
+        .admin-event-field:first-of-type {
+          margin-top: 4px;
+        }
         .admin-edit-actions {
           display: flex;
           gap: 8px;
-          margin-top: 10px;
+          margin-top: 14px;
           flex-wrap: wrap;
         }
         .admin-edit-actions .btn {
