@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/option-groups/[groupId]/delete
 export async function POST(
@@ -28,15 +25,12 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    await pool.query(
+    await execute(
       "DELETE FROM option_group WHERE id = ? AND EXISTS (SELECT 1 FROM event e WHERE e.id = option_group.event_id AND e.tenant_id = ?)",
       [groupId, tenant.id],
     );
 
-    return NextResponse.redirect(
-      new URL(`/admin?tenant=${tenant.slug}`, request.url),
-      303,
-    );
+    return NextResponse.redirect(new URL(`/admin?tenant=${tenant.slug}`, request.url), 303);
   } catch (err) {
     console.error("POST /api/admin/option-groups/[groupId]/delete:", err);
     return new Response("Internal server error", { status: 500 });

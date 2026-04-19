@@ -1,4 +1,5 @@
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
+import { formatDateKorean } from "@/lib/dateOnly";
 import type { Event, Tenant } from "@/types";
 
 interface Props {
@@ -8,16 +9,16 @@ interface Props {
 export default function AdminEventEdit({ tenant, events }: Props) {
   return (
     <div className="admin-grid">
-      {/* 이벤트 목록 */}
+      {/* 꼬리달기 목록 */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-          <h2 className="card__title" style={{ marginBottom: 0 }}>이벤트 목록</h2>
+          <h2 className="card__title" style={{ marginBottom: 0 }}>꼬리달기 목록</h2>
           <a className="btn btn--primary btn--sm" href={`/admin/events/new?tenant=${encodeURIComponent(tenant.slug)}`}>
-            + 이벤트 등록
+            + 꼬리달기 등록
           </a>
         </div>
         {events.length === 0 ? (
-          <p className="empty-state mt-0 mb-0">아직 이벤트가 없습니다. 아래에서 만들어 주세요.</p>
+          <p className="empty-state mt-0 mb-0">아직 꼬리달기가 없습니다. 아래에서 만들어 주세요.</p>
         ) : (
           <ul className="event-admin-list">
             {events.map((ev) => {
@@ -27,7 +28,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
                     <div className="event-admin-info">
                       <div className="event-admin-title">{ev.title}</div>
                       <div className="event-admin-date">
-                        {new Date(ev.event_date).toISOString().slice(0, 16).replace("T", " ")}
+                        {formatDateKorean(ev.event_date)}
                       </div>
                     </div>
                     <span className={`badge ${ev.is_active ? "badge--on" : "badge--off"}`}>
@@ -47,7 +48,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
                         </svg>
                       </button>
                     </form>
-                    {/* 이벤트 수정 페이지 */}
+                    {/* 꼬리달기 수정 페이지 */}
                     <a
                       className="icon-btn"
                       href={`/admin/events/${ev.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`}
@@ -58,7 +59,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </a>
-                    {/* 이벤트 보기 */}
+                    {/* 꼬리달기 보기 */}
                     <a href={`/t/${tenant.slug}/events/${ev.id}`} className="icon-btn" title="보기">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />

@@ -27,7 +27,7 @@ export default function TelegramLoginWidget({
   requestAccess,
 }: {
   botName: string;
-  /** 로그인 성공 후 init-tenant / 이벤트 목록 이동에 사용 — 선택 */
+  /** 로그인 성공 후 init-tenant / 꼬리달기 목록 이동에 사용 — 선택 */
   tenantSlug?: string;
   /** `"write"`일 때만 data-request-access 설정 (봇이 사용자에게 메시지 보낼 권한 요청) */
   requestAccess?: "write";

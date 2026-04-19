@@ -127,9 +127,9 @@ Express `POST` 라우트 → `app/api/.../route.ts`
 - [ ] `POST /participants` (참여 신청) → `app/api/participants/route.ts`
 - [ ] `POST /participants/update` (수정/취소) → `app/api/participants/update/route.ts`
 
-### 4-3. 관리자 이벤트 (`backend/src/routes/admin.js`)
+### 4-3. 관리자 꼬리달기 (`backend/src/routes/admin.js`)
 
-- [ ] `POST /admin/events` (이벤트 생성) → `app/api/admin/events/route.ts`
+- [ ] `POST /admin/events` (꼬리달기 생성) → `app/api/admin/events/route.ts`
 - [ ] `POST /admin/events/:eventId/update` → `app/api/admin/events/[eventId]/update/route.ts`
 - [ ] `POST /admin/events/:eventId/delete` → `app/api/admin/events/[eventId]/delete/route.ts`
 - [ ] `POST /admin/events/:eventId/toggle` → `app/api/admin/events/[eventId]/toggle/route.ts`
@@ -167,15 +167,15 @@ Express `POST` 라우트 → `app/api/.../route.ts`
 - [ ] **로그인** `app/login/page.tsx`
   - Telegram WebApp 자동 로그인: `'use client'` 컴포넌트로 분리
   - Login Widget(PC): `<Script>` 컴포넌트로 `telegram-widget.js` 로드
-- [ ] **이벤트 목록** `app/t/[tenantSlug]/events/page.tsx`
+- [ ] **꼬리달기 목록** `app/t/[tenantSlug]/events/page.tsx`
   - 서버 컴포넌트에서 DB 직접 조회
   - `allowed_tenant_slug` 쿠키 검사 (`tenantRestrict` 로직 통합)
-- [ ] **이벤트 상세** `app/t/[tenantSlug]/events/[eventId]/page.tsx`
+- [ ] **꼬리달기 상세** `app/t/[tenantSlug]/events/[eventId]/page.tsx`
   - 참여 신청 폼: Client 컴포넌트로 분리 (Telegram WebApp 자동 로그인 포함)
   - 참여자 목록 (옵션별/전체 토글): `'use client'` 컴포넌트
   - 수정/삭제 폼
 - [ ] **관리자 메인** `app/admin/page.tsx`
-  - 이벤트 목록 + 수정 폼: Client 컴포넌트로 분리
+  - 꼬리달기 목록 + 수정 폼: Client 컴포넌트로 분리
   - 옵션 그룹 토글 UI
 - [ ] **관리자 테넌트 설정** `app/admin/tenants/[tenantSlug]/page.tsx`
 - [ ] **리다이렉트** `app/t/[tenantSlug]/page.tsx` → `/t/[tenantSlug]/events` 로 redirect
@@ -194,7 +194,7 @@ Express `POST` 라우트 → `app/api/.../route.ts`
   - 제출 후 `router.refresh()` 또는 revalidate
 - [ ] **참여자 수정/삭제 폼** 인라인 토글 UI → `src/components/ParticipantEditForm.tsx`
 - [ ] **옵션별/전체 참여자 보기 토글** → `src/components/ParticipantList.tsx`
-- [ ] **관리자 이벤트 수정 폼** 토글 + 옵션 그룹 동적 추가 UI → `src/components/AdminEventEdit.tsx`
+- [ ] **관리자 꼬리달기 수정 폼** 토글 + 옵션 그룹 동적 추가 UI → `src/components/AdminEventEdit.tsx`
 
 ---
 
@@ -215,7 +215,7 @@ Express `POST` 라우트 → `app/api/.../route.ts`
 - [ ] Telegram WebApp 환경(모바일)에서 자동 로그인 동작 확인
 - [ ] Telegram Login Widget(PC)에서 관리자 로그인 동작 확인
 - [ ] 참여 신청 → 참여자 목록 업데이트 확인
-- [ ] 관리자 이벤트 생성/수정/삭제 확인
+- [ ] 관리자 꼬리달기 생성/수정/삭제 확인
 - [ ] 옵션 그룹 생성/삭제 확인
 - [ ] 테넌트 접근 제한 (`allowed_tenant_slug`) 동작 확인
 - [ ] `action_log` 로그인 로그 기록 확인

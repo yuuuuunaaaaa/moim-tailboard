@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug, pool } from "@/lib/db";
+import { boundTo } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/events/[eventId]/delete
 export async function POST(
@@ -31,21 +28,21 @@ export async function POST(
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      const q = boundTo(conn);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [[evRow]] = await conn.query<any[]>(
+      const evRow = await q.first<{ id: number; title: string }>(
         "SELECT id, title FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
         [eventId, tenant.id],
       );
       if (!evRow) {
         await conn.rollback();
-        return new Response("이벤트를 찾을 수 없습니다.", { status: 404 });
+        return new Response("꼬리달기를 찾을 수 없습니다.", { status: 404 });
       }
 
-      await conn.query("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
+      await q.exec("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
 
-      // 이벤트 삭제 후 기록 — DB FK 가 ON DELETE SET NULL 이면 기존 로그의 event_id/participant_id 는 NULL 로 유지됨
-      await conn.query(
+      // 꼬리달기 삭제 후 기록 — FK ON DELETE SET NULL 이면 event_id/participant_id 는 NULL로 유지됨
+      await q.exec(
         `INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata)
          VALUES (?, NULL, NULL, ?, JSON_OBJECT('deletedEventId', ?, 'title', ?, 'username', ?))`,
         [
@@ -65,10 +62,7 @@ export async function POST(
       conn.release();
     }
 
-    return NextResponse.redirect(
-      new URL(`/admin?tenant=${tenant.slug}`, request.url),
-      303,
-    );
+    return NextResponse.redirect(new URL(`/admin?tenant=${tenant.slug}`, request.url), 303);
   } catch (err) {
     console.error("POST /api/admin/events/[eventId]/delete:", err);
     return new Response("Internal server error", { status: 500 });

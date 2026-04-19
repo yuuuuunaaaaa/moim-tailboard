@@ -67,7 +67,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
           </div>
           <div className="form-group">
             <label>설명 <span className="optional">(선택)</span></label>
-            <textarea name="description" placeholder="이벤트 설명" />
+            <textarea name="description" placeholder="꼬리달기 설명" />
           </div>
           <div className="form-group">
             <label>날짜</label>
@@ -96,7 +96,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
               <input
                 name="telegramNotifyHeadline"
                 maxLength={120}
-                placeholder="기본: 새 이벤트가 생성되었습니다!"
+                placeholder="기본: 새 꼬리달기가 생성되었습니다!"
               />
             </div>
             <div className="form-group">
@@ -104,7 +104,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
               <textarea
                 name="telegramNotifyExtra"
                 maxLength={500}
-                placeholder="이벤트명·링크 위·아래에 붙는 안내 (줄바꿈 가능)"
+                placeholder="꼬리달기명·링크 위·아래에 붙는 안내 (줄바꿈 가능)"
                 style={{ minHeight: "72px" }}
               />
             </div>
@@ -112,10 +112,10 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
 
           <details className="form-group" style={{ marginTop: "12px" }}>
             <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
-              참가/취소 방 알림 말머리 (이 이벤트에 저장)
+              참가/취소 방 알림 말머리 (이 꼬리달기에 저장)
             </summary>
             <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
-              신청(+1)·취소(-1) 텔레그램 알림 앞 이모지/문구입니다. 비우면 👤. 이벤트마다 다르게 둘 수 있습니다.
+              신청(+1)·취소(-1) 텔레그램 알림 앞 이모지/문구입니다. 비우면 👤. 꼬리달기마다 다르게 둘 수 있습니다.
             </p>
             <div className="form-group">
               <label>참가 신청 시</label>
@@ -191,7 +191,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
       </div>
 
       <div style={{ marginTop: "16px" }}>
-        <button className="btn btn--primary" type="submit">이벤트 만들기</button>
+        <button className="btn btn--primary" type="submit">꼬리달기 만들기</button>
       </div>
     </form>
   );

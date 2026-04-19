@@ -2,7 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
-import { pool } from "./db";
+import { queryFirst } from "./queryRows";
 import { verifyToken } from "./jwt-verify";
 import type { Admin } from "@/types";
 import { getDevDefaultUsername, isDevBypassEnabled } from "@/lib/dev";
@@ -14,6 +14,9 @@ function adminCacheRevalidateSeconds(): number {
   const n = Number(raw);
   return Number.isFinite(n) && n >= 0 ? n : 300;
 }
+
+// 모듈 로드 시점 상수: unstable_cache 사용 여부 결정에 사용 (클로저 재생성 방지)
+const ADMIN_CACHE_TTL = adminCacheRevalidateSeconds();
 
 /**
  * Route Handler에서 쿠키의 JWT를 검증해 username을 얻습니다.
@@ -70,25 +73,15 @@ function normalizeIsSuperadmin(value: unknown): boolean {
 /** username으로 관리자 행 조회 (서비스 로직 전용; 로그인 시에는 호출하지 않음) */
 export async function loadAdminByUsername(username: string): Promise<Admin | null> {
   const u = username.trim();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapRow = (row: any): Admin => ({
-    ...row,
-    is_superadmin: normalizeIsSuperadmin(row?.is_superadmin),
-  });
-
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [rows] = await pool.query<any[]>(ADMIN_SELECT_WITH_SUPER, [u]);
-    const row = rows[0] as Admin | undefined;
+    const row = await queryFirst<Admin>(ADMIN_SELECT_WITH_SUPER, [u]);
     if (!row) return null;
-    return mapRow(row);
+    return { ...row, is_superadmin: normalizeIsSuperadmin(row.is_superadmin) };
   } catch (err: unknown) {
     const e = err as { code?: string; errno?: number };
     // MySQL: ER_BAD_FIELD_ERROR — 기존 DB에 is_superadmin 컬럼이 없을 때
     if (e?.code === "ER_BAD_FIELD_ERROR" || e?.errno === 1054) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [rows] = await pool.query<any[]>(ADMIN_SELECT_BASE, [u]);
-      const row = rows[0] as Admin | undefined;
+      const row = await queryFirst<Admin>(ADMIN_SELECT_BASE, [u]);
       if (!row) return null;
       return { ...row, is_superadmin: false };
     }
@@ -97,19 +90,28 @@ export async function loadAdminByUsername(username: string): Promise<Admin | nul
 }
 
 /**
- * 관리자 행 조회 + Full Route Cache(데이터 캐시).
- * 동일 username은 TTL 동안 DB를 다시 보지 않음(요청 간·서버리스 인스턴스 재사용 시 유효).
+ * 관리자 행 조회 + 데이터 캐시.
+ * 같은 username 은 TTL 동안 DB 를 다시 보지 않음.
+ *
+ * 이전 구현은 호출할 때마다 `unstable_cache(...)`를 새로 만들어 내부적으로 핸들러를 재할당했다.
+ * 여기서는 모듈 로드 시 한 번만 래핑하고, username 을 인자로만 받게 한다.
  */
+const loadAdminByUsernameUncached = loadAdminByUsername;
+
+const loadAdminByUsernameDataCached =
+  ADMIN_CACHE_TTL === 0
+    ? loadAdminByUsernameUncached
+    : unstable_cache(
+        async (username: string) => loadAdminByUsernameUncached(username),
+        ["loadAdminByUsername"],
+        { revalidate: ADMIN_CACHE_TTL },
+      );
+
+/** 요청 단위(React cache) + 요청 간(unstable_cache) 양쪽 캐시 적용 */
 export const loadAdminByUsernameCached = cache(async (username: string): Promise<Admin | null> => {
   const u = username.trim();
   if (!u) return null;
-  const ttl = adminCacheRevalidateSeconds();
-  if (ttl === 0) return loadAdminByUsername(u);
-  return unstable_cache(
-    async () => loadAdminByUsername(u),
-    ["loadAdminByUsername", u],
-    { revalidate: ttl },
-  )();
+  return loadAdminByUsernameDataCached(u);
 });
 
 export const getPageContext = cache(async () => {

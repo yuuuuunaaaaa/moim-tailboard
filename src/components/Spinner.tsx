@@ -11,7 +11,7 @@ export default function Spinner({
   color?: string;
   label?: string;
 }) {
-  const s: CSSProperties = {
+  const style: CSSProperties = {
     width: size,
     height: size,
     borderRadius: 9999,
@@ -23,16 +23,5 @@ export default function Spinner({
     animation: "spin 0.8s linear infinite",
   };
 
-  return (
-    <>
-      <span aria-label={label} role="status" style={s} />
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </>
-  );
+  return <span aria-label={label} role="status" style={style} />;
 }
-

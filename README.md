@@ -1,7 +1,7 @@
 ## moim-tailboard
 
-교회/지역 커뮤니티에서 텔레그램으로 하던 “이름 꼬리 참여 신청”을 웹으로 옮긴 **멀티 테넌트 이벤트 참여 보드**입니다.  
-테넌트(예: 인천청년/서울청년)별로 이벤트/참여/옵션 데이터를 분리해 운영합니다.
+교회/지역 커뮤니티에서 텔레그램으로 하던 “이름 꼬리 참여 신청”을 웹으로 옮긴 **멀티 테넌트 꼬리달기 참여 보드**입니다.  
+테넌트(예: 인천청년/서울청년)별로 꼬리달기/참여/옵션 데이터를 분리해 운영합니다.
 
 ### 기술 스택
 
@@ -71,8 +71,8 @@ npm run dev
 
 ### 사용 방법 (주요 화면/URL)
 
-- 테넌트 이벤트 목록: `/t/{tenantSlug}/events`
-- 이벤트 상세/참여: `/t/{tenantSlug}/events/{eventId}`
+- 테넌트 꼬리달기 목록: `/t/{tenantSlug}/events`
+- 꼬리달기 상세/참여: `/t/{tenantSlug}/events/{eventId}`
 - 관리자: `/admin`
 - 헬스체크: `/api/health`
 
@@ -80,8 +80,8 @@ npm run dev
 
 - **BotFather 도메인 등록(필수)**: `/setdomain`으로 Web App을 열 도메인을 등록해야 “Bot domain invalid”를 피할 수 있습니다. (`https://` 없이 호스트만)
 - **메뉴 버튼 URL 권장**
-  - `https://moim-tailboard.vercel.app/t/{tenantSlug}` (이벤트 목록으로 이동)
-  - `https://moim-tailboard.vercel.app/t/{tenantSlug}/events/{eventId}` (특정 이벤트 바로 열기)
+  - `https://moim-tailboard.vercel.app/t/{tenantSlug}` (꼬리달기 목록으로 이동)
+  - `https://moim-tailboard.vercel.app/t/{tenantSlug}/events/{eventId}` (특정 꼬리달기 바로 열기)
 - **로컬 테스트**: Telegram WebApp은 HTTPS만 열 수 있어 ngrok 같은 터널이 필요합니다. 이때 `NEXT_PUBLIC_APP_URL`도 ngrok HTTPS 주소로 맞추세요.
 
 ### 배포
