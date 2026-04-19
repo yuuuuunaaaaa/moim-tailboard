@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/tenants/[tenantSlug]/admins — 관리자 추가
 export async function POST(
@@ -35,7 +32,7 @@ export async function POST(
     }
 
     try {
-      await pool.query(
+      await execute(
         "INSERT INTO admin (tenant_id, username, name) VALUES (?, ?, ?)",
         [tenant.id, inputUsername, name],
       );

@@ -3,6 +3,11 @@ import type { Admin, Tenant } from "@/types";
 export const TENANT_COOKIE_NAME = "allowed_tenant_slug";
 export const TENANT_COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // 90일 (초)
 
+/** 관리자(superadmin 포함)가 해당 테넌트에 접근 가능한지. API·관리 페이지 공용. */
+export function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
+  return admin.is_superadmin || admin.tenant_id === tenant.id;
+}
+
 /**
  * 테넌트 접근 허용 여부 확인 (Next.js용).
  * - superadmin → 모든 테넌트 허용

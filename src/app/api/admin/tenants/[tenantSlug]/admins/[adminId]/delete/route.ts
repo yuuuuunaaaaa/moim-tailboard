@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/tenants/[tenantSlug]/admins/[adminId]/delete
 export async function POST(
@@ -25,8 +22,7 @@ export async function POST(
       return new Response("소속 지역만 수정할 수 있습니다.", { status: 403 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [result] = await pool.query<any>(
+    const result = await execute(
       "DELETE FROM admin WHERE id = ? AND tenant_id = ?",
       [adminId, tenant.id],
     );

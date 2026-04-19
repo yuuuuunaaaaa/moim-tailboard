@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute, queryFirst } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 /** 관리자가 참여자 삭제 — DB 정리만 하고 텔레그램 알림은 보내지 않음 */
 export async function POST(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ eventId: string; participantId: string }> },
+  { params }: { params: Promise<{ eventId: string; participantId: string }> },
 ) {
   try {
     const { admin, username } = await getPageContext();
@@ -38,21 +33,24 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[ev]] = await pool.query<any[]>(
-      "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
-      [eventId, tenant.id],
+    // event 소유 확인 + 참여자 존재 확인을 단일 JOIN 쿼리로
+    const participant = await queryFirst<{
+      id: number;
+      name: string;
+      username: string;
+    }>(
+      `SELECT p.id, p.name, p.username
+       FROM participant p
+       JOIN event e ON p.event_id = e.id
+       WHERE p.id = ? AND p.event_id = ? AND e.tenant_id = ?
+       LIMIT 1`,
+      [participantId, eventId, tenant.id],
     );
-    if (!ev) return new Response("Event not found", { status: 404 });
+    if (!participant) {
+      return new Response("Participant not found", { status: 404 });
+    }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[participant]] = await pool.query<any[]>(
-      "SELECT id, name, username FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
-      [participantId, eventId],
-    );
-    if (!participant) return new Response("Participant not found", { status: 404 });
-
-    await pool.query(
+    await execute(
       `INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata)
        VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?, 'participantUsername', ?, 'deletedBy', ?))`,
       [
@@ -65,10 +63,10 @@ export async function POST(
         username ?? null,
       ],
     );
-    await pool.query("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [
+    await execute("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [
       participant.id,
     ]);
-    await pool.query("DELETE FROM participant WHERE id = ?", [participant.id]);
+    await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
 
     return NextResponse.redirect(
       new URL(

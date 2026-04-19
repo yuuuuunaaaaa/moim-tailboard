@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute, queryFirst, queryRows } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/events/[eventId]/participants/update-one — 참여자 옵션 1행 저장
 export async function POST(
@@ -33,44 +30,40 @@ export async function POST(
       return new Response("Invalid participantId", { status: 400 });
     }
 
-    // 꼬리달기/참여자 소유 확인
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[ev]] = await pool.query<any[]>(
-      "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
-      [eventId, tenant.id],
-    );
-    if (!ev) return new Response("Event not found", { status: 404 });
+    // 꼬리달기/참여자 소유 + 옵션 그룹 병렬 조회
+    const [ev, p, groups] = await Promise.all([
+      queryFirst<{ id: number }>(
+        "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
+        [eventId, tenant.id],
+      ),
+      queryFirst<{ id: number }>(
+        "SELECT id FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
+        [participantId, eventId],
+      ),
+      queryRows<{ id: number; multiple_select: number }>(
+        "SELECT id, multiple_select FROM option_group WHERE event_id = ?",
+        [eventId],
+      ),
+    ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[p]] = await pool.query<any[]>(
-      "SELECT id FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
-      [participantId, eventId],
-    );
+    if (!ev) return new Response("Event not found", { status: 404 });
     if (!p) return new Response("Participant not found", { status: 404 });
 
-    // 그룹/아이템 목록 (검증용)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [groupRows] = await pool.query<any[]>(
-      "SELECT id, multiple_select FROM option_group WHERE event_id = ?",
-      [eventId],
-    );
-    const groups = groupRows as { id: number; multiple_select: number }[];
     const groupIds = groups.map((g) => g.id);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [itemRows] = groupIds.length
-      ? await pool.query<any[]>(
+    const itemRows = groupIds.length
+      ? await queryRows<{ id: number; option_group_id: number }>(
           "SELECT id, option_group_id FROM option_item WHERE option_group_id IN (?)",
           [groupIds],
         )
-      : [[], []];
+      : [];
     const itemById = new Map<number, { id: number; option_group_id: number }>();
-    (itemRows as { id: number; option_group_id: number }[]).forEach((r) => itemById.set(r.id, r));
+    itemRows.forEach((r) => itemById.set(r.id, r));
 
-    // 기존 선택 삭제 (해당 참여자만)
-    await pool.query("DELETE FROM participant_option WHERE participant_id = ?", [participantId]);
+    await execute(
+      "DELETE FROM participant_option WHERE participant_id = ?",
+      [participantId],
+    );
 
-    // 새 선택 생성
     const values: Array<[number, number]> = [];
     for (const g of groups) {
       const key = `g_${g.id}`;
@@ -83,11 +76,10 @@ export async function POST(
         if (item.option_group_id !== g.id) continue;
         values.push([participantId, optId]);
       }
-      // 단일 선택인 경우 중복 방지(브라우저 이상/조작 대비)
+      // 단일 선택인 경우 중복 방지 — 마지막 선택만 유지
       if (!g.multiple_select && values.length > 0) {
         const last = values.filter((t) => itemById.get(t[1])?.option_group_id === g.id);
         if (last.length > 1) {
-          // keep only the last one for this group
           const keep = last[last.length - 1]!;
           for (let i = values.length - 1; i >= 0; i--) {
             const opt = values[i]!;
@@ -100,13 +92,13 @@ export async function POST(
     }
 
     if (values.length > 0) {
-      await pool.query(
+      await execute(
         "INSERT INTO participant_option (participant_id, option_item_id) VALUES ?",
         [values],
       );
     }
 
-    await pool.query(
+    await execute(
       "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('username', ?, 'mappings', ?))",
       [
         tenant.id,
@@ -119,7 +111,10 @@ export async function POST(
     );
 
     return NextResponse.redirect(
-      new URL(`/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=row_saved`, request.url),
+      new URL(
+        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=row_saved`,
+        request.url,
+      ),
       303,
     );
   } catch (err) {
@@ -127,4 +122,3 @@ export async function POST(
     return new Response("Internal server error", { status: 500 });
   }
 }
-

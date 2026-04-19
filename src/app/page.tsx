@@ -1,5 +1,5 @@
 import { getPageContext } from "@/lib/auth";
-import { pool } from "@/lib/db";
+import { queryRows } from "@/lib/queryRows";
 import Header from "@/components/Header";
 import type { Tenant } from "@/types";
 
@@ -8,14 +8,9 @@ export const metadata = { title: "꼬리달기" };
 export default async function HomePage() {
   const { username, isAdmin, canChooseTenant } = await getPageContext();
 
-  let tenants: Tenant[] = [];
-  if (canChooseTenant) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [rows] = await pool.query<any[]>(
-      "SELECT id, slug, name FROM tenant ORDER BY name ASC",
-    );
-    tenants = rows as Tenant[];
-  }
+  const tenants: Tenant[] = canChooseTenant
+    ? await queryRows<Tenant>("SELECT id, slug, name FROM tenant ORDER BY name ASC")
+    : [];
 
   return (
     <>

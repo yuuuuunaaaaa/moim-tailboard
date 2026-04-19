@@ -1,4 +1,5 @@
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
+import { formatDateKorean } from "@/lib/dateOnly";
 import type { Event, Tenant } from "@/types";
 
 interface Props {
@@ -27,7 +28,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
                     <div className="event-admin-info">
                       <div className="event-admin-title">{ev.title}</div>
                       <div className="event-admin-date">
-                        {new Date(ev.event_date).toISOString().slice(0, 16).replace("T", " ")}
+                        {formatDateKorean(ev.event_date)}
                       </div>
                     </div>
                     <span className={`badge ${ev.is_active ? "badge--on" : "badge--off"}`}>

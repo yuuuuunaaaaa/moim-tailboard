@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, findTenantBySlug } from "@/lib/db";
+import { findTenantBySlug } from "@/lib/db";
+import { queryFirst } from "@/lib/queryRows";
 import { loadAdminByUsername } from "@/lib/auth";
 import { verifyToken } from "@/lib/jwt-verify";
 import { TENANT_COOKIE_NAME, TENANT_COOKIE_MAX_AGE } from "@/lib/tenantRestrict";
@@ -28,13 +29,14 @@ export async function GET(request: NextRequest) {
 
   if (admin && !admin.is_superadmin) {
     if (tenant.id !== admin.tenant_id) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [[row]] = await pool.query<any[]>("SELECT slug FROM tenant WHERE id = ? LIMIT 1", [
-        admin.tenant_id,
-      ]);
-      const mySlug = row?.slug as string | undefined;
-      if (mySlug) {
-        return NextResponse.redirect(new URL(`/t/${encodeURIComponent(mySlug)}/events`, request.url));
+      const row = await queryFirst<{ slug: string }>(
+        "SELECT slug FROM tenant WHERE id = ? LIMIT 1",
+        [admin.tenant_id],
+      );
+      if (row?.slug) {
+        return NextResponse.redirect(
+          new URL(`/t/${encodeURIComponent(row.slug)}/events`, request.url),
+        );
       }
       return NextResponse.redirect(new URL("/", request.url));
     }

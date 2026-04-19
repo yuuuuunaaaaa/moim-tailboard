@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/db";
+import { queryRows } from "@/lib/queryRows";
 import type { Admin, Tenant } from "@/types";
 
 const ERR_TELEGRAM =
@@ -15,11 +15,9 @@ const ERR_SUPER_NEED_SLUG =
  */
 export async function responseWhenTenantSlugMissing(admin: Admin) {
   if (admin.is_superadmin) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [rows] = await pool.query<any[]>(
+    const tenants = await queryRows<Tenant>(
       "SELECT id, slug, name FROM tenant ORDER BY name ASC",
     );
-    const tenants = rows as Tenant[];
     return NextResponse.json(
       {
         error: ERR_SUPER_NEED_SLUG,

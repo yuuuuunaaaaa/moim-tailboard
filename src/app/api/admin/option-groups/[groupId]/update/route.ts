@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
-import { pool, findTenantBySlug } from "@/lib/db";
-import type { Admin, Tenant } from "@/types";
-
-function canAccessTenant(admin: Admin, tenant: Tenant): boolean {
-  return admin.is_superadmin || admin.tenant_id === tenant.id;
-}
+import { findTenantBySlug } from "@/lib/db";
+import { execute, queryFirst } from "@/lib/queryRows";
+import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/option-groups/[groupId]/update — 옵션 그룹/항목 수정
 export async function POST(
@@ -33,14 +30,13 @@ export async function POST(
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
     // group이 실제로 해당 테넌트/꼬리달기 소속인지 확인
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[row]] = await pool.query<any[]>(
+    const row = await queryFirst<{ id: number; event_id: number }>(
       "SELECT og.id, og.event_id FROM option_group og JOIN event e ON og.event_id = e.id WHERE og.id = ? AND e.id = ? AND e.tenant_id = ? LIMIT 1",
       [groupId, eventId, tenant.id],
     );
     if (!row) return new Response("Option group not found", { status: 404 });
 
-    await pool.query(
+    await execute(
       "UPDATE option_group SET name = ?, multiple_select = ? WHERE id = ?",
       [groupName, multipleSelect, groupId],
     );
@@ -53,16 +49,16 @@ export async function POST(
       .filter(Boolean);
 
     // 기존 항목 전체 교체(삭제된 항목 선택은 FK로 함께 정리됨)
-    await pool.query("DELETE FROM option_item WHERE option_group_id = ?", [groupId]);
+    await execute("DELETE FROM option_item WHERE option_group_id = ?", [groupId]);
     if (names.length > 0) {
       const values = names.map((n, idx) => [groupId, n, idx]);
-      await pool.query(
+      await execute(
         "INSERT INTO option_item (option_group_id, name, sort_order) VALUES ?",
         [values],
       );
     }
 
-    await pool.query(
+    await execute(
       "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'groupId', ?, 'groupName', ?, 'multipleSelect', ?, 'itemNames', ?))",
       [
         tenant.id,
@@ -76,10 +72,12 @@ export async function POST(
       ],
     );
 
-    return NextResponse.redirect(new URL(`/admin/events/${eventId}?tenant=${tenant.slug}`, request.url), 303);
+    return NextResponse.redirect(
+      new URL(`/admin/events/${eventId}?tenant=${tenant.slug}`, request.url),
+      303,
+    );
   } catch (err) {
     console.error("POST /api/admin/option-groups/[groupId]/update:", err);
     return new Response("Internal server error", { status: 500 });
   }
 }
-

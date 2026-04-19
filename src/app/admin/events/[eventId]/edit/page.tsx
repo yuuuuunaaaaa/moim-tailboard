@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
-import { pool } from "@/lib/db";
+import { queryFirst, queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
+import { resolveAdminTenant } from "@/lib/adminTenant";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
 import AutoToast from "@/components/AutoToast";
-import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption, Tenant } from "@/types";
+import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
@@ -15,117 +16,109 @@ interface Props {
 
 export const metadata = { title: "수정 · 꼬리달기" };
 
+const TOAST_TEXT: Record<string, string> = {
+  row_saved: "저장되었습니다.",
+  participant_deleted: "참여 기록을 삭제했습니다.",
+};
+
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
-  const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
+  const [{ admin, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
+    await Promise.all([getPageContext(), params, searchParams]);
+
   if (!admin) redirect("/login");
 
-  const { eventId: eventIdStr } = await params;
   const eventId = Number(eventIdStr);
   if (!Number.isFinite(eventId)) {
     return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기 ID가 올바르지 않습니다.</div>;
   }
 
-  const sp = await searchParams;
   const slugParam = (sp.tenant ?? "").trim();
   const toast = (sp.toast ?? "").trim();
+  const toastText = TOAST_TEXT[toast] ?? "";
 
-  let tenant: Tenant;
-  if (admin.is_superadmin) {
-    if (!slugParam) {
-      return (
-        <>
-          <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
-          <main className="container">
-            <h1>꼬리달기 수정</h1>
-            <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
-            <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
-          </main>
-        </>
-      );
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[row]] = await pool.query<any[]>(
-      "SELECT id, slug, name FROM tenant WHERE slug = ? LIMIT 1",
-      [slugParam],
+  const res = await resolveAdminTenant(admin, slugParam);
+
+  if (res.kind === "missing") {
+    return (
+      <div style={{ padding: "48px", textAlign: "center" }}>
+        {res.reason === "admin_tenant_not_found" ? "소속 지역을 찾을 수 없습니다." : "지역을 찾을 수 없습니다."}
+      </div>
     );
-    if (!row) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
-    tenant = row as Tenant;
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [[row]] = await pool.query<any[]>(
-      "SELECT id, slug, name FROM tenant WHERE id = ? LIMIT 1",
-      [admin.tenant_id],
+  }
+  if (res.kind === "redirect") {
+    redirect(`/admin/events/${eventId}/edit?tenant=${encodeURIComponent(res.canonicalSlug)}`);
+  }
+  if (res.kind === "choose") {
+    return (
+      <>
+        <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
+        <main className="container">
+          <h1>꼬리달기 수정</h1>
+          <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
+          <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
+        </main>
+      </>
     );
-    if (!row) return <div style={{ padding: "48px", textAlign: "center" }}>소속 지역을 찾을 수 없습니다.</div>;
-    tenant = row as Tenant;
-    if (slugParam && slugParam !== tenant.slug) {
-      redirect(
-        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}`,
-      );
-    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [[eventRow]] = await pool.query<any[]>(
+  const { tenant } = res;
+
+  const event = await queryFirst<Event>(
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
     [eventId, tenant.id],
   );
-  if (!eventRow) return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
-  const event = eventRow as Event;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [groupRows] = await pool.query<any[]>(
-    "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
-    [event.id],
-  );
-  const optionGroups = groupRows as OptionGroup[];
-
-  let optionItems: OptionItem[] = [];
-  if (optionGroups.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [itemRows] = await pool.query<any[]>(
-      "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY option_group_id, sort_order ASC",
-      [optionGroups.map((g) => g.id)],
-    );
-    optionItems = itemRows as OptionItem[];
+  if (!event) {
+    return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [participantRows] = await pool.query<any[]>(
-    "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
-    [event.id],
-  );
-  const participants = participantRows as Participant[];
+  // 이벤트가 확정된 뒤: 옵션 그룹·참여자는 서로 독립 → 병렬
+  const [optionGroups, participants] = await Promise.all([
+    queryRows<OptionGroup>(
+      "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
+      [event.id],
+    ),
+    queryRows<Participant>(
+      "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
+      [event.id],
+    ),
+  ]);
 
-  let participantOptions: ParticipantOption[] = [];
-  if (participants.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [poRows] = await pool.query<any[]>(
-      "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
-      [participants.map((p) => p.id)],
-    );
-    participantOptions = poRows as ParticipantOption[];
+  const [optionItems, participantOptions] = await Promise.all([
+    optionGroups.length === 0
+      ? Promise.resolve<OptionItem[]>([])
+      : queryRows<OptionItem>(
+          "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY option_group_id, sort_order ASC",
+          [optionGroups.map((g) => g.id)],
+        ),
+    participants.length === 0
+      ? Promise.resolve<ParticipantOption[]>([])
+      : queryRows<ParticipantOption>(
+          "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
+          [participants.map((p) => p.id)],
+        ),
+  ]);
+
+  // 파생 자료구조: O(n+m)으로 준비
+  const itemsByGroup = new Map<number, OptionItem[]>();
+  for (const g of optionGroups) itemsByGroup.set(g.id, []);
+  for (const oi of optionItems) {
+    const arr = itemsByGroup.get(oi.option_group_id);
+    if (arr) arr.push(oi);
   }
+  const groupsWithItems = optionGroups.map((g) => ({ ...g, items: itemsByGroup.get(g.id) ?? [] }));
 
-  const participantOptMap: Record<number, Set<number>> = {};
-  participantOptions.forEach((po) => {
-    if (!participantOptMap[po.participant_id]) participantOptMap[po.participant_id] = new Set();
-    participantOptMap[po.participant_id].add(po.option_item_id);
-  });
   const participantOptIds: Record<number, number[]> = {};
-  participants.forEach((p) => {
-    participantOptIds[p.id] = Array.from(participantOptMap[p.id] ?? []);
-  });
-
-  const groupsWithItems = optionGroups.map((g) => ({
-    ...g,
-    items: optionItems.filter((oi) => oi.option_group_id === g.id),
-  }));
+  for (const p of participants) participantOptIds[p.id] = [];
+  for (const po of participantOptions) {
+    const arr = participantOptIds[po.participant_id];
+    if (arr) arr.push(po.option_item_id);
+  }
 
   const eventDateVal = toDateInputValue(event.event_date);
+  const clearHref = `/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`;
 
   return (
-    <>
+    <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
       <Header
         username={username}
@@ -138,20 +131,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>꼬리달기 수정</h1>
-        {toast === "row_saved" && (
-          <AutoToast
-            message="저장되었습니다."
-            clearHref={`/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`}
-            timeoutMs={2000}
-          />
-        )}
-        {toast === "participant_deleted" && (
-          <AutoToast
-            message="참여 기록을 삭제했습니다."
-            clearHref={`/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`}
-            timeoutMs={2000}
-          />
-        )}
+        {toastText && <AutoToast message={toastText} clearHref={clearHref} timeoutMs={2000} />}
 
         <div className="admin-grid" style={{ marginTop: "12px" }}>
           <div className="card" style={{ gridColumn: "1 / -1" }}>
@@ -178,7 +158,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                     defaultValue={event.telegram_participant_join_prefix ?? ""}
                   />
                 </div>
-                <div className="form-group" style={{ marginBottom: 0 , marginTop: 10 }}>
+                <div className="form-group" style={{ marginBottom: 0, marginTop: 10 }}>
                   <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
                   <input
                     type="text"
@@ -205,9 +185,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   const itemsText = g.items.map((i) => i.name).join("\n");
                   return (
                     <div key={g.id} className="option-group-card">
-                      <div
-                        className="admin-og-row"
-                      >
+                      <div className="admin-og-row">
                         <form
                           method="post"
                           action={`/api/admin/option-groups/${g.id}/update`}
@@ -253,10 +231,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                           style={{ flexShrink: 0 }}
                         >
                           <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                          <button
-                            type="submit"
-                            className="btn btn--danger option-group-edit-btn"
-                          >
+                          <button type="submit" className="btn btn--danger option-group-edit-btn">
                             삭제
                           </button>
                         </form>
@@ -322,98 +297,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
           </div>
         </div>
       </main>
-      <style>{`
-        /* Prevent page-level horizontal overflow on mobile.
-           Tables are allowed to scroll inside .participants-wrap. */
-        .container--wide {
-          overflow-x: hidden;
-        }
-        .admin-grid,
-        .card {
-          min-width: 0;
-          max-width: 100%;
-        }
-        .admin-og-row {
-          min-width: 0;
-        }
-
-        .admin-event-field {
-          margin-top: 12px;
-          margin-bottom: 12px;
-        }
-        .admin-event-field:first-of-type {
-          margin-top: 4px;
-        }
-        .admin-edit-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 14px;
-          flex-wrap: wrap;
-        }
-        .admin-edit-actions .btn {
-          min-height: 44px;
-        }
-
-        .admin-og-row {
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-          flex-wrap: wrap;
-        }
-        .admin-og-row .option-group-edit-btn {
-          min-height: 44px;
-        }
-
-        .admin-participants-wrap {
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-        }
-        .admin-participants-wrap .table {
-          min-width: 720px;
-        }
-
-        /* Mobile-first: stack rows and make inputs full width */
-        @media (max-width: 640px) {
-          .admin-edit-row {
-            flex-direction: column !important;
-            align-items: stretch !important;
-          }
-          .admin-edit-row input,
-          .admin-edit-row textarea {
-            width: 100%;
-          }
-          .admin-edit-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-          .admin-edit-actions .btn {
-            width: 100%;
-          }
-          .option-group-edit-head {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 10px;
-          }
-          .option-group-edit-actions {
-            width: 100%;
-            justify-content: space-between;
-          }
-          .option-group-edit-actions button,
-          .option-group-edit-actions .btn {
-            min-height: 44px;
-          }
-          .admin-og-row form {
-            width: 100%;
-          }
-          .admin-og-row > form:last-child {
-            width: 100%;
-          }
-          .admin-og-row > form:last-child .btn {
-            width: 100%;
-          }
-        }
-      `}</style>
-    </>
+    </div>
   );
 }
-

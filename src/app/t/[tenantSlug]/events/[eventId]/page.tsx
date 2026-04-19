@@ -1,9 +1,11 @@
 import { toDateInputValue } from "@/lib/dateOnly";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { pool, findTenantBySlugCached } from "@/lib/db";
+import { findTenantBySlugCached } from "@/lib/db";
+import { queryFirst, queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
 import { checkTenantAccess, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
+import { isDevBypassEnabled } from "@/lib/dev";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import TelegramAuth from "@/components/TelegramAuthNoSsr";
@@ -17,17 +19,32 @@ interface Props {
   searchParams?: Promise<{ toast?: string }>;
 }
 
+const TOAST_TEXT: Record<string, string> = {
+  joined: "참여 신청이 완료되었습니다.",
+  updated: "수정이 완료되었습니다.",
+  cancelled: "참여가 취소되었습니다.",
+  participant_deleted: "참여 기록을 삭제했습니다.",
+};
+
 export default async function EventDetailPage({ params, searchParams }: Props) {
-  const { tenantSlug, eventId: eventIdStr } = await params;
+  const [{ tenantSlug, eventId: eventIdStr }, sp] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({} as { toast?: string }),
+  ]);
   const eventId = Number(eventIdStr);
-  const isDevBypass =
-    process.env.NODE_ENV === "development" || process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1";
+  const isDevBypass = isDevBypassEnabled();
 
-  const tenant = await findTenantBySlugCached(tenantSlug);
-  if (!tenant) return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
+  // 테넌트·페이지 컨텍스트·쿠키는 서로 독립적이라 동시에 준비
+  const [tenant, ctx, cookieStore] = await Promise.all([
+    findTenantBySlugCached(tenantSlug),
+    getPageContext(),
+    cookies(),
+  ]);
+  if (!tenant) {
+    return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
+  }
 
-  const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
-  const cookieStore = await cookies();
+  const { admin, username, isAdmin, canChooseTenant } = ctx;
   const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
   const access = checkTenantAccess(admin, tenant, allowedSlug);
 
@@ -44,60 +61,44 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     redirect(`/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${next}`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [[event]] = await pool.query<any[]>(
+  const event = await queryFirst<Event>(
     "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
     [eventId, tenant.id],
   );
-  if (!event) return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [optionGroupRows] = await pool.query<any[]>(
-    "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
-    [event.id],
-  );
-  const optionGroups = optionGroupRows as OptionGroup[];
-
-  let optionItems: OptionItem[] = [];
-  if (optionGroups.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [oiRows] = await pool.query<any[]>(
-      "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY sort_order ASC",
-      [optionGroups.map((g) => g.id)],
-    );
-    optionItems = oiRows as OptionItem[];
+  if (!event) {
+    return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [participantRows] = await pool.query<any[]>(
-    "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
-    [event.id],
-  );
-  const participants = participantRows as Participant[];
+  // 이벤트가 확정되면 옵션 그룹/참여자는 서로 독립 → 병렬
+  const [optionGroups, participants] = await Promise.all([
+    queryRows<OptionGroup>(
+      "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
+      [event.id],
+    ),
+    queryRows<Participant>(
+      "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
+      [event.id],
+    ),
+  ]);
 
-  let participantOptions: ParticipantOption[] = [];
-  if (participants.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [poRows] = await pool.query<any[]>(
-      "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
-      [participants.map((p) => p.id)],
-    );
-    participantOptions = poRows as ParticipantOption[];
-  }
+  // 그룹·참여자 결과에 의존하는 항목 로드도 병렬
+  const [optionItems, participantOptions] = await Promise.all([
+    optionGroups.length === 0
+      ? Promise.resolve<OptionItem[]>([])
+      : queryRows<OptionItem>(
+          "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY sort_order ASC",
+          [optionGroups.map((g) => g.id)],
+        ),
+    participants.length === 0
+      ? Promise.resolve<ParticipantOption[]>([])
+      : queryRows<ParticipantOption>(
+          "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
+          [participants.map((p) => p.id)],
+        ),
+  ]);
 
   const eventDateStr = toDateInputValue(event.event_date);
-  const sp = (await searchParams) ?? {};
-  const toast = typeof sp.toast === "string" ? sp.toast : "";
-  const toastText =
-    toast === "joined"
-      ? "참여 신청이 완료되었습니다."
-      : toast === "updated"
-        ? "수정이 완료되었습니다."
-        : toast === "cancelled"
-          ? "참여가 취소되었습니다."
-          : toast === "participant_deleted"
-            ? "참여 기록을 삭제했습니다."
-          : "";
+  const toastText = typeof sp?.toast === "string" ? TOAST_TEXT[sp.toast] ?? "" : "";
 
   return (
     <>
@@ -109,9 +110,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         tenantSlug={tenantSlug}
         showEventListLink
       />
-      {!username && (
-        <TelegramAuth tenantSlug={tenantSlug} />
-      )}
+      {!username && <TelegramAuth tenantSlug={tenantSlug} />}
       <main className="container container--wide">
         {toastText && (
           <AutoToast message={toastText} clearHref={`/t/${tenant.slug}/events/${event.id}`} timeoutMs={2000} />
@@ -121,12 +120,10 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </a>
         <h1>{event.title}</h1>
         <p className="page-subtitle">
-          {eventDateStr} ·{" "}
-          {event.description ? event.description : "꼬리달기에 참여해 주세요."}
+          {eventDateStr} · {event.description ? event.description : "꼬리달기에 참여해 주세요."}
         </p>
 
         <div className="layout-half">
-          {/* 참여 신청 폼 */}
           <div className="card">
             <h2 className="card__title">참여 신청</h2>
             <JoinParticipantForm
@@ -139,7 +136,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             />
           </div>
 
-          {/* 참여자 목록 */}
           <ParticipantList
             participants={participants}
             optionGroups={optionGroups}
@@ -152,27 +148,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           />
         </div>
       </main>
-      <style>{`
-        .card__title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .card__title-row .card__title { margin-bottom: 0; }
-        .p-group-block { margin-bottom: 18px; }
-        .p-group-block:last-child { margin-bottom: 0; }
-        .p-group-label {
-          font-size: 0.8125rem; font-weight: 700; color: var(--primary);
-          text-transform: uppercase; letter-spacing: .04em;
-          padding: 4px 0 6px; border-bottom: 2px solid var(--primary-light); margin-bottom: 8px;
-        }
-        .p-opt-row {
-          display: flex; align-items: baseline; gap: 8px;
-          padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.875rem;
-        }
-        .p-opt-row:last-child { border-bottom: none; }
-        .p-opt-item-name { font-weight: 600; white-space: nowrap; min-width: 64px; }
-        .p-opt-count { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
-        .p-opt-names { color: var(--text); line-height: 1.6; flex: 1; }
-        .p-opt-row--none .p-opt-item-name { color: var(--muted); font-weight: 500; }
-        .p-opt-row--none .p-opt-names { color: var(--muted); }
-      `}</style>
     </>
   );
 }
