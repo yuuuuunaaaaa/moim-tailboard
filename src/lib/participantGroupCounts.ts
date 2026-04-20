@@ -62,26 +62,49 @@ export async function fetchLeaveRemovedCountPerOptionGroup(
 /** 목록 페이지와 동일: 활성 꼬리달기별 참가 인원 스냅샷. (±n)은 affectedEventId 에만 표시 */
 export type TenantEventParticipantSnapshot = {
   eventTitle: string;
+  /** 이벤트별 말머리. 감소한 이벤트는 leave_prefix, 나머지는 join_prefix를 사용. */
+  titlePrefix?: string | null;
   lines: { groupName: string; count: number; delta?: number }[];
   totalFallback?: { count: number; delta?: number };
 };
 
+/**
+ * 옵션 그룹이 2개 이상인 꼬리달기는 그룹별 라인을 보여주고,
+ * 그 외(0~1개)는 '이벤트 제목 n명 (+1)' 한 줄로만 표시한다.
+ * - 0~1개: 총 참가 인원, 변동은 ±1 (참여/취소 1건 단위)
+ * - 2개 이상: 각 그룹의 현재 인원 + 해당 그룹에 발생한 변동(±n)
+ */
 export async function fetchTenantParticipantSnapshots(
   tenantId: number,
   affectedEventId: number,
   mode: "join" | "leave",
   deltaByGroupId: Map<number, number>,
 ): Promise<TenantEventParticipantSnapshot[]> {
-  const events = await queryRows<{ id: number; title: string }>(
-    `SELECT id, title FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC`,
+  const events = await queryRows<{
+    id: number;
+    title: string;
+    telegram_participant_join_prefix: string | null;
+    telegram_participant_leave_prefix: string | null;
+  }>(
+    `SELECT id, title, telegram_participant_join_prefix, telegram_participant_leave_prefix
+     FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC`,
     [tenantId],
   );
 
   return Promise.all(
     events.map(async (ev) => {
       const isAffected = ev.id === affectedEventId;
+      // 참가 인원이 "감소"한 이벤트만 leave_prefix, 그 외(증가·변동 없음)는 join_prefix.
+      const rawPrefix =
+        isAffected && mode === "leave"
+          ? ev.telegram_participant_leave_prefix
+          : ev.telegram_participant_join_prefix;
+      const titlePrefix = rawPrefix?.trim() || null;
+
       const groupRows = await fetchParticipantCountsPerOptionGroup(ev.id);
-      if (groupRows.length > 0) {
+
+      // 옵션 그룹이 2개 이상이어야 그룹별 분해를 보여준다.
+      if (groupRows.length >= 2) {
         const lines = groupRows.map((g) => {
           let delta: number | undefined;
           if (isAffected) {
@@ -92,18 +115,18 @@ export async function fetchTenantParticipantSnapshots(
           }
           return { groupName: g.name, count: g.cnt, delta };
         });
-        return { eventTitle: ev.title, lines };
+        return { eventTitle: ev.title, titlePrefix, lines };
       }
+
+      // 옵션 그룹이 0개 또는 1개: 총 참가 인원만 한 줄로
       const countRow = await queryFirst<{ cnt: number }>(
         "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
         [ev.id],
       );
-      let delta: number | undefined;
-      if (isAffected) {
-        delta = mode === "join" ? 1 : -1;
-      }
+      const delta = isAffected ? (mode === "join" ? 1 : -1) : undefined;
       return {
         eventTitle: ev.title,
+        titlePrefix,
         lines: [],
         totalFallback: { count: countRow?.cnt ?? 0, delta },
       };

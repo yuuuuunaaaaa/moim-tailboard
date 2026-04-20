@@ -45,23 +45,32 @@ export function buildNewEventTelegramHtml(opts: {
 
 const TELEGRAM_HTML_SAFE_LEN = 3900;
 
+function formatDelta(delta: number | null | undefined): string {
+  if (delta == null || delta === 0) return "";
+  return ` (${delta > 0 ? "+" : ""}${delta})`;
+}
+
+/** prefix 가 있으면 제목 앞에 공백 1칸을 두고 붙인다. 없으면 빈 문자열. */
+function titleWithPrefix(ev: TenantEventParticipantSnapshot): string {
+  const p = ev.titlePrefix?.trim();
+  const head = p ? `${escapeHtml(p)} ` : "";
+  return `${head}${escapeHtml(ev.eventTitle)}`;
+}
+
 function formatEventSnapshotBlock(ev: TenantEventParticipantSnapshot): string {
-  const sub: string[] = ["", `<b>${escapeHtml(ev.eventTitle)}</b>`];
+  // 각 블록은 앞에 빈 줄을 넣어 시각적으로 구분
+  // 옵션 그룹이 2개 이상: 제목을 볼드로 한 줄, 그룹별 인원을 그 아래 들여쓰기로
   if (ev.lines.length > 0) {
+    const sub: string[] = ["", "", `<b>${titleWithPrefix(ev)}</b>`];
     for (const L of ev.lines) {
-      const d =
-        L.delta != null && L.delta !== 0 ? `(${L.delta > 0 ? "+" : ""}${L.delta})` : "";
-      sub.push(`- ${escapeHtml(L.groupName)} ${L.count}명${d}`);
+      sub.push(`- ${escapeHtml(L.groupName)} ${L.count}명${formatDelta(L.delta)}`);
     }
-  } else if (ev.totalFallback) {
-    const tf = ev.totalFallback;
-    const d =
-      tf.delta != null && tf.delta !== 0 ? `(${tf.delta > 0 ? "+" : ""}${tf.delta})` : "";
-    sub.push(`- 전체 ${tf.count}명${d}`);
-  } else {
-    sub.push(`- 전체 0명`);
+    return sub.join("\n");
   }
-  return sub.join("\n");
+  // 옵션 그룹이 0~1개: 한 줄로 '이벤트 제목 n명 (+1)'
+  const tf = ev.totalFallback;
+  const count = tf?.count ?? 0;
+  return `\n\n${titleWithPrefix(ev)} ${count}명${formatDelta(tf?.delta)}`;
 }
 
 /**
@@ -78,7 +87,7 @@ export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
   const head = raw ? `${escapeHtml(raw)}\n` : "";
   const title = "<b>참가 인원 변동 알림</b>";
   const anchor = escapeHtml(opts.linkLabel?.trim() || "꼬리달기 목록");
-  const footer = `\n<a href="${escapeHtml(opts.link)}">${anchor}</a>`;
+  const footer = `\n\n<a href="${escapeHtml(opts.link)}">${anchor}</a>`;
 
   let body = "";
   let omitted = 0;
