@@ -3,7 +3,11 @@ import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
-import { sendMessage, eventDetailUrl, buildParticipantCountTelegramHtml } from "@/lib/telegram";
+import {
+  fetchLeaveRemovedCountPerOptionGroup,
+  fetchParticipantCountsPerOptionGroup,
+} from "@/lib/participantGroupCounts";
+import { sendMessage, eventDetailUrl, buildParticipantOptionSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import type { Participant } from "@/types";
 
@@ -46,6 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (mode === "delete") {
+      const removedByGroup = await fetchLeaveRemovedCountPerOptionGroup(participant.id);
+
       // 로그 기록 → participant_id 를 NULL 로 덮어쓰기 → DELETE 순서는 기존 동작을 유지
       await execute(
         "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?))",
@@ -56,24 +62,39 @@ export async function POST(request: NextRequest) {
       ]);
       await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
 
-      const [countRow, ev] = await Promise.all([
+      const [groupRows, countRow, ev] = await Promise.all([
+        fetchParticipantCountsPerOptionGroup(participant.event_id),
         queryFirst<{ cnt: number }>(
           "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
           [participant.event_id],
         ),
-        queryFirst<{ title: string; telegram_participant_leave_prefix: string | null }>(
-          "SELECT title, telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
+        queryFirst<{ telegram_participant_leave_prefix: string | null }>(
+          "SELECT telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
           [participant.event_id],
         ),
       ]);
 
+      const lines =
+        groupRows.length > 0
+          ? groupRows.map((g) => {
+              const n = removedByGroup.get(g.id);
+              return {
+                groupName: g.name,
+                count: g.cnt,
+                delta: n != null && n !== 0 ? -n : undefined,
+              };
+            })
+          : [];
+
       await sendMessage(
         tenant.chat_room_id,
-        buildParticipantCountTelegramHtml({
-          eventTitle: ev?.title ?? "꼬리달기",
+        buildParticipantOptionSummaryTelegramHtml({
           link: eventDetailUrl(tenant.slug, participant.event_id),
-          count: countRow?.cnt ?? 0,
-          deltaLabel: "-1",
+          lines,
+          totalFallback:
+            groupRows.length === 0
+              ? { count: countRow?.cnt ?? 0, delta: -1 }
+              : undefined,
           prefix: ev?.telegram_participant_leave_prefix ?? "",
         }),
       );
