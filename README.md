@@ -56,7 +56,10 @@ mysql -u <user> -p <db_name> < schema.sql
 예시(직접 값은 환경에 맞게 변경):
 
 ```sql
-INSERT INTO tenant (slug, name, chat_room_id) VALUES ('incheon', '인천청년', '-1');
+-- chat_room_id: 참가/취소 등 기본 알림 방 ID
+-- event_notice_chat_room_id: 꼬리달기 생성 알림 전용 방 ID (NULL 이면 chat_room_id 로 폴백)
+INSERT INTO tenant (slug, name, chat_room_id, event_notice_chat_room_id)
+VALUES ('incheon', '인천청년', '-1', NULL);
 INSERT INTO admin (telegram_id, username, name, tenant_id)
 VALUES (NULL, 'your_telegram_username', '관리자', (SELECT id FROM tenant WHERE slug='incheon'));
 ```
