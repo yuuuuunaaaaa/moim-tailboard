@@ -1,4 +1,4 @@
-import { queryRows } from "@/lib/queryRows";
+import { queryFirst, queryRows } from "@/lib/queryRows";
 
 export type OptionGroupCountRow = {
   id: number;
@@ -57,4 +57,56 @@ export async function fetchLeaveRemovedCountPerOptionGroup(
   const m = new Map<number, number>();
   for (const r of rows) m.set(r.option_group_id, r.n);
   return m;
+}
+
+/** 목록 페이지와 동일: 활성 꼬리달기별 참가 인원 스냅샷. (±n)은 affectedEventId 에만 표시 */
+export type TenantEventParticipantSnapshot = {
+  eventTitle: string;
+  lines: { groupName: string; count: number; delta?: number }[];
+  totalFallback?: { count: number; delta?: number };
+};
+
+export async function fetchTenantParticipantSnapshots(
+  tenantId: number,
+  affectedEventId: number,
+  mode: "join" | "leave",
+  deltaByGroupId: Map<number, number>,
+): Promise<TenantEventParticipantSnapshot[]> {
+  const events = await queryRows<{ id: number; title: string }>(
+    `SELECT id, title FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC`,
+    [tenantId],
+  );
+
+  return Promise.all(
+    events.map(async (ev) => {
+      const isAffected = ev.id === affectedEventId;
+      const groupRows = await fetchParticipantCountsPerOptionGroup(ev.id);
+      if (groupRows.length > 0) {
+        const lines = groupRows.map((g) => {
+          let delta: number | undefined;
+          if (isAffected) {
+            const raw = deltaByGroupId.get(g.id);
+            if (raw != null && raw !== 0) {
+              delta = mode === "leave" ? -raw : raw;
+            }
+          }
+          return { groupName: g.name, count: g.cnt, delta };
+        });
+        return { eventTitle: ev.title, lines };
+      }
+      const countRow = await queryFirst<{ cnt: number }>(
+        "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
+        [ev.id],
+      );
+      let delta: number | undefined;
+      if (isAffected) {
+        delta = mode === "join" ? 1 : -1;
+      }
+      return {
+        eventTitle: ev.title,
+        lines: [],
+        totalFallback: { count: countRow?.cnt ?? 0, delta },
+      };
+    }),
+  );
 }

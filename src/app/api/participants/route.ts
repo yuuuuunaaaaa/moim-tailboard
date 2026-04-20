@@ -4,10 +4,10 @@ import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import {
-  fetchParticipantCountsPerOptionGroup,
   fetchJoinDeltaPerOptionGroup,
+  fetchTenantParticipantSnapshots,
 } from "@/lib/participantGroupCounts";
-import { sendMessage, eventDetailUrl, buildParticipantOptionSummaryTelegramHtml } from "@/lib/telegram";
+import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import type { Event } from "@/types";
 
@@ -72,37 +72,20 @@ export async function POST(request: NextRequest) {
       ],
     );
 
-    const link = eventDetailUrl(tenant.slug, event.id);
-    const [groupRows, joinDelta, countRow] = await Promise.all([
-      fetchParticipantCountsPerOptionGroup(event.id),
-      fetchJoinDeltaPerOptionGroup(optionItemIds),
-      queryFirst<{ cnt: number }>(
-        "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
-        [event.id],
-      ),
-    ]);
-
-    const lines =
-      groupRows.length > 0
-        ? groupRows.map((g) => {
-            const d = joinDelta.get(g.id);
-            return {
-              groupName: g.name,
-              count: g.cnt,
-              delta: d != null && d !== 0 ? d : undefined,
-            };
-          })
-        : [];
+    const link = eventListUrl(tenant.slug);
+    const joinDelta = await fetchJoinDeltaPerOptionGroup(optionItemIds);
+    const snapshots = await fetchTenantParticipantSnapshots(
+      tenant.id,
+      event.id,
+      "join",
+      joinDelta,
+    );
 
     await sendMessage(
       tenant.chat_room_id,
-      buildParticipantOptionSummaryTelegramHtml({
+      buildParticipantTenantWideSummaryTelegramHtml({
         link,
-        lines,
-        totalFallback:
-          groupRows.length === 0
-            ? { count: countRow?.cnt ?? 0, delta: 1 }
-            : undefined,
+        events: snapshots,
         prefix: event.telegram_participant_join_prefix ?? "",
       }),
     );
