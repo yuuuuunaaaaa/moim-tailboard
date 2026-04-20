@@ -5,9 +5,9 @@ import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import {
   fetchLeaveRemovedCountPerOptionGroup,
-  fetchParticipantCountsPerOptionGroup,
+  fetchTenantParticipantSnapshots,
 } from "@/lib/participantGroupCounts";
-import { sendMessage, eventDetailUrl, buildParticipantOptionSummaryTelegramHtml } from "@/lib/telegram";
+import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import type { Participant } from "@/types";
 
@@ -62,39 +62,23 @@ export async function POST(request: NextRequest) {
       ]);
       await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
 
-      const [groupRows, countRow, ev] = await Promise.all([
-        fetchParticipantCountsPerOptionGroup(participant.event_id),
-        queryFirst<{ cnt: number }>(
-          "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
-          [participant.event_id],
-        ),
-        queryFirst<{ telegram_participant_leave_prefix: string | null }>(
-          "SELECT telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
-          [participant.event_id],
-        ),
-      ]);
+      const ev = await queryFirst<{ telegram_participant_leave_prefix: string | null }>(
+        "SELECT telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
+        [participant.event_id],
+      );
 
-      const lines =
-        groupRows.length > 0
-          ? groupRows.map((g) => {
-              const n = removedByGroup.get(g.id);
-              return {
-                groupName: g.name,
-                count: g.cnt,
-                delta: n != null && n !== 0 ? -n : undefined,
-              };
-            })
-          : [];
+      const snapshots = await fetchTenantParticipantSnapshots(
+        tenant.id,
+        participant.event_id,
+        "leave",
+        removedByGroup,
+      );
 
       await sendMessage(
         tenant.chat_room_id,
-        buildParticipantOptionSummaryTelegramHtml({
-          link: eventDetailUrl(tenant.slug, participant.event_id),
-          lines,
-          totalFallback:
-            groupRows.length === 0
-              ? { count: countRow?.cnt ?? 0, delta: -1 }
-              : undefined,
+        buildParticipantTenantWideSummaryTelegramHtml({
+          link: eventListUrl(tenant.slug),
+          events: snapshots,
           prefix: ev?.telegram_participant_leave_prefix ?? "",
         }),
       );
