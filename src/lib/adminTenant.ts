@@ -45,7 +45,7 @@ export async function resolveAdminTenant(
 
   if (admin.is_superadmin) {
     const tenants = await queryRows<Tenant>(
-      "SELECT id, slug, name, chat_room_id FROM tenant ORDER BY name ASC",
+      "SELECT id, slug, name, chat_room_id, event_notice_chat_room_id FROM tenant ORDER BY name ASC",
     );
     if (!slug) return { kind: "choose", tenants };
     const found = tenants.find((t) => t.slug === slug);
@@ -54,7 +54,7 @@ export async function resolveAdminTenant(
   }
 
   const tenant = await queryFirst<Tenant>(
-    "SELECT id, slug, name, chat_room_id FROM tenant WHERE id = ? LIMIT 1",
+    "SELECT id, slug, name, chat_room_id, event_notice_chat_room_id FROM tenant WHERE id = ? LIMIT 1",
     [admin.tenant_id],
   );
   if (!tenant) return { kind: "missing", reason: "admin_tenant_not_found" };

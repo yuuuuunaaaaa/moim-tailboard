@@ -11,7 +11,12 @@ CREATE TABLE tenant (
   -- 테넌트 표시 이름
   name VARCHAR(255) NOT NULL,
   -- 생성/수정 시각
-  chat_room_id VARCHAR(20) NOT NULL DEFAULT '-1' COMMENT '텔레그램 채팅방 ID',
+  chat_room_id VARCHAR(20) NOT NULL DEFAULT '-1' COMMENT '텔레그램 채팅방 ID (참가/취소 알림용)',
+  -- 꼬리달기 생성 알림 전용 채팅방 ID. NULL 또는 빈 문자열이면 chat_room_id로 폴백한다.
+  -- 기존 DB에는 ALTER로 추가:
+  --   ALTER TABLE tenant ADD COLUMN event_notice_chat_room_id VARCHAR(20) NULL DEFAULT NULL
+  --     COMMENT '꼬리달기 생성 알림 채팅방 ID' AFTER chat_room_id;
+  event_notice_chat_room_id VARCHAR(20) NULL DEFAULT NULL COMMENT '꼬리달기 생성 알림 채팅방 ID',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
 );

@@ -67,8 +67,13 @@ export async function POST(request: NextRequest) {
       [tenant.id, eventId, "ADMIN_CREATE_EVENT", username ?? null, title],
     );
 
+    // 꼬리달기 생성 알림은 tenant.event_notice_chat_room_id 로 분리 전송.
+    // 값이 비어 있으면 기존 chat_room_id 로 폴백한다(마이그레이션 공백 대비).
+    const eventNoticeChatRoomId =
+      (tenant.event_notice_chat_room_id ?? "").trim() || tenant.chat_room_id;
+
     await sendMessage(
-      tenant.chat_room_id,
+      eventNoticeChatRoomId,
       buildNewEventTelegramHtml({
         title,
         link: eventDetailUrl(tenant.slug, eventId),

@@ -2,7 +2,10 @@ export interface Tenant {
   id: number;
   slug: string;
   name: string;
+  /** 참가/취소 등 기본 알림 전용 채팅방 ID */
   chat_room_id: string | null;
+  /** 꼬리달기 생성 알림 전용 채팅방 ID. null/빈 문자열이면 chat_room_id로 폴백 */
+  event_notice_chat_room_id: string | null;
 }
 
 export interface Admin {

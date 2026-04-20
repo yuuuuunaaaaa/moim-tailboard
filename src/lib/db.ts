@@ -33,7 +33,7 @@ try {
 
 export async function findTenantBySlug(slug: string): Promise<Tenant | null> {
   return queryFirst<Tenant>(
-    "SELECT id, slug, name, chat_room_id FROM tenant WHERE slug = ? LIMIT 1",
+    "SELECT id, slug, name, chat_room_id, event_notice_chat_room_id FROM tenant WHERE slug = ? LIMIT 1",
     [slug],
   );
 }
