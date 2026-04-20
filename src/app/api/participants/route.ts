@@ -3,7 +3,11 @@ import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
-import { sendMessage, eventDetailUrl, buildParticipantCountTelegramHtml } from "@/lib/telegram";
+import {
+  fetchParticipantCountsPerOptionGroup,
+  fetchJoinDeltaPerOptionGroup,
+} from "@/lib/participantGroupCounts";
+import { sendMessage, eventDetailUrl, buildParticipantOptionSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import type { Event } from "@/types";
 
@@ -54,35 +58,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 액션 로그 + 참여자 수는 알림과 동시에 처리 (텔레그램은 네트워크 왕복)
-    const [countRow] = await Promise.all([
+    await execute(
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?, 'studentNo', ?, 'username', ?, 'optionItemIds', ?))",
+      [
+        tenant.id,
+        event.id,
+        participantId,
+        "JOIN_EVENT",
+        name,
+        studentNo,
+        username,
+        JSON.stringify(optionItemIds),
+      ],
+    );
+
+    const link = eventDetailUrl(tenant.slug, event.id);
+    const [groupRows, joinDelta, countRow] = await Promise.all([
+      fetchParticipantCountsPerOptionGroup(event.id),
+      fetchJoinDeltaPerOptionGroup(optionItemIds),
       queryFirst<{ cnt: number }>(
         "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
         [event.id],
       ),
-      execute(
-        "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?, 'studentNo', ?, 'username', ?, 'optionItemIds', ?))",
-        [
-          tenant.id,
-          event.id,
-          participantId,
-          "JOIN_EVENT",
-          name,
-          studentNo,
-          username,
-          JSON.stringify(optionItemIds),
-        ],
-      ),
     ]);
 
-    const link = eventDetailUrl(tenant.slug, event.id);
+    const lines =
+      groupRows.length > 0
+        ? groupRows.map((g) => {
+            const d = joinDelta.get(g.id);
+            return {
+              groupName: g.name,
+              count: g.cnt,
+              delta: d != null && d !== 0 ? d : undefined,
+            };
+          })
+        : [];
+
     await sendMessage(
       tenant.chat_room_id,
-      buildParticipantCountTelegramHtml({
-        eventTitle: event.title,
+      buildParticipantOptionSummaryTelegramHtml({
         link,
-        count: countRow?.cnt ?? 0,
-        deltaLabel: "+1",
+        lines,
+        totalFallback:
+          groupRows.length === 0
+            ? { count: countRow?.cnt ?? 0, delta: 1 }
+            : undefined,
         prefix: event.telegram_participant_join_prefix ?? "",
       }),
     );
