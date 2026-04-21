@@ -247,6 +247,12 @@ export default function ParticipantList({
                       >
                         <input type="hidden" name="tenantSlug" value={tenantSlug} />
                         <input type="hidden" name="participantId" value={p.id} />
+                        {/* 일부 WebView에서 클릭한 submit 버튼의 name/value가 누락될 수 있어 hidden mode를 사용 */}
+                        <input
+                          type="hidden"
+                          name="mode"
+                          value={pendingDeleteId === p.id ? "delete" : "update"}
+                        />
                         <div className="p-edit-fields">
                           <input type="text" name="name" defaultValue={p.name} placeholder="이름" />
                           <input
@@ -260,8 +266,6 @@ export default function ParticipantList({
                           <button
                             className="btn btn--secondary btn--sm"
                             type="submit"
-                            name="mode"
-                            value="update"
                             disabled={submittingId === p.id}
                           >
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -294,8 +298,6 @@ export default function ParticipantList({
                               <button
                                 className="btn btn--danger btn--sm"
                                 type="submit"
-                                name="mode"
-                                value="delete"
                                 disabled={submittingId === p.id}
                               >
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
