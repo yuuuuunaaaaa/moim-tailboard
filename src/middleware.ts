@@ -56,6 +56,24 @@ export async function middleware(request: NextRequest) {
       return redirectToLogin(request, tenantSlug);
     }
 
+    // prod: 테넌트 페이지는 allowed_tenant_slug 쿠키가 있어야 API(참가/취소)가 403이 나지 않음.
+    // 로그인 직후 이벤트 상세로 바로 진입하는 경우(텔레그램 WebApp 인증 후 reload 등) init-tenant를
+    // 거치지 않아 쿠키가 비어있는 상태가 생길 수 있어 여기서 자동 초기화한다.
+    const tenantMatch = pathname.match(/^\/t\/([^/]+)/);
+    if (tenantMatch) {
+      const tenantSlug = tenantMatch[1];
+      const allowed = request.cookies.get(TENANT_COOKIE_NAME)?.value;
+      if (!allowed || allowed !== tenantSlug) {
+        const next = encodeURIComponent(pathname + request.nextUrl.search);
+        return NextResponse.redirect(
+          new URL(
+            `/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${next}`,
+            request.url,
+          ),
+        );
+      }
+    }
+
     return NextResponse.next();
   } catch (err) {
     console.error("[middleware] uncaught:", err);

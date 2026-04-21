@@ -40,7 +40,7 @@ export function buildNewEventTelegramHtml(opts: {
   const extra = extraRaw
     ? `${escapeHtml(extraRaw).replace(/\r\n/g, "\n").replace(/\r/g, "\n")}\n`
     : "";
-  return `${escapeHtml(lead)}<b>${headline}</b>\n꼬리달기명: ${escapeHtml(opts.title)}\n${extra}<a href="${escapeHtml(opts.link)}">바로가기</a>`;
+  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}<a href="${escapeHtml(opts.link)}">바로가기</a>`;
 }
 
 const TELEGRAM_HTML_SAFE_LEN = 3900;
