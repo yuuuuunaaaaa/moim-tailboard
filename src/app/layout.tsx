@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import VercelSpeedInsights from "@/components/VercelSpeedInsights";
 
 export const metadata: Metadata = {
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: LOAD_PRETENDARD }}
         />
         <VercelSpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
