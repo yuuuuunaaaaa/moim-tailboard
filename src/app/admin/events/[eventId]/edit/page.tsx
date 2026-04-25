@@ -20,6 +20,8 @@ export const metadata = { title: "수정 · 꼬리달기" };
 const TOAST_TEXT: Record<string, string> = {
   row_saved: "저장되었습니다.",
   participant_deleted: "참여 기록을 삭제했습니다.",
+  event_toggled_active: "공개로 전환했습니다.",
+  event_toggled_inactive: "비공개로 전환했습니다.",
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {

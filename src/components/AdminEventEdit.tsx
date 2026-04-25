@@ -39,12 +39,20 @@ export default function AdminEventEdit({ tenant, events }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<Event[]>(events);
   const [drag, setDrag] = useState<DragSnapshot | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // 순서 저장/실패 등 짧은 알림. AutoToast 와 동일한 디자인을 그대로 사용한다.
+  const [toast, setToast] = useState<{ text: string; kind: "ok" | "error" } | null>(null);
 
   const listRef = useRef<HTMLUListElement | null>(null);
   const itemsRef = useRef<Event[]>(events);
   const initialItemsRef = useRef<Event[]>(events);
   const dragRef = useRef<DragSnapshot | null>(null);
+
+  // toast 자동 닫기 (2초)
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     itemsRef.current = items;
@@ -82,10 +90,14 @@ export default function AdminEventEdit({ tenant, events }: Props) {
           body: JSON.stringify({ tenantSlug: tenant.slug, orderedIds }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setToast({ text: "순서를 저장했습니다.", kind: "ok" });
         router.refresh();
       } catch (err) {
         console.error("reorder save failed:", err);
-        setSaveError("순서 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        setToast({
+          text: "순서 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+          kind: "error",
+        });
         setItems(rollbackTo);
         itemsRef.current = rollbackTo;
       }
@@ -203,7 +215,6 @@ export default function AdminEventEdit({ tenant, events }: Props) {
     if (!li) return;
     const rect = li.getBoundingClientRect();
     initialItemsRef.current = itemsRef.current.slice();
-    setSaveError(null);
     const snapshot: DragSnapshot = {
       draggingId: eventId,
       floatX: rect.left,
@@ -241,12 +252,6 @@ export default function AdminEventEdit({ tenant, events }: Props) {
             + 꼬리달기 등록
           </a>
         </div>
-
-        {saveError && (
-          <p className="alert alert--error" role="alert" style={{ marginTop: "12px" }}>
-            {saveError}
-          </p>
-        )}
 
         {items.length === 0 ? (
           <p className="empty-state mt-0 mb-0">
@@ -304,6 +309,30 @@ export default function AdminEventEdit({ tenant, events }: Props) {
           </div>
         )}
       </div>
+
+      {/*
+       * 클라이언트 측 토스트 (드래그 저장 결과 등).
+       * AutoToast 는 URL 파라미터를 비우는 동작까지 가져 가는데, 여기서는 단순 상태 토스트라
+       * 동일한 CSS 클래스만 빌려 더 가볍게 그린다.
+       */}
+      {toast && (
+        <div
+          className="toast-overlay"
+          role={toast.kind === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          <div className="toast-banner">
+            <span className="toast-message">{toast.text}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => setToast(null)}
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -333,6 +362,7 @@ function EventRow({
   const toggleLabel = ev.is_active ? "공개" : "비공개";
   const toggleClass = `badge ${ev.is_active ? "badge--on" : "badge--off"}`;
   const editHref = `/admin/events/${ev.id}/edit?tenant=${encodeURIComponent(tenantSlug)}`;
+  const logsHref = `/admin/events/${ev.id}/logs?tenant=${encodeURIComponent(tenantSlug)}`;
 
   return (
     <div className="event-admin-item">
@@ -384,12 +414,36 @@ function EventRow({
           </form>
           {/* 수정 페이지로 이동 — 모든 위험 작업(공개/비공개 영구 변경 인지, 삭제)은 여기서 수행 */}
           <a
-            className="btn btn--secondary btn--sm"
+            className="icon-btn"
             href={editHref}
             title="수정"
-            style={{ flex: "0 0 auto", minHeight: 32 }}
+            aria-label="꼬리달기 수정"
+            style={{
+              flex: "0 0 auto",
+              minWidth: 32,
+              minHeight: 32,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            수정
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z" />
+            </svg>
+          </a>
+          <a
+            className="icon-btn"
+            href={logsHref}
+            title="참여/취소 로그"
+            aria-label="참여/취소 로그 보기"
+            style={{ flex: "0 0 auto", minWidth: 32, minHeight: 32, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 3v18h18" />
+              <path d="M7 14l3-3 3 2 5-6" />
+              <path d="M7 19h14" opacity="0" />
+            </svg>
           </a>
         </>
       ) : (
@@ -398,10 +452,42 @@ function EventRow({
             {toggleLabel}
           </span>
           <span
-            className="btn btn--secondary btn--sm"
-            style={{ minHeight: 32, pointerEvents: "none" }}
+            className="icon-btn"
+            aria-hidden
+            style={{
+              flex: "0 0 auto",
+              minWidth: 32,
+              minHeight: 32,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              opacity: 0.85,
+            }}
           >
-            수정
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z" />
+            </svg>
+          </span>
+          <span
+            className="icon-btn"
+            aria-hidden
+            style={{
+              flex: "0 0 auto",
+              minWidth: 32,
+              minHeight: 32,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              opacity: 0.85,
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 3v18h18" />
+              <path d="M7 14l3-3 3 2 5-6" />
+            </svg>
           </span>
         </>
       )}

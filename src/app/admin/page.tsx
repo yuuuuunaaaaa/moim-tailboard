@@ -4,14 +4,22 @@ import { getPageContext } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/adminTenant";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
+import AutoToast from "@/components/AutoToast";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
 
 interface Props {
-  searchParams: Promise<{ tenant?: string }>;
+  searchParams: Promise<{ tenant?: string; toast?: string }>;
 }
 
 export const metadata = { title: "관리 · 꼬리달기" };
+
+// 관리 메인에서 보여줄 수 있는 토스트 종류.
+// 다른 라우트(예: 토글 API) 가 redirect URL 에 ?toast=... 를 붙여 전달한다.
+const TOAST_TEXT: Record<string, string> = {
+  event_toggled_active: "공개로 전환했습니다.",
+  event_toggled_inactive: "비공개로 전환했습니다.",
+};
 
 export default async function AdminPage({ searchParams }: Props) {
   const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
@@ -19,6 +27,8 @@ export default async function AdminPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const slugParam = (sp.tenant ?? "").trim();
+  const toastKey = (sp.toast ?? "").trim();
+  const toastText = TOAST_TEXT[toastKey] ?? "";
 
   const res = await resolveAdminTenant(admin, slugParam);
 
@@ -99,6 +109,13 @@ export default async function AdminPage({ searchParams }: Props) {
           <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
         </div>
         <AdminEventEdit tenant={tenant} events={events} />
+        {toastText && (
+          <AutoToast
+            message={toastText}
+            clearHref={`/admin?tenant=${encodeURIComponent(tenant.slug)}`}
+            timeoutMs={2000}
+          />
+        )}
       </main>
     </>
   );

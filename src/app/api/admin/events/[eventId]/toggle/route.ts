@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
-import { execute } from "@/lib/queryRows";
+import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
 
 // POST /api/admin/events/[eventId]/toggle
@@ -25,9 +25,17 @@ export async function POST(
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
 
-    await execute(
-      "UPDATE event SET is_active = 1 - is_active WHERE id = ? AND tenant_id = ?",
+    // 토글 결과(공개/비공개)를 호출자에게 알려야 토스트 메시지를 정확히 띄울 수 있다.
+    // 한 번의 SELECT 로 현재값을 읽고, 명시적 값으로 UPDATE 한다.
+    const cur = await queryFirst<{ is_active: number }>(
+      "SELECT is_active FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
       [eventId, tenant.id],
+    );
+    if (!cur) return new Response("Event not found", { status: 404 });
+    const nextActive = cur.is_active ? 0 : 1;
+    await execute(
+      "UPDATE event SET is_active = ? WHERE id = ? AND tenant_id = ?",
+      [nextActive, eventId, tenant.id],
     );
 
     // 폼이 returnTo 를 보내면(수정 페이지 등) 그쪽으로 다시 보내고, 없으면 관리 메인으로.
@@ -35,7 +43,12 @@ export async function POST(
     const returnTo = String(formData.get("returnTo") ?? "").trim();
     const isSafeRelative = returnTo.startsWith("/") && !returnTo.startsWith("//");
     const redirectPath = isSafeRelative ? returnTo : `/admin?tenant=${tenant.slug}`;
-    return NextResponse.redirect(new URL(redirectPath, request.url), 303);
+    const target = new URL(redirectPath, request.url);
+    target.searchParams.set(
+      "toast",
+      nextActive ? "event_toggled_active" : "event_toggled_inactive",
+    );
+    return NextResponse.redirect(target, 303);
   } catch (err) {
     console.error("POST /api/admin/events/[eventId]/toggle:", err);
     return new Response("Internal server error", { status: 500 });
