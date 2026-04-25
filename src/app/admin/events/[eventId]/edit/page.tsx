@@ -5,6 +5,7 @@ import { resolveAdminTenant } from "@/lib/adminTenant";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
+import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
 import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
@@ -130,7 +131,30 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
       />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
-        <h1>꼬리달기 수정</h1>
+
+        {/*
+         * 페이지 헤더 액션바: 모바일은 세로 스택, 넓은 화면은 한 줄로.
+         * - 공개/비공개 토글: 변경 후 이 페이지로 다시 돌아오도록 returnTo 를 함께 보낸다.
+         * - 삭제: 여기서만 가능. 삭제 후엔 관리 메인으로 이동.
+         */}
+        <div className="admin-edit-header">
+          <h1 style={{ margin: 0 }}>꼬리달기 수정</h1>
+          <div className="admin-edit-header-actions">
+            <form method="post" action={`/api/admin/events/${event.id}/toggle`}>
+              <input type="hidden" name="tenantSlug" value={tenant.slug} />
+              <input type="hidden" name="returnTo" value={clearHref} />
+              <button
+                type="submit"
+                className={`badge ${event.is_active ? "badge--on" : "badge--off"}`}
+                title={event.is_active ? "비공개로 전환" : "공개로 전환"}
+                style={{ cursor: "pointer", border: 0, minHeight: 32 }}
+              >
+                {event.is_active ? "공개" : "비공개"}
+              </button>
+            </form>
+            <AdminEventDeleteForm eventId={event.id} tenantSlug={tenant.slug} />
+          </div>
+        </div>
         {toastText && <AutoToast message={toastText} clearHref={clearHref} timeoutMs={2000} />}
 
         <div className="admin-grid" style={{ marginTop: "12px" }}>

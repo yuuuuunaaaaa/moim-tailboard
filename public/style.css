@@ -290,7 +290,11 @@ input[type="radio"] {
 }
 @media (max-width: 768px) {
   .layout-half { grid-template-columns: 1fr; }
+  /* 좁은 폭에서는 카드 좌우 패딩이 누적돼 컨텐츠 폭이 부족해진다. 모바일은 12px 로 축소. */
+  .card { padding: 12px; }
 }
+/* 어떤 자식 요소가 모바일에서 살짝 비어져 나와도 페이지 자체에 가로 스크롤이 생기지 않도록 안전 가드 */
+html, body { overflow-x: clip; }
 
 /* Admin */
 .tenant-pills {
@@ -465,14 +469,24 @@ input[type="radio"] {
 .p-opt-row--none .p-opt-names { color: var(--muted); }
 
 /* Admin event list (index) */
-.event-admin-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+.event-admin-list { list-style: none; padding: 0; margin: 0 0 16px 0; min-width: 0; }
+.event-admin-list > li { min-width: 0; max-width: 100%; }
 .event-admin-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 4px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  min-width: 0; max-width: 100%;
 }
 .event-admin-item:last-child { border-bottom: none; }
-.event-admin-info { flex: 1; }
-.event-admin-title { font-weight: 500; font-size: 0.9375rem; }
+/* 핸들이 카드 좌측 패딩 안쪽으로 붙도록 살짝 마이너스 마진. 터치 영역(>=40px) 은 유지. */
+.event-admin-item > .icon-btn[aria-label="순서 변경 핸들"] {
+  margin-left: -6px; min-width: 40px; min-height: 40px; padding: 4px;
+}
+/* min-width: 0 + overflow: hidden 이 없으면 flex 자식의 ellipsis 가 안 먹는다 */
+.event-admin-info { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.event-admin-title {
+  font-weight: 500; font-size: 0.9375rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .event-admin-date { font-size: 0.8125rem; color: var(--muted); margin-top: 2px; }
 .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
 .badge--on { background: var(--primary-light); color: var(--primary-hover); }
@@ -491,6 +505,18 @@ input[type="radio"] {
 .admin-event-field:first-of-type { margin-top: 4px; }
 .admin-edit-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
 .admin-edit-actions .btn { min-height: 44px; }
+/* 수정 페이지 상단 액션바: 제목 + (공개/비공개 토글, 삭제) */
+.admin-edit-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 4px;
+}
+.admin-edit-header h1 { margin: 0; }
+.admin-edit-header-actions { display: inline-flex; align-items: center; gap: 8px; }
+.admin-edit-header-actions .badge { min-height: 32px; }
+@media (max-width: 640px) {
+  .admin-edit-header { flex-direction: column; align-items: stretch; }
+  .admin-edit-header-actions { justify-content: flex-end; }
+}
 .admin-og-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; min-width: 0; }
 .admin-og-row .option-group-edit-btn { min-height: 44px; }
 .admin-participants-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -30,7 +30,12 @@ export async function POST(
       [eventId, tenant.id],
     );
 
-    return NextResponse.redirect(new URL(`/admin?tenant=${tenant.slug}`, request.url), 303);
+    // 폼이 returnTo 를 보내면(수정 페이지 등) 그쪽으로 다시 보내고, 없으면 관리 메인으로.
+    // 외부 리다이렉트로 악용되지 않도록 동일 출처 경로(`/`)만 허용한다.
+    const returnTo = String(formData.get("returnTo") ?? "").trim();
+    const isSafeRelative = returnTo.startsWith("/") && !returnTo.startsWith("//");
+    const redirectPath = isSafeRelative ? returnTo : `/admin?tenant=${tenant.slug}`;
+    return NextResponse.redirect(new URL(redirectPath, request.url), 303);
   } catch (err) {
     console.error("POST /api/admin/events/[eventId]/toggle:", err);
     return new Response("Internal server error", { status: 500 });

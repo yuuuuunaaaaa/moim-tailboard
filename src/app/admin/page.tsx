@@ -66,8 +66,9 @@ export default async function AdminPage({ searchParams }: Props) {
 
   const { tenant, tenants } = res;
 
+  // 관리 목록 정렬: 공개 우선(is_active DESC) → 직접 지정한 순서(event_order ASC) → 가까운 날짜(event_date DESC)
   const events = await queryRows<Event>(
-    "SELECT id, title, description, event_date, is_active, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY event_date DESC",
+    "SELECT id, title, description, event_date, is_active, event_order, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY is_active DESC, event_order ASC, event_date DESC, id ASC",
     [tenant.id],
   );
 

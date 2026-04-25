@@ -16,9 +16,9 @@ export default async function HomePage() {
     <>
       <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} />
       <main className="container">
-        <h1>지역 선택</h1>
         {canChooseTenant ? (
           <>
+          <h1>지역 선택</h1>
             <p className="page-subtitle">참여할 지역을 선택하세요.</p>
             {tenants.length === 0 ? (
               <div className="empty-state">등록된 지역이 없습니다.</div>
@@ -36,23 +36,18 @@ export default async function HomePage() {
               <a href="/admin" className="btn btn--secondary">관리자 페이지</a>
             </p>
           </>
-        ) : isAdmin ? (
-          <>
-            <p className="page-subtitle">
-              일반 관리자는 루트에서 지역을 고를 수 없습니다. 소속 지역의 텔레그램에서 공유된
-              꼬리달기·지역 링크로 접속해 주세요.
-            </p>
-            <p className="form-hint" style={{ marginTop: "12px" }}>
-              관리 작업은 해당 링크로 들어온 뒤 <a href="/admin">관리자 페이지</a>에서 진행할 수
-              있습니다.
-            </p>
-          </>
         ) : (
           <>
-            <p className="page-subtitle">지역 선택과 관리는 로그인된 관리자만 가능합니다.</p>
-            <p className="form-hint">참여할 꼬리달기 링크로 접속해 주세요.</p>
-            <p style={{ marginTop: "24px" }}>
-              <a href="/login" className="btn btn--secondary">관리자 로그인</a>
+            <img
+              src="/image/telegram-warning.jpg"
+              alt="텔레그램"
+              style={{ display: "block", margin: "0 auto 12px", width: "100%", height: "auto", borderRadius: "15px" }}
+            />
+            <p className="page-subtitle">
+              소속 텔레그램방 링크가 아닌 외부 링크로 접속하였습니다.
+            </p>
+            <p className="form-hint" style={{ marginTop: "12px" }}>
+              정확한 링크를 통해 접속해주세요.
             </p>
           </>
         )}

@@ -25,6 +25,8 @@ export interface Event {
   /** DATE (YYYY-MM-DD) */
   event_date: Date | string;
   is_active: number;
+  /** 화면 표시 순서. 작을수록 위. 관리 화면 드래그앤드롭으로 갱신 */
+  event_order: number;
   /** 참가 신청 방 알림 말머리. null/빈 문자열이면 기본 👤 */
   telegram_participant_join_prefix?: string | null;
   /** 참가 취소 방 알림 말머리. null/빈 문자열이면 기본 👤 */

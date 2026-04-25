@@ -87,7 +87,7 @@ export async function fetchTenantParticipantSnapshots(
     telegram_participant_leave_prefix: string | null;
   }>(
     `SELECT id, title, telegram_participant_join_prefix, telegram_participant_leave_prefix
-     FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC`,
+     FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_order ASC, event_date DESC, id ASC`,
     [tenantId],
   );
 
