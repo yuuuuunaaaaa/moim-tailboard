@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
+import AdminEventVisibilityToggle from "@/components/AdminEventVisibilityToggle";
 import AutoToast from "@/components/AutoToast";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
@@ -142,18 +143,12 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
         <div className="admin-edit-header">
           <h1 style={{ margin: 0 }}>꼬리달기 수정</h1>
           <div className="admin-edit-header-actions">
-            <form method="post" action={`/api/admin/events/${event.id}/toggle`}>
-              <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <input type="hidden" name="returnTo" value={clearHref} />
-              <button
-                type="submit"
-                className={`badge ${event.is_active ? "badge--on" : "badge--off"}`}
-                title={event.is_active ? "비공개로 전환" : "공개로 전환"}
-                style={{ cursor: "pointer", border: 0, minHeight: 32 }}
-              >
-                {event.is_active ? "공개" : "비공개"}
-              </button>
-            </form>
+            <AdminEventVisibilityToggle
+              eventId={event.id}
+              tenantSlug={tenant.slug}
+              returnTo={clearHref}
+              isActive={!!event.is_active}
+            />
             <AdminEventDeleteForm eventId={event.id} tenantSlug={tenant.slug} />
           </div>
         </div>

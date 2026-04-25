@@ -33,10 +33,23 @@ export async function POST(
     );
     if (!cur) return new Response("Event not found", { status: 404 });
     const nextActive = cur.is_active ? 0 : 1;
-    await execute(
-      "UPDATE event SET is_active = ? WHERE id = ? AND tenant_id = ?",
-      [nextActive, eventId, tenant.id],
-    );
+    // 비공개로 전환 시: 목록에서 항상 맨 뒤로 보내기 위해 event_order 를 최댓값+1 로 밀어준다.
+    if (nextActive === 0) {
+      const maxRow = await queryFirst<{ next_order: number }>(
+        "SELECT COALESCE(MAX(event_order), 0) + 1 AS next_order FROM event WHERE tenant_id = ?",
+        [tenant.id],
+      );
+      const nextOrder = maxRow?.next_order ?? 1;
+      await execute(
+        "UPDATE event SET is_active = ?, event_order = ? WHERE id = ? AND tenant_id = ?",
+        [nextActive, nextOrder, eventId, tenant.id],
+      );
+    } else {
+      await execute(
+        "UPDATE event SET is_active = ? WHERE id = ? AND tenant_id = ?",
+        [nextActive, eventId, tenant.id],
+      );
+    }
 
     // 폼이 returnTo 를 보내면(수정 페이지 등) 그쪽으로 다시 보내고, 없으면 관리 메인으로.
     // 외부 리다이렉트로 악용되지 않도록 동일 출처 경로(`/`)만 허용한다.

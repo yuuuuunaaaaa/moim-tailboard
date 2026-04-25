@@ -469,14 +469,31 @@ html, body { overflow-x: clip; }
 .p-opt-row--none .p-opt-names { color: var(--muted); }
 
 /* Admin event list (index) */
-.event-admin-list { list-style: none; padding: 0; margin: 0 0 16px 0; min-width: 0; }
+.event-admin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* row 간 간격: 음영이 서로 닿지 않도록 */
+}
 .event-admin-list > li { min-width: 0; max-width: 100%; }
 .event-admin-item {
   display: flex; align-items: center; gap: 6px;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
+  padding: 10px 6px;
+  border: none;
+  border-radius: 12px;
   min-width: 0; max-width: 100%;
 }
-.event-admin-item:last-child { border-bottom: none; }
+.event-admin-item--inactive {
+  background: rgba(0,0,0,0.035);
+  color: var(--muted);
+  /* 배경이 위/아래로 꽉 차보이지 않게 살짝 안쪽으로 보이도록 inset shadow */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+}
+.event-admin-item--inactive .event-admin-title { color: var(--muted); }
+.event-admin-item--inactive .icon-btn { color: var(--muted); }
 /* 핸들이 카드 좌측 패딩 안쪽으로 붙도록 살짝 마이너스 마진. 터치 영역(>=40px) 은 유지. */
 .event-admin-item > .icon-btn[aria-label="순서 변경 핸들"] {
   margin-left: -6px; min-width: 40px; min-height: 40px; padding: 4px;
@@ -517,6 +534,8 @@ html, body { overflow-x: clip; }
   .admin-edit-header { flex-direction: column; align-items: stretch; }
   .admin-edit-header-actions { justify-content: flex-end; }
 }
+
+/* (removed) toggle-pill — reverted back to badge toggle */
 .admin-og-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; min-width: 0; }
 .admin-og-row .option-group-edit-btn { min-height: 44px; }
 .admin-participants-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -526,6 +545,11 @@ html, body { overflow-x: clip; }
 .page-admin-edit .container--wide { overflow-x: hidden; }
 .page-admin-edit .admin-grid,
 .page-admin-edit .card { min-width: 0; max-width: 100%; }
+
+/* Admin index page container: prevent horizontal overflow on mobile */
+.page-admin .container--wide { overflow-x: hidden; }
+.page-admin .admin-grid,
+.page-admin .card { min-width: 0; max-width: 100%; }
 
 @media (max-width: 640px) {
   .admin-edit-row { flex-direction: column !important; align-items: stretch !important; }

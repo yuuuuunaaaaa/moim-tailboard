@@ -76,9 +76,9 @@ export default async function AdminPage({ searchParams }: Props) {
 
   const { tenant, tenants } = res;
 
-  // 관리 목록 정렬: 공개 우선(is_active DESC) → 직접 지정한 순서(event_order ASC) → 가까운 날짜(event_date DESC)
+  // 관리 목록 정렬: 직접 지정한 순서(event_order ASC) → 공개 우선(is_active DESC) → 가까운 날짜(event_date DESC)
   const events = await queryRows<Event>(
-    "SELECT id, title, description, event_date, is_active, event_order, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY is_active DESC, event_order ASC, event_date DESC, id ASC",
+    "SELECT id, title, description, event_date, is_active, event_order, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY event_order ASC, is_active DESC, event_date DESC, id ASC",
     [tenant.id],
   );
 
@@ -92,31 +92,40 @@ export default async function AdminPage({ searchParams }: Props) {
         tenantSlug={tenant.slug}
         showAdminLink
       />
-      <main className="container container--wide">
-        <h1>관리</h1>
-        <div className="tenant-pills">
-          {tenants.length > 1 && (
-            <select
-              defaultValue={tenant.slug}
-              style={{ padding: "8px 14px", borderRadius: "999px", border: "1px solid var(--border)", fontSize: "0.9375rem" }}
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.slug}>{t.name}</option>
-              ))}
-            </select>
+      <div className="page-admin">
+        <main className="container container--wide">
+          <h1>관리</h1>
+          <div className="tenant-pills">
+            {tenants.length > 1 && (
+              <select
+                defaultValue={tenant.slug}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "999px",
+                  border: "1px solid var(--border)",
+                  fontSize: "0.9375rem",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                }}
+              >
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.slug}>{t.name}</option>
+                ))}
+              </select>
+            )}
+            <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
+            <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
+          </div>
+          <AdminEventEdit tenant={tenant} events={events} />
+          {toastText && (
+            <AutoToast
+              message={toastText}
+              clearHref={`/admin?tenant=${encodeURIComponent(tenant.slug)}`}
+              timeoutMs={2000}
+            />
           )}
-          <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
-          <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
-        </div>
-        <AdminEventEdit tenant={tenant} events={events} />
-        {toastText && (
-          <AutoToast
-            message={toastText}
-            clearHref={`/admin?tenant=${encodeURIComponent(tenant.slug)}`}
-            timeoutMs={2000}
-          />
-        )}
-      </main>
+        </main>
+      </div>
     </>
   );
 }

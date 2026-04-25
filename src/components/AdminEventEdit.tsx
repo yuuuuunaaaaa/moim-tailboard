@@ -359,13 +359,11 @@ function EventRow({
   isDragHandleActive,
   isClone = false,
 }: EventRowProps) {
-  const toggleLabel = ev.is_active ? "공개" : "비공개";
-  const toggleClass = `badge ${ev.is_active ? "badge--on" : "badge--off"}`;
   const editHref = `/admin/events/${ev.id}/edit?tenant=${encodeURIComponent(tenantSlug)}`;
   const logsHref = `/admin/events/${ev.id}/logs?tenant=${encodeURIComponent(tenantSlug)}`;
 
   return (
-    <div className="event-admin-item">
+    <div className={`event-admin-item ${!ev.is_active ? "event-admin-item--inactive" : ""}`}>
       {/* 드래그 핸들 — 이 버튼만 드래그 시작점. 폭/터치영역은 .event-admin-item > .icon-btn 규칙에서 관리. */}
       <button
         type="button"
@@ -395,23 +393,6 @@ function EventRow({
 
       {!isClone ? (
         <>
-          {/* 공개/비공개 토글 — 뱃지 모양 그대로 클릭 가능한 버튼 */}
-          <form
-            method="post"
-            action={`/api/admin/events/${ev.id}/toggle`}
-            style={{ display: "inline-flex", flex: "0 0 auto" }}
-          >
-            <input type="hidden" name="tenantSlug" value={tenantSlug} />
-            <button
-              type="submit"
-              className={toggleClass}
-              title={ev.is_active ? "비공개로 전환" : "공개로 전환"}
-              aria-label={ev.is_active ? "비공개로 전환" : "공개로 전환"}
-              style={{ cursor: "pointer", border: 0, minHeight: 32 }}
-            >
-              {toggleLabel}
-            </button>
-          </form>
           {/* 수정 페이지로 이동 — 모든 위험 작업(공개/비공개 영구 변경 인지, 삭제)은 여기서 수행 */}
           <a
             className="icon-btn"
@@ -448,9 +429,6 @@ function EventRow({
         </>
       ) : (
         <>
-          <span className={toggleClass} style={{ minHeight: 32 }}>
-            {toggleLabel}
-          </span>
           <span
             className="icon-btn"
             aria-hidden
