@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
-import { execute } from "@/lib/queryRows";
+import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
 import { sendMessage, eventDetailUrl, buildNewEventTelegramHtml } from "@/lib/telegram";
 import { toDateInputValue } from "@/lib/dateOnly";
@@ -35,9 +35,21 @@ export async function POST(request: NextRequest) {
     const dateOnly = toDateInputValue(eventDate);
     if (!dateOnly) return new Response("날짜 형식이 올바르지 않습니다.", { status: 400 });
 
+    // 새 이벤트는 같은 테넌트 내 최대 event_order + 1 로 두어 목록의 맨 뒤에 위치시킨다.
+    // 관리자는 이후 드래그앤드롭(POST /api/admin/events/reorder)으로 위치를 옮길 수 있다.
+    // INSERT VALUES 안에 같은 테이블 서브쿼리를 두면 MySQL 버전/락 모드에 따라 거절될 수 있어
+    // 안전하게 두 단계로 분리한다.
+    const maxRow = await queryFirst<{ next_order: number }>(
+      "SELECT COALESCE(MAX(event_order), 0) + 1 AS next_order FROM event WHERE tenant_id = ?",
+      [tenant.id],
+    );
+    const nextOrder = maxRow?.next_order ?? 1;
+
     const insertResult = await execute(
-      "INSERT INTO event (tenant_id, title, description, event_date, is_active, telegram_participant_join_prefix, telegram_participant_leave_prefix) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [tenant.id, title, description, dateOnly, isActive, eventJoinPrefix, eventLeavePrefix],
+      `INSERT INTO event
+         (tenant_id, title, description, event_date, is_active, event_order, telegram_participant_join_prefix, telegram_participant_leave_prefix)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenant.id, title, description, dateOnly, isActive, nextOrder, eventJoinPrefix, eventLeavePrefix],
     );
     const eventId = insertResult.insertId;
 

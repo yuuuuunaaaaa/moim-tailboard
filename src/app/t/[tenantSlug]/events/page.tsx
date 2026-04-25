@@ -43,8 +43,10 @@ export default async function EventListPage({ params }: Props) {
     redirect(`/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${next}`);
   }
 
+  // 참여자 목록은 이미 is_active = 1 만 보이므로 공개여부는 정렬에서 의미가 없다.
+  // 정렬 규칙(공개여부 > event_order > 날짜) 중 뒤 두 단계만 적용한다.
   const events = await queryRows<Event>(
-    "SELECT * FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_date ASC",
+    "SELECT * FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_order ASC, event_date DESC, id ASC",
     [tenant.id],
   );
 

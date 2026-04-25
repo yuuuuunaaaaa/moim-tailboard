@@ -57,6 +57,12 @@ CREATE TABLE event (
   event_date DATE NOT NULL,
   -- 꼬리달기 노출/비노출 여부
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  -- 화면 표시 순서 (관리자가 드래그앤드롭으로 직접 지정). 작을수록 위.
+  -- 기존 DB에는 ALTER로 추가:
+  --   ALTER TABLE event ADD COLUMN event_order INT NOT NULL DEFAULT 0
+  --     COMMENT '꼬리달기 표시 순서' AFTER is_active;
+  --   UPDATE event SET event_order = id;  -- 기존 데이터 초기 정렬: id 순
+  event_order INT NOT NULL DEFAULT 0 COMMENT '꼬리달기 표시 순서 (작을수록 위)',
   -- 참가/취소 방 알림 말머리(이모지 등). NULL 이면 기본 👤
   telegram_participant_join_prefix VARCHAR(64) NULL DEFAULT NULL COMMENT '참가 신청 텔레그램 알림 말머리',
   telegram_participant_leave_prefix VARCHAR(64) NULL DEFAULT NULL COMMENT '참가 취소 텔레그램 알림 말머리',
@@ -66,7 +72,8 @@ CREATE TABLE event (
   CONSTRAINT fk_event_tenant
     FOREIGN KEY (tenant_id) REFERENCES tenant(id)
     ON DELETE CASCADE,
-  INDEX idx_event_tenant_date (tenant_id, event_date)
+  INDEX idx_event_tenant_date (tenant_id, event_date),
+  INDEX idx_event_tenant_order (tenant_id, event_order)
 );
 
 -- 옵션 그룹

@@ -76,7 +76,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       [event.id],
     ),
     queryRows<Participant>(
-      "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
+      // 신청자 전체보기: 신청 일시(created_at) 내림차순
+      "SELECT * FROM participant WHERE event_id = ? ORDER BY created_at DESC, id DESC",
       [event.id],
     ),
   ]);
