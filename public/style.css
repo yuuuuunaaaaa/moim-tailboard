@@ -459,6 +459,7 @@ html, body { overflow-x: clip; }
 }
 .p-opt-row {
   display: flex; align-items: baseline; gap: 8px;
+  flex-direction: column;
   padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.875rem;
 }
 .p-opt-row:last-child { border-bottom: none; }
