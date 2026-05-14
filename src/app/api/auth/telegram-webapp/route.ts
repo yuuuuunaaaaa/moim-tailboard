@@ -3,19 +3,12 @@ import {
   verifyTelegramWebAppInitData,
   getWebAppUsernameFromInitData,
 } from "@/lib/verifyTelegram";
-import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
+import { signToken } from "@/lib/jwt";
+import { getAuthTokenCookieOptions } from "@/lib/authCookieOptions";
 import { assertLoginTenantContext } from "@/lib/authTenantLogin";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const JWT_READY = !!process.env.JWT_SECRET?.trim();
-
-const cookieOpts = {
-  maxAge: COOKIE_MAX_AGE,
-  httpOnly: true,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-};
 
 /**
  * POST /api/auth/telegram-webapp
@@ -66,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const token = await signToken(username);
     const res = NextResponse.json({ success: true, username });
-    res.cookies.set("auth_token", token, cookieOpts);
+    res.cookies.set("auth_token", token, getAuthTokenCookieOptions());
     return res;
   } catch (err) {
     console.error("POST /api/auth/telegram-webapp:", err);
