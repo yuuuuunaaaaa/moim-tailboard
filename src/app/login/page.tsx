@@ -2,17 +2,25 @@ import Script from "next/script";
 import Header from "@/components/Header";
 import TelegramAuth from "@/components/TelegramAuthNoSsr";
 import TelegramLoginWidget from "@/components/TelegramLoginWidgetNoSsr";
+import {
+  extractTenantSlugFromReturnPath,
+  sanitizeInternalReturnPath,
+} from "@/lib/loginReturnPath";
 import { resolveTelegramWebAppOpenConfig } from "@/lib/telegramWebAppOpenUrl";
 
 interface Props {
-  searchParams: Promise<{ tenantSlug?: string; tenant?: string }>;
+  searchParams: Promise<{ tenantSlug?: string; tenant?: string; next?: string }>;
 }
 
 export const metadata = { title: "할 일 산더미" };
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const tenantSlug = (sp.tenantSlug || sp.tenant || "").trim();
+  const safeNext =
+    typeof sp.next === "string" ? sanitizeInternalReturnPath(sp.next) : null;
+  const fromParams = (sp.tenantSlug || sp.tenant || "").trim();
+  const fromNext = safeNext ? extractTenantSlugFromReturnPath(safeNext) : "";
+  const tenantSlug = fromParams || fromNext;
   const botName =
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME ||
     "TailboardBot";
@@ -49,6 +57,7 @@ export default async function LoginPage({ searchParams }: Props) {
             {!isLocalWeb && (
               <TelegramAuth
                 tenantSlug={tenantSlug}
+                postLoginNext={safeNext ?? undefined}
                 loginPage
                 webAppOpenUrl={webAppOpenUrl}
                 skipWebAppRedirect={skipWebAppRedirect}
@@ -68,6 +77,7 @@ export default async function LoginPage({ searchParams }: Props) {
                   <TelegramLoginWidget
                     botName={botName}
                     tenantSlug={tenantSlug || undefined}
+                    postLoginNext={safeNext ?? undefined}
                     requestAccess={widgetRequestAccess}
                   />
                 </div>

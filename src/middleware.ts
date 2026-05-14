@@ -5,11 +5,32 @@ import { verifyToken } from "@/lib/jwt-verify";
 import { getDevDefaultTenantSlug, isDevBypassEnabled } from "@/lib/dev";
 import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 
-function redirectToLogin(request: NextRequest, tenantSlug: string) {
+function deriveTenantSlugForLogin(pathname: string, search: string): string {
+  const fromT = pathname.match(/^\/t\/([^/]+)/);
+  if (fromT) {
+    try {
+      return decodeURIComponent(fromT[1]);
+    } catch {
+      return fromT[1];
+    }
+  }
+  const qs = search.startsWith("?") ? search.slice(1) : search;
+  const params = new URLSearchParams(qs);
+  return (params.get("tenant")?.trim() || params.get("tenantSlug")?.trim() || "").trim();
+}
+
+/** 비로그인 시 원래 목적지를 `next`로 보존해 로그인 후 tenantSlug · 복귀 경로가 비지 않게 한다 */
+function redirectToLogin(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const returnPath = pathname + search;
+  const tenantSlug = deriveTenantSlugForLogin(pathname, search);
   const url = request.nextUrl.clone();
   url.pathname = "/login";
   url.search = "";
   if (tenantSlug) url.searchParams.set("tenantSlug", tenantSlug);
+  if (returnPath && returnPath !== "/login" && !returnPath.startsWith("/login?")) {
+    url.searchParams.set("next", returnPath);
+  }
   return NextResponse.redirect(url);
 }
 
@@ -51,9 +72,7 @@ export async function middleware(request: NextRequest) {
     const payload = token ? await verifyToken(token) : null;
 
     if (!payload?.username) {
-      const tenantMatch = pathname.match(/^\/t\/([^/]+)/);
-      const tenantSlug = tenantMatch ? tenantMatch[1] : "";
-      return redirectToLogin(request, tenantSlug);
+      return redirectToLogin(request);
     }
 
     // prod: 테넌트 페이지는 allowed_tenant_slug 쿠키가 있어야 API(참가/취소)가 403이 나지 않음.
@@ -77,7 +96,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (err) {
     console.error("[middleware] uncaught:", err);
-    return redirectToLogin(request, "");
+    return redirectToLogin(request);
   }
 }
 

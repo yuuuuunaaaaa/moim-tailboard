@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pickPostLoginPath, sanitizeInternalReturnPath } from "@/lib/loginReturnPath";
 
 interface TelegramAuthProps {
   tenantSlug?: string;
+  /** 로그인 직후 복귀할 안전한 상대 경로(미들웨어가 넘긴 `next`) */
+  postLoginNext?: string;
   /** true: /login 페이지 — 텔레그램 위젯은 부모에서 삽입 */
   loginPage?: boolean;
   /** 설정 시 일반 브라우저에서 /login 접속 → t.me 미니 앱으로 이동 */
@@ -52,6 +55,7 @@ const INIT_DATA_POLL_MAX = 45;
 
 export default function TelegramAuth({
   tenantSlug,
+  postLoginNext,
   loginPage = false,
   webAppOpenUrl,
   skipWebAppRedirect = false,
@@ -74,7 +78,22 @@ export default function TelegramAuth({
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     const slugFromUrl = tenantSlug?.trim() ?? "";
-    const loginQs = slugFromUrl ? `?tenantSlug=${encodeURIComponent(slugFromUrl)}` : "";
+    const buildLoginRedirectQs = (): string => {
+      const p = new URLSearchParams();
+      if (slugFromUrl) p.set("tenantSlug", slugFromUrl);
+      if (postLoginNext) {
+        const s = sanitizeInternalReturnPath(postLoginNext);
+        if (s) p.set("next", s);
+      }
+      if (!loginPage && typeof window !== "undefined") {
+        const cur = window.location.pathname + window.location.search;
+        const safeCur = cur && cur !== "/login" ? sanitizeInternalReturnPath(cur) : null;
+        if (safeCur) p.set("next", safeCur);
+      }
+      const qs = p.toString();
+      return qs ? `?${qs}` : "";
+    };
+    const loginQs = buildLoginRedirectQs();
 
     const runLoginWithInitData = (initData: string) => {
       const effectiveTenant = resolveEffectiveTenant(tenantSlug, window.Telegram);
@@ -95,7 +114,7 @@ export default function TelegramAuth({
           }
           const slug = effectiveTenant.trim();
           if (slug) {
-            const nextPath = `/t/${encodeURIComponent(slug)}/events`;
+            const nextPath = pickPostLoginPath(slug, postLoginNext);
             window.location.href = `/api/init-tenant?slug=${encodeURIComponent(slug)}&next=${encodeURIComponent(nextPath)}`;
             return;
           }
@@ -192,7 +211,7 @@ export default function TelegramAuth({
       timers.forEach(clearTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, loginPage, webAppOpenUrl, skipWebAppRedirect, tenantSlug]);
+  }, [mounted, loginPage, webAppOpenUrl, skipWebAppRedirect, tenantSlug, postLoginNext]);
 
   if (!loginPage) return null;
 

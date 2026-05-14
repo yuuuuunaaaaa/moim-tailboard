@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+import { pickPostLoginPath } from "@/lib/loginReturnPath";
 
 declare global {
   interface Window {
@@ -24,17 +25,22 @@ declare global {
 export default function TelegramLoginWidget({
   botName,
   tenantSlug,
+  postLoginNext,
   requestAccess,
 }: {
   botName: string;
   /** 로그인 성공 후 init-tenant / 꼬리달기 목록 이동에 사용 — 선택 */
   tenantSlug?: string;
+  /** 미들웨어가 넘긴 원래 목적지(상대 경로) */
+  postLoginNext?: string;
   /** `"write"`일 때만 data-request-access 설정 (봇이 사용자에게 메시지 보낼 권한 요청) */
   requestAccess?: "write";
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const tenantRef = useRef(tenantSlug);
+  const returnRef = useRef(postLoginNext);
   tenantRef.current = tenantSlug;
+  returnRef.current = postLoginNext;
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -55,7 +61,7 @@ export default function TelegramLoginWidget({
           return;
         }
         if (slug) {
-          const nextPath = `/t/${encodeURIComponent(slug)}/events`;
+          const nextPath = pickPostLoginPath(slug, returnRef.current);
           window.location.href = `/api/init-tenant?slug=${encodeURIComponent(slug)}&next=${encodeURIComponent(nextPath)}`;
           return;
         }
@@ -81,7 +87,7 @@ export default function TelegramLoginWidget({
       delete window.moimOnTelegramAuth;
       host.replaceChildren();
     };
-  }, [botName, tenantSlug, requestAccess]);
+  }, [botName, tenantSlug, postLoginNext, requestAccess]);
 
   return <div ref={hostRef} className="telegram-widget-mount" aria-label="Telegram 로그인" />;
 }

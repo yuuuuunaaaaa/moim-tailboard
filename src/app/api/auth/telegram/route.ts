@@ -5,6 +5,7 @@ import {
 } from "@/lib/verifyTelegram";
 import { signToken, COOKIE_MAX_AGE } from "@/lib/jwt";
 import { assertLoginTenantContext } from "@/lib/authTenantLogin";
+import { pickPostLoginPath, sanitizeInternalReturnPath } from "@/lib/loginReturnPath";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const JWT_READY = !!process.env.JWT_SECRET?.trim();
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const telegramPayload: Record<string, unknown> = {};
     searchParams.forEach((val, key) => {
-      if (key !== "tenantSlug" && key !== "tenant") {
+      if (key !== "tenantSlug" && key !== "tenant" && key !== "next") {
         telegramPayload[key] = val;
       }
     });
@@ -123,10 +124,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const nextRaw = request.nextUrl.searchParams.get("next")?.trim() ?? "";
+    const safeNext = nextRaw ? sanitizeInternalReturnPath(nextRaw) : null;
+
     const token = await signToken(username);
     const destination =
       tenantSlug !== ""
-        ? `/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${encodeURIComponent(`/t/${encodeURIComponent(tenantSlug)}/events`)}`
+        ? `/api/init-tenant?slug=${encodeURIComponent(tenantSlug)}&next=${encodeURIComponent(pickPostLoginPath(tenantSlug, safeNext))}`
         : "/";
     const res = NextResponse.redirect(new URL(destination, request.url));
     res.cookies.set("auth_token", token, cookieOpts);
