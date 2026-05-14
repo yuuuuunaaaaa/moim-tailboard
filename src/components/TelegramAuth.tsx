@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { pickPostLoginPath, sanitizeInternalReturnPath } from "@/lib/loginReturnPath";
+import { parseStartParam } from "@/lib/telegram";
 
 interface TelegramAuthProps {
   tenantSlug?: string;
@@ -47,7 +48,19 @@ function resolveEffectiveTenant(tenantSlug: string | undefined, tg: Window["Tele
     typeof tg?.WebApp?.initDataUnsafe?.start_param === "string"
       ? tg.WebApp.initDataUnsafe.start_param.trim()
       : "";
-  return fromUrl || sp;
+  if (fromUrl) return fromUrl;
+  if (sp) return parseStartParam(sp).tenantSlug;
+  return "";
+}
+
+/** start_param 이 `{slug}-ev-{id}` 형태일 때 이벤트 ID를 반환 */
+function resolveEffectiveEventId(tg: Window["Telegram"]): string | null {
+  const sp =
+    typeof tg?.WebApp?.initDataUnsafe?.start_param === "string"
+      ? tg.WebApp.initDataUnsafe.start_param.trim()
+      : "";
+  if (!sp) return null;
+  return parseStartParam(sp).eventId ?? null;
 }
 
 const INIT_DATA_POLL_MS = 150;
@@ -114,7 +127,10 @@ export default function TelegramAuth({
           }
           const slug = effectiveTenant.trim();
           if (slug) {
-            const nextPath = pickPostLoginPath(slug, postLoginNext);
+            const eventId = resolveEffectiveEventId(window.Telegram);
+            const nextPath = eventId
+              ? `/t/${encodeURIComponent(slug)}/events/${eventId}`
+              : pickPostLoginPath(slug, postLoginNext);
             window.location.href = `/api/init-tenant?slug=${encodeURIComponent(slug)}&next=${encodeURIComponent(nextPath)}`;
             return;
           }

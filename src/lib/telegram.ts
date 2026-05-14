@@ -6,15 +6,71 @@ function getAppBaseUrl(): string {
   return withProto.replace(/\/$/, "");
 }
 
-export function eventDetailUrl(tenantSlug: string, eventId: number | string): string {
-  const base = getAppBaseUrl();
-  return `${base}/t/${encodeURIComponent(tenantSlug)}/events/${Number(eventId)}`;
+/**
+ * 텔레그램 미니앱 딥링크 베이스 URL을 반환한다.
+ * - NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL 이 t.me/... 형태면 그걸 사용
+ * - 없으면 NEXT_PUBLIC_TELEGRAM_BOT_NAME + NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME 조합
+ * - 둘 다 없으면 null (직접 URL 사용)
+ */
+function getMiniAppBase(): string | null {
+  const openUrl = process.env.NEXT_PUBLIC_TELEGRAM_WEBAPP_OPEN_URL?.trim();
+  if (openUrl) {
+    try {
+      const u = new URL(openUrl);
+      if (u.hostname === "t.me" || u.hostname === "telegram.me" || u.hostname === "www.telegram.me") {
+        return openUrl.replace(/\/+$/, "");
+      }
+    } catch { /* invalid URL */ }
+  }
+  const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME?.trim();
+  const short = process.env.NEXT_PUBLIC_TELEGRAM_MINI_APP_SHORT_NAME?.trim();
+  if (bot && short) {
+    return `https://t.me/${encodeURIComponent(bot)}/${encodeURIComponent(short)}`;
+  }
+  return null;
 }
 
-/** 테넌트 꼬리달기(이벤트) 목록 화면 */
+/**
+ * startapp 파라미터 인코딩.
+ * - 이벤트 목록: `{tenantSlug}`
+ * - 이벤트 상세: `{tenantSlug}-ev-{eventId}`
+ * Telegram startapp 허용 문자: A-Z a-z 0-9 _ - (최대 64자)
+ */
+export function encodeStartParam(tenantSlug: string, eventId?: number | string): string {
+  const slug = tenantSlug.replace(/[^A-Za-z0-9_-]/g, "_");
+  if (eventId !== undefined) return `${slug}-ev-${Number(eventId)}`;
+  return slug;
+}
+
+/** startapp 파라미터를 파싱해 tenantSlug · eventId 를 분리한다 */
+export function parseStartParam(startParam: string): { tenantSlug: string; eventId?: string } {
+  const match = startParam.match(/^(.+)-ev-(\d+)$/);
+  if (match) return { tenantSlug: match[1], eventId: match[2] };
+  return { tenantSlug: startParam };
+}
+
+/**
+ * 이벤트 상세 링크.
+ * 미니앱 환경 변수가 설정돼 있으면 t.me 딥링크, 없으면 직접 URL.
+ */
+export function eventDetailUrl(tenantSlug: string, eventId: number | string): string {
+  const base = getMiniAppBase();
+  if (base) {
+    return `${base}?startapp=${encodeURIComponent(encodeStartParam(tenantSlug, eventId))}`;
+  }
+  return `${getAppBaseUrl()}/t/${encodeURIComponent(tenantSlug)}/events/${Number(eventId)}`;
+}
+
+/**
+ * 이벤트 목록 링크.
+ * 미니앱 환경 변수가 설정돼 있으면 t.me 딥링크, 없으면 직접 URL.
+ */
 export function eventListUrl(tenantSlug: string): string {
-  const base = getAppBaseUrl();
-  return `${base}/t/${encodeURIComponent(tenantSlug)}/events`;
+  const base = getMiniAppBase();
+  if (base) {
+    return `${base}?startapp=${encodeURIComponent(encodeStartParam(tenantSlug))}`;
+  }
+  return `${getAppBaseUrl()}/t/${encodeURIComponent(tenantSlug)}/events`;
 }
 
 export function escapeHtml(s: string | number | null | undefined): string {
