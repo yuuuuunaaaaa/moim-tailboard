@@ -85,7 +85,6 @@ const DEFAULT_NEW_EVENT_HEADLINE = "새 꼬리달기가 생성되었습니다!";
 /** 꼬리달기 최초 생성 시 1회 발송(폼 값만 사용, DB 저장 없음) */
 export function buildNewEventTelegramHtml(opts: {
   title: string;
-  link: string;
   notifyIcon?: string | null;
   notifyHeadline?: string | null;
   notifyExtra?: string | null;
@@ -96,7 +95,7 @@ export function buildNewEventTelegramHtml(opts: {
   const extra = extraRaw
     ? `${escapeHtml(extraRaw).replace(/\r\n/g, "\n").replace(/\r/g, "\n")}\n`
     : "";
-  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}<a href="${escapeHtml(opts.link)}">바로가기</a>`;
+  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}아래 버튼을 눌러 확인하세요.`;
 }
 
 const TELEGRAM_HTML_SAFE_LEN = 3900;
@@ -134,16 +133,13 @@ function formatEventSnapshotBlock(ev: TenantEventParticipantSnapshot): string {
  * (±n) 은 이번 신청/취소가 발생한 꼬리달기에만 붙음.
  */
 export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
-  link: string;
   events: TenantEventParticipantSnapshot[];
   prefix?: string | null;
-  linkLabel?: string;
 }): string {
   const raw = opts.prefix?.trim();
   const head = raw ? `${escapeHtml(raw)}\n` : "";
   const title = "<b>참가 인원 변동 알림</b>";
-  const anchor = escapeHtml(opts.linkLabel?.trim() || "꼬리달기 목록");
-  const footer = `\n\n<a href="${escapeHtml(opts.link)}">${anchor}</a>`;
+  const footer = "\n\n아래 버튼을 눌러 확인하세요.";
 
   let body = "";
   let omitted = 0;
@@ -168,14 +164,40 @@ export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
   return `${head}${title}${body}${footer}`;
 }
 
-export async function sendMessage(chatId: string | number | null | undefined, text: string): Promise<void> {
+export async function sendMessage(
+  chatId: string | number | null | undefined,
+  text: string,
+  opts?: {
+    buttonText?: string;
+    webAppUrl?: string;
+  },
+): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId || String(chatId) === "-1") return;
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...(opts?.webAppUrl
+          ? {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: opts.buttonText || "열기",
+                      web_app: { url: opts.webAppUrl },
+                    },
+                  ],
+                ],
+              },
+            }
+          : {}),
+      }),
     });
     if (!res.ok) {
       const body = await res.text();

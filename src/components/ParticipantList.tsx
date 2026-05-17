@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 import Spinner from "@/components/Spinner";
+import ParticipantEditForm from "@/components/ParticipantEditForm";
 
 interface Props {
   participants: Participant[];
@@ -236,89 +237,18 @@ export default function ParticipantList({
                     </div>
 
                     {isOwner && isEditing && (
-                      <form
-                        className="p-edit-form"
-                        method="post"
-                        action="/api/participants/update"
-                        onSubmit={() => {
-                          if (submittingId != null) return;
-                          setSubmittingId(p.id);
-                        }}
-                      >
-                        <input type="hidden" name="tenantSlug" value={tenantSlug} />
-                        <input type="hidden" name="participantId" value={p.id} />
-                        {/* 일부 WebView에서 클릭한 submit 버튼의 name/value가 누락될 수 있어 hidden mode를 사용 */}
-                        <input
-                          type="hidden"
-                          name="mode"
-                          value={pendingDeleteId === p.id ? "delete" : "update"}
-                        />
-                        <div className="p-edit-fields">
-                          <input type="text" name="name" defaultValue={p.name} placeholder="이름" />
-                          <input
-                            type="text"
-                            name="studentNo"
-                            defaultValue={p.student_no || ""}
-                            placeholder="학번(선택)"
-                          />
-                        </div>
-                        <div className="p-edit-actions">
-                          <button
-                            className="btn btn--secondary btn--sm"
-                            type="submit"
-                            disabled={submittingId === p.id}
-                          >
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              {submittingId === p.id && <Spinner size={14} label="저장 중" />}
-                              {submittingId === p.id ? "저장 중..." : "저장"}
-                            </span>
-                          </button>
-                          <button
-                            className="btn btn--sm"
-                            type="button"
-                            onClick={() => {
-                              setPendingDeleteId(null);
-                              setEditingId(null);
-                            }}
-                            disabled={submittingId === p.id}
-                          >
-                            닫기
-                          </button>
-                          {pendingDeleteId === p.id ? (
-                            <div className="p-delete-confirm" role="group" aria-label="참여 취소 확인">
-                              <span className="p-delete-confirm-text">참여를 취소할까요?</span>
-                              <button
-                                className="btn btn--secondary btn--sm"
-                                type="button"
-                                onClick={() => setPendingDeleteId(null)}
-                                disabled={submittingId === p.id}
-                              >
-                                아니오
-                              </button>
-                              <button
-                                className="btn btn--danger btn--sm"
-                                type="submit"
-                                disabled={submittingId === p.id}
-                              >
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                  {submittingId === p.id && <Spinner size={14} label="삭제 중" />}
-                                  {submittingId === p.id ? "처리 중..." : "네, 취소"}
-                                </span>
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              className="btn btn--danger btn--sm"
-                              type="button"
-                              disabled={submittingId === p.id}
-                              onClick={() => setPendingDeleteId(p.id)}
-                            >
-                              삭제
-                            </button>
-                          )}
-                        </div>
-                      </form>
+                      <ParticipantEditForm
+                        participant={p}
+                        tenantSlug={tenantSlug}
+                        participants={participants}
+                        pendingDeleteId={pendingDeleteId}
+                        submittingId={submittingId}
+                        setPendingDeleteId={setPendingDeleteId}
+                        setEditingId={setEditingId}
+                        setSubmittingId={setSubmittingId}
+                      />
                     )}
+
 
                     {canAdminDelete && pendingDeleteId === p.id && (
                       <div className="p-delete-confirm" role="group" aria-label="관리자 참여 삭제 확인">

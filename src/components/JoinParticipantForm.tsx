@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { OptionGroup, OptionItem } from "@/types";
+import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
+import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
+import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
 
 type Props = {
   tenantSlug: string;
@@ -11,6 +13,7 @@ type Props = {
   isDevBypass: boolean;
   optionGroups: OptionGroup[];
   optionItems: OptionItem[];
+  participants: Pick<Participant, "id" | "name" | "student_no">[];
 };
 
 export default function JoinParticipantForm({
@@ -20,8 +23,17 @@ export default function JoinParticipantForm({
   isDevBypass,
   optionGroups,
   optionItems,
+  participants,
 }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const {
+    formRef,
+    showDuplicateConfirm,
+    allowDuplicate,
+    handleSubmit: handleDuplicateSubmit,
+    confirmDuplicateYes,
+    confirmDuplicateNo,
+  } = useParticipantDuplicateSubmit({ participants });
 
   const groupedItems = useMemo(() => {
     const map = new Map<number, OptionItem[]>();
@@ -37,15 +49,20 @@ export default function JoinParticipantForm({
 
   return (
     <form
+      ref={formRef}
       method="post"
       action="/api/participants"
-      onSubmit={() => {
-        if (submitting) return;
-        setSubmitting(true);
+      onSubmit={(e) => {
+        if (submitting) {
+          e.preventDefault();
+          return;
+        }
+        handleDuplicateSubmit(e, () => setSubmitting(true));
       }}
     >
       <input type="hidden" name="tenantSlug" value={tenantSlug} />
       <input type="hidden" name="eventId" value={eventId} />
+      <input type="hidden" name="allowDuplicate" value={allowDuplicate ? "1" : "0"} />
 
       <div className="form-group">
         <label htmlFor="name">이름</label>
@@ -82,11 +99,19 @@ export default function JoinParticipantForm({
         );
       })}
 
+      {showDuplicateConfirm && (
+        <DuplicateParticipantConfirm
+          disabled={submitting}
+          onYes={confirmDuplicateYes}
+          onNo={confirmDuplicateNo}
+        />
+      )}
+
       <button
         className="btn btn--primary"
         type="submit"
-        disabled={disabled}
-        aria-disabled={disabled}
+        disabled={disabled || showDuplicateConfirm}
+        aria-disabled={disabled || showDuplicateConfirm}
         title={!username && !isDevBypass ? "텔레그램에서 열어 로그인해 주세요" : undefined}
       >
         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -97,4 +122,3 @@ export default function JoinParticipantForm({
     </form>
   );
 }
-
