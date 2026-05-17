@@ -9,6 +9,7 @@ import {
 } from "@/lib/participantGroupCounts";
 import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
+import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import type { Event } from "@/types";
 
 // POST /api/participants — 참여 신청 (JWT → username → DB)
@@ -43,6 +44,17 @@ export async function POST(request: NextRequest) {
       [eventId, tenant.id],
     );
     if (!event) return new Response("Event not found", { status: 404 });
+
+    const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
+    if (!allowDuplicate) {
+      const duplicate = await findParticipantByNameAndStudentNo(event.id, name, studentNo);
+      if (duplicate) {
+        return NextResponse.redirect(
+          new URL(`/t/${tenant.slug}/events/${event.id}?toast=duplicate`, request.url),
+          303,
+        );
+      }
+    }
 
     const insertResult = await execute(
       "INSERT INTO participant (event_id, name, student_no, username) VALUES (?, ?, ?, ?)",
@@ -84,10 +96,10 @@ export async function POST(request: NextRequest) {
     await sendMessage(
       tenant.chat_room_id,
       buildParticipantTenantWideSummaryTelegramHtml({
-        link,
         events: snapshots,
         prefix: event.telegram_participant_join_prefix ?? "",
       }),
+      { webAppUrl: link, buttonText: "꼬리달기 목록" },
     );
 
     return NextResponse.redirect(

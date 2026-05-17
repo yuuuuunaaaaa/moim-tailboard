@@ -9,6 +9,7 @@ import {
 } from "@/lib/participantGroupCounts";
 import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
+import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import type { Participant } from "@/types";
 
 type ParticipantWithEvent = Participant & { tenant_id: number; event_id: number };
@@ -77,14 +78,32 @@ export async function POST(request: NextRequest) {
       await sendMessage(
         tenant.chat_room_id,
         buildParticipantTenantWideSummaryTelegramHtml({
-          link: eventListUrl(tenant.slug),
           events: snapshots,
           prefix: ev?.telegram_participant_leave_prefix ?? "",
         }),
+        { webAppUrl: eventListUrl(tenant.slug), buttonText: "꼬리달기 목록" },
       );
     } else {
       const newName = name || participant.name;
       const newStudentNo = studentNo;
+      const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
+      if (!allowDuplicate) {
+        const duplicate = await findParticipantByNameAndStudentNo(
+          participant.event_id,
+          newName,
+          newStudentNo,
+          participant.id,
+        );
+        if (duplicate) {
+          return NextResponse.redirect(
+            new URL(
+              `/t/${tenant.slug}/events/${participant.event_id}?toast=duplicate`,
+              request.url,
+            ),
+            303,
+          );
+        }
+      }
       await execute(
         "UPDATE participant SET name = ?, student_no = ? WHERE id = ?",
         [newName, newStudentNo, participant.id],

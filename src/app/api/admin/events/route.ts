@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
       eventNoticeChatRoomId,
       buildNewEventTelegramHtml({
         title,
-        link: eventDetailUrl(tenant.slug, eventId),
         notifyIcon: telegramNotifyIcon,
         notifyHeadline: telegramNotifyHeadline,
         notifyExtra: telegramNotifyExtra,
       }),
+      { webAppUrl: eventDetailUrl(tenant.slug, eventId), buttonText: "바로가기" },
     );
 
     return NextResponse.redirect(
