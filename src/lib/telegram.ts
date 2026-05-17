@@ -164,6 +164,12 @@ export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
   return `${head}${title}${body}${footer}`;
 }
 
+function buildOpenButton(text: string, openUrl: string) {
+  // web_app 은 봇·사용자 1:1 채팅에서만 가능하고 URL 은 BotFather 에 등록한 HTTPS 여야 함.
+  // 방 알림(chat_room_id)은 보통 그룹/채널이므로 url 버튼 사용 (t.me 딥링크·자체 HTTPS 모두 가능).
+  return { text, url: openUrl };
+}
+
 export async function sendMessage(
   chatId: string | number | null | undefined,
   text: string,
@@ -186,14 +192,7 @@ export async function sendMessage(
         ...(opts?.webAppUrl
           ? {
               reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: opts.buttonText || "열기",
-                      web_app: { url: opts.webAppUrl },
-                    },
-                  ],
-                ],
+                inline_keyboard: [[buildOpenButton(opts.buttonText || "열기", opts.webAppUrl)]],
               },
             }
           : {}),
@@ -201,9 +200,9 @@ export async function sendMessage(
     });
     if (!res.ok) {
       const body = await res.text();
-      console.warn("[telegram] sendMessage failed:", body);
+      console.error("[telegram] sendMessage failed:", res.status, body);
     }
   } catch (err) {
-    console.warn("[telegram] sendMessage error:", (err as Error).message);
+    console.error("[telegram] sendMessage error:", (err as Error).message);
   }
 }
