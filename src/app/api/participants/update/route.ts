@@ -7,7 +7,12 @@ import {
   fetchLeaveRemovedCountPerOptionGroup,
   fetchTenantParticipantSnapshots,
 } from "@/lib/participantGroupCounts";
-import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
+import {
+  sendMessage,
+  eventListUrl,
+  buildParticipantTenantWideSummaryTelegramHtml,
+  getChatRoomThreadId,
+} from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import type { Participant } from "@/types";
@@ -81,7 +86,11 @@ export async function POST(request: NextRequest) {
           events: snapshots,
           prefix: ev?.telegram_participant_leave_prefix ?? "",
         }),
-        { webAppUrl: eventListUrl(tenant.slug), buttonText: "꼬리달기 목록" },
+        {
+          webAppUrl: eventListUrl(tenant.slug),
+          buttonText: "꼬리달기 목록",
+          messageThreadId: getChatRoomThreadId(tenant),
+        },
       );
     } else {
       const newName = name || participant.name;

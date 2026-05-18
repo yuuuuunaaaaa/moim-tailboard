@@ -6,6 +6,7 @@ import {
   buildAdminBroadcastTelegramHtml,
   eventListUrl,
   getEventNoticeChatRoomIdStrict,
+  getEventNoticeChatRoomThreadIdStrict,
   sendMessage,
 } from "@/lib/telegram";
 
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
     const sent = await sendMessage(chatId, html, {
       webAppUrl: eventListUrl(tenant.slug),
       buttonText,
+      messageThreadId: getEventNoticeChatRoomThreadIdStrict(tenant),
     });
     if (!sent.ok) {
       return NextResponse.json({ success: false, error: sent.error }, { status: 502 });

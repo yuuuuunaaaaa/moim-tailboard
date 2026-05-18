@@ -4,21 +4,15 @@
 -- 테넌트(지역) 정보
 -- 예: 인천청년, 서울청년 등
 CREATE TABLE tenant (
-  -- PK
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  -- URL 에서 사용하는 짧은 텍스트 ID (예: 'incheon', 'seoul')
-  slug VARCHAR(191) NOT NULL UNIQUE,
-  -- 테넌트 표시 이름
-  name VARCHAR(255) NOT NULL,
-  -- 생성/수정 시각
-  chat_room_id VARCHAR(20) NOT NULL DEFAULT '-1' COMMENT '텔레그램 채팅방 ID (참가/취소 알림용)',
-  -- 꼬리달기 생성 알림 전용 채팅방 ID. NULL 또는 빈 문자열이면 chat_room_id로 폴백한다.
-  -- 기존 DB에는 ALTER로 추가:
-  --   ALTER TABLE tenant ADD COLUMN event_notice_chat_room_id VARCHAR(20) NULL DEFAULT NULL
-  --     COMMENT '꼬리달기 생성 알림 채팅방 ID' AFTER chat_room_id;
-  event_notice_chat_room_id VARCHAR(20) NULL DEFAULT NULL COMMENT '꼬리달기 생성 알림 채팅방 ID',
+  id INT AUTO_INCREMENT PRIMARY KEY COMMENT '고유번호 5자리 권장',
+  slug VARCHAR(191) NOT NULL UNIQUE COMMENT 'URL에서 사용하는 짧은 텍스트',
+  name VARCHAR(255) NOT NULL COMMENT '테넌트 표시 이름',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  chat_room_id VARCHAR(20) NOT NULL DEFAULT '-1' COMMENT '채팅방 아이디',
+  chat_room_thread_id INT NULL DEFAULT NULL COMMENT 'chat_room_id 포럼 토픽 (message_thread_id)',
+  event_notice_chat_room_id VARCHAR(20) NULL DEFAULT NULL COMMENT '생성하면 알림 갈 채팅방 아이디',
+  event_notice_chat_room_thread_id INT NULL DEFAULT NULL COMMENT 'event_notice 포럼 토픽 (message_thread_id)'
 );
 
 -- 관리자 정보

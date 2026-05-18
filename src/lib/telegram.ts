@@ -191,6 +191,44 @@ export function getEventNoticeChatRoomIdStrict(tenant: {
   return id;
 }
 
+export function parseMessageThreadId(value: number | string | null | undefined): number | undefined {
+  if (value == null) return undefined;
+  const n = typeof value === "number" ? value : Number(String(value).trim());
+  if (!Number.isFinite(n)) return undefined;
+  const threadId = Math.trunc(n);
+  return threadId > 0 ? threadId : undefined;
+}
+
+/** chat_room_id 전송 시 message_thread_id */
+export function getChatRoomThreadId(tenant: {
+  chat_room_thread_id?: number | string | null;
+}): number | undefined {
+  return parseMessageThreadId(tenant.chat_room_thread_id);
+}
+
+/** event_notice 전용 방(폴백 없음) 전송 시 message_thread_id */
+export function getEventNoticeChatRoomThreadIdStrict(tenant: {
+  event_notice_chat_room_thread_id?: number | string | null;
+}): number | undefined {
+  return parseMessageThreadId(tenant.event_notice_chat_room_thread_id);
+}
+
+/**
+ * resolveEventNoticeChatRoomId 와 짝 — notice 전용 방이면 event_notice 스레드,
+ * chat_room_id 로 폴백이면 chat_room_thread_id 사용.
+ */
+export function resolveEventNoticeThreadId(tenant: {
+  chat_room_thread_id?: number | string | null;
+  event_notice_chat_room_id?: string | null;
+  event_notice_chat_room_thread_id?: number | string | null;
+}): number | undefined {
+  const notice = (tenant.event_notice_chat_room_id ?? "").trim();
+  if (notice && notice !== "-1") {
+    return getEventNoticeChatRoomThreadIdStrict(tenant);
+  }
+  return getChatRoomThreadId(tenant);
+}
+
 /** 참가자 10·20·30… 명 돌파 알림 */
 export function buildParticipantMilestoneTelegramHtml(opts: {
   eventTitle: string;
@@ -224,6 +262,8 @@ export async function sendMessage(
   opts?: {
     buttonText?: string;
     webAppUrl?: string;
+    /** Telegram forum topic thread id (message_thread_id) */
+    messageThreadId?: number | null;
   },
 ): Promise<SendMessageResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -234,6 +274,7 @@ export async function sendMessage(
   if (!id || id === "-1") {
     return { ok: false, error: "이 지역에 연결된 텔레그램 채팅방이 없습니다." };
   }
+  const messageThreadId = parseMessageThreadId(opts?.messageThreadId);
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
@@ -243,6 +284,7 @@ export async function sendMessage(
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
+        ...(messageThreadId != null ? { message_thread_id: messageThreadId } : {}),
         ...(opts?.webAppUrl
           ? {
               reply_markup: {

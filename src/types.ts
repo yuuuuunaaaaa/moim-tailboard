@@ -6,6 +6,10 @@ export interface Tenant {
   chat_room_id: string | null;
   /** 꼬리달기 생성 알림 전용 채팅방 ID. null/빈 문자열이면 chat_room_id로 폴백 */
   event_notice_chat_room_id: string | null;
+  /** chat_room_id 포럼 토픽 (Telegram message_thread_id) */
+  chat_room_thread_id: number | null;
+  /** event_notice_chat_room_id 포럼 토픽 (Telegram message_thread_id) */
+  event_notice_chat_room_thread_id: number | null;
 }
 
 export interface Admin {

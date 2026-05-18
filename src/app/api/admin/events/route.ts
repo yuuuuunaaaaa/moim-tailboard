@@ -9,6 +9,7 @@ import {
   eventDetailUrl,
   buildNewEventTelegramHtml,
   resolveEventNoticeChatRoomId,
+  resolveEventNoticeThreadId,
 } from "@/lib/telegram";
 import { toDateInputValue } from "@/lib/dateOnly";
 
@@ -94,7 +95,11 @@ export async function POST(request: NextRequest) {
         notifyHeadline: telegramNotifyHeadline,
         notifyExtra: telegramNotifyExtra,
       }),
-      { webAppUrl: eventDetailUrl(tenant.slug, eventId), buttonText: "바로가기" },
+      {
+        webAppUrl: eventDetailUrl(tenant.slug, eventId),
+        buttonText: "바로가기",
+        messageThreadId: resolveEventNoticeThreadId(tenant),
+      },
     );
 
     return NextResponse.redirect(
