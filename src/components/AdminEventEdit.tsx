@@ -273,7 +273,6 @@ export default function AdminEventEdit({ tenant, events }: Props) {
 
   return (
     <div className="admin-grid">
-      <AdminBroadcastForm tenant={tenant} />
       {/* 꼬리달기 목록 */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <div
@@ -365,6 +364,8 @@ export default function AdminEventEdit({ tenant, events }: Props) {
           </div>
         )}
       </div>
+
+      <AdminBroadcastForm tenant={tenant} />
 
       {/*
        * 클라이언트 측 토스트 (드래그 저장 결과 등).

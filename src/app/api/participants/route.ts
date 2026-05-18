@@ -10,6 +10,8 @@ import {
   isParticipantCountMilestone,
 } from "@/lib/participantGroupCounts";
 import {
+  getChatRoomThreadId,
+  getEventNoticeChatRoomThreadIdStrict,
   sendMessage,
   eventDetailUrl,
   eventListUrl,
@@ -108,7 +110,11 @@ export async function POST(request: NextRequest) {
         events: snapshots,
         prefix: event.telegram_participant_join_prefix ?? "",
       }),
-      { webAppUrl: link, buttonText: "꼬리달기 목록" },
+      {
+        webAppUrl: link,
+        buttonText: "꼬리달기 목록",
+        messageThreadId: getChatRoomThreadId(tenant),
+      },
     );
 
     const totalParticipants = await countEventParticipants(event.id);
@@ -123,6 +129,7 @@ export async function POST(request: NextRequest) {
         {
           webAppUrl: eventDetailUrl(tenant.slug, event.id),
           buttonText: "바로가기",
+          messageThreadId: getEventNoticeChatRoomThreadIdStrict(tenant),
         },
       );
     }
