@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { findTenantBySlug } from "@/lib/db";
-import { queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
 import {
   buildAdminBroadcastTelegramHtml,
-  eventDetailUrl,
   eventListUrl,
   getEventNoticeChatRoomIdStrict,
   sendMessage,
@@ -13,8 +11,8 @@ import {
 
 const MAX_BODY = 3500;
 const MAX_HEADLINE = 120;
-
-type LinkType = "none" | "list" | "event";
+const MAX_BUTTON = 32;
+const DEFAULT_BUTTON_LABEL = "꼬리달기 목록";
 
 /** POST /api/admin/broadcast — 관리자 커스텀 방 알림(저장 없이 즉시 전송) */
 export async function POST(request: NextRequest) {
@@ -28,8 +26,6 @@ export async function POST(request: NextRequest) {
       tenantSlug?: string;
       headline?: string;
       message?: string;
-      linkType?: string;
-      eventId?: number | string;
       buttonText?: string;
     };
 
@@ -57,48 +53,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const headline =
-      typeof body.headline === "string" ? body.headline.trim().slice(0, MAX_HEADLINE) : "";
-
-    const linkType: LinkType =
-      body.linkType === "list" || body.linkType === "event" ? body.linkType : "none";
-
     const chatId = getEventNoticeChatRoomIdStrict(tenant);
     if (!chatId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "꼬리달기 알림 방이 설정되어 있지 않습니다.",
-        },
+        { success: false, error: "꼬리달기 알림 방이 설정되어 있지 않습니다." },
         { status: 400 },
       );
     }
 
-    let webAppUrl: string | undefined;
-    let buttonText = typeof body.buttonText === "string" ? body.buttonText.trim().slice(0, 32) : "";
+    const headline =
+      typeof body.headline === "string" ? body.headline.trim().slice(0, MAX_HEADLINE) : "";
+    const buttonText =
+      (typeof body.buttonText === "string" ? body.buttonText.trim().slice(0, MAX_BUTTON) : "") ||
+      DEFAULT_BUTTON_LABEL;
 
-    if (linkType === "list") {
-      webAppUrl = eventListUrl(tenant.slug);
-      if (!buttonText) buttonText = "꼬리달기 목록";
-    } else if (linkType === "event") {
-      const eventId = Number(body.eventId);
-      if (!Number.isFinite(eventId) || eventId <= 0) {
-        return NextResponse.json({ success: false, error: "연결할 꼬리달기를 선택해 주세요." }, { status: 400 });
-      }
-      const row = await queryFirst<{ id: number; title: string }>(
-        "SELECT id, title FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
-        [eventId, tenant.id],
-      );
-      if (!row) {
-        return NextResponse.json({ success: false, error: "꼬리달기를 찾을 수 없습니다." }, { status: 404 });
-      }
-      webAppUrl = eventDetailUrl(tenant.slug, row.id);
-      if (!buttonText) buttonText = row.title.slice(0, 32) || "바로가기";
-    }
+    const html = buildAdminBroadcastTelegramHtml({
+      body: message,
+      headline: headline || null,
+    });
 
-    const html = buildAdminBroadcastTelegramHtml({ body: message, headline: headline || null });
-
-    const sent = await sendMessage(chatId, html, webAppUrl ? { webAppUrl, buttonText } : undefined);
+    const sent = await sendMessage(chatId, html, {
+      webAppUrl: eventListUrl(tenant.slug),
+      buttonText,
+    });
     if (!sent.ok) {
       return NextResponse.json({ success: false, error: sent.error }, { status: 502 });
     }

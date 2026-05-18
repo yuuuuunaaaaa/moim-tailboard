@@ -1,21 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { Event, Tenant } from "@/types";
-
-type LinkType = "none" | "list" | "event";
+import type { Tenant } from "@/types";
 
 interface Props {
   tenant: Tenant;
-  events: Event[];
 }
 
-export default function AdminBroadcastForm({ tenant, events }: Props) {
+const DEFAULT_BUTTON_LABEL = "꼬리달기 목록";
+
+export default function AdminBroadcastForm({ tenant }: Props) {
   const [open, setOpen] = useState(false);
   const [headline, setHeadline] = useState("");
   const [message, setMessage] = useState("");
-  const [linkType, setLinkType] = useState<LinkType>("list");
-  const [eventId, setEventId] = useState("");
   const [buttonText, setButtonText] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -41,10 +38,6 @@ export default function AdminBroadcastForm({ tenant, events }: Props) {
       setFeedback({ kind: "error", text: "메시지 내용을 입력해 주세요." });
       return;
     }
-    if (linkType === "event" && !eventId) {
-      setFeedback({ kind: "error", text: "연결할 꼬리달기를 선택해 주세요." });
-      return;
-    }
 
     setSending(true);
     setFeedback(null);
@@ -57,8 +50,6 @@ export default function AdminBroadcastForm({ tenant, events }: Props) {
           tenantSlug: tenant.slug,
           headline: headline.trim() || undefined,
           message: trimmed,
-          linkType,
-          eventId: linkType === "event" ? Number(eventId) : undefined,
           buttonText: buttonText.trim() || undefined,
         }),
       });
@@ -80,27 +71,28 @@ export default function AdminBroadcastForm({ tenant, events }: Props) {
 
   return (
     <div className="card admin-broadcast-card" style={{ gridColumn: "1 / -1" }}>
-      <button
-        type="button"
-        className="admin-broadcast-toggle"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <h2 className="card__title" style={{ marginBottom: 0 }}>
-          메시지 보내기
-        </h2>
-        <span className="admin-broadcast-toggle__hint">{open ? "접기" : "펼치기"}</span>
-      </button>
+      <div className="card__title-row">
+        <h2 className="card__title">메시지 보내기</h2>
+        <button
+          type="button"
+          className="btn btn--sm btn--secondary"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          {open ? "접기" : "펼치기"}
+        </button>
+      </div>
 
       {open && (
         <form className="admin-broadcast-form" onSubmit={handleSubmit}>
           <p className="form-hint" style={{ marginTop: 0 }}>
-            <code>event_notice_chat_room_id</code> 로 지정된 꼬리달기 알림 방으로 바로 전송합니다. DB에
-            저장되지 않습니다.
+            꼬리달기 알림 방으로 전송합니다. 하단 버튼은 참가 알림과 같이{" "}
+            <strong>꼬리달기 목록</strong> 미니앱으로 연결됩니다.
           </p>
+
           {!noticeChatConfigured && (
             <p className="form-hint admin-broadcast-feedback admin-broadcast-feedback--error" role="alert">
-              이 지역에 꼬리달기 알림 방 ID가 없어 전송할 수 없습니다.
+              이 지역에 꼬리달기 알림 방 ID가 없어 전송할 수 없습니다. 관리자에게 문의하세요.
             </p>
           )}
 
@@ -131,53 +123,19 @@ export default function AdminBroadcastForm({ tenant, events }: Props) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="broadcast-link">버튼 링크</label>
-            <select
-              id="broadcast-link"
-              value={linkType}
-              onChange={(e) => setLinkType(e.target.value as LinkType)}
+            <label htmlFor="broadcast-button">하단 버튼 글자 <span className="optional">(선택)</span></label>
+            <input
+              id="broadcast-button"
+              value={buttonText}
+              onChange={(e) => setButtonText(e.target.value)}
+              maxLength={32}
+              placeholder={`기본: ${DEFAULT_BUTTON_LABEL}`}
               disabled={sending}
-            >
-              <option value="none">없음</option>
-              <option value="list">꼬리달기 목록</option>
-              <option value="event">특정 꼬리달기</option>
-            </select>
+            />
+            <p className="form-hint" style={{ marginTop: 8, marginBottom: 0 }}>
+              링크는 항상 이 지역의 꼬리달기 목록으로 연결됩니다.
+            </p>
           </div>
-
-          {linkType === "event" && (
-            <div className="form-group">
-              <label htmlFor="broadcast-event">꼬리달기</label>
-              <select
-                id="broadcast-event"
-                value={eventId}
-                onChange={(e) => setEventId(e.target.value)}
-                required
-                disabled={sending}
-              >
-                <option value="">선택…</option>
-                {events.map((ev) => (
-                  <option key={ev.id} value={String(ev.id)}>
-                    {ev.title}
-                    {!ev.is_active ? " (비공개)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {linkType !== "none" && (
-            <div className="form-group">
-              <label htmlFor="broadcast-button">버튼 글자 <span className="optional">(선택)</span></label>
-              <input
-                id="broadcast-button"
-                value={buttonText}
-                onChange={(e) => setButtonText(e.target.value)}
-                maxLength={32}
-                placeholder={linkType === "list" ? "기본: 꼬리달기 목록" : "기본: 꼬리달기 제목"}
-                disabled={sending}
-              />
-            </div>
-          )}
 
           <div className="admin-edit-actions">
             <button

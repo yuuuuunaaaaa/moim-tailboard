@@ -81,6 +81,9 @@ export function escapeHtml(s: string | number | null | undefined): string {
 }
 
 const DEFAULT_NEW_EVENT_HEADLINE = "새 꼬리달기가 생성되었습니다!";
+/** 텔레그램 본문 하단 CTA (인라인 버튼 위 안내) */
+const TELEGRAM_CLICK_FOOTER = "👇 클릭";
+const TELEGRAM_CLICK_FOOTER_BLOCK = `\n\n${TELEGRAM_CLICK_FOOTER}`;
 
 /** 꼬리달기 최초 생성 시 1회 발송(폼 값만 사용, DB 저장 없음) */
 export function buildNewEventTelegramHtml(opts: {
@@ -95,7 +98,7 @@ export function buildNewEventTelegramHtml(opts: {
   const extra = extraRaw
     ? `${escapeHtml(extraRaw).replace(/\r\n/g, "\n").replace(/\r/g, "\n")}\n`
     : "";
-  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}아래 버튼을 눌러 확인하세요.`;
+  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}${TELEGRAM_CLICK_FOOTER_BLOCK}`;
 }
 
 const TELEGRAM_HTML_SAFE_LEN = 3900;
@@ -139,7 +142,7 @@ export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
   const raw = opts.prefix?.trim();
   const head = raw ? `${escapeHtml(raw)}\n` : "";
   const title = "<b>참가 인원 변동 알림</b>";
-  const footer = "\n\n아래 버튼을 눌러 확인하세요.";
+  const footer = TELEGRAM_CLICK_FOOTER_BLOCK;
 
   let body = "";
   let omitted = 0;
@@ -198,18 +201,19 @@ export function buildParticipantMilestoneTelegramHtml(opts: {
   return `🎉 <b>[${title}]</b> 참가자 <b>${n}명</b> 돌파!`;
 }
 
-/** 관리자가 방에 직접 보내는 커스텀 알림(HTML). DB 저장 없음. */
+/** 관리자가 방에 직접 보내는 커스텀 알림(HTML). DB 저장 없음. 하단 버튼은 sendMessage 에서 목록 링크로 연결. */
 export function buildAdminBroadcastTelegramHtml(opts: {
   body: string;
   headline?: string | null;
 }): string {
   const rawBody = opts.body.trim();
   const body = escapeHtml(rawBody).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const headline = opts.headline?.trim();
-  if (headline) {
-    return `<b>${escapeHtml(headline)}</b>\n\n${body}`;
+  const footer = TELEGRAM_CLICK_FOOTER_BLOCK;
+  const rawHead = opts.headline?.trim();
+  if (rawHead) {
+    return `<b>${escapeHtml(rawHead)}</b>\n\n${body}${footer}`;
   }
-  return body;
+  return `${body}${footer}`;
 }
 
 export type SendMessageResult = { ok: true } | { ok: false; error: string };
