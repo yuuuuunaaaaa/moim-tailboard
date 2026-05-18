@@ -80,26 +80,9 @@ export function escapeHtml(s: string | number | null | undefined): string {
     .replace(/>/g, "&gt;");
 }
 
-const DEFAULT_NEW_EVENT_HEADLINE = "새 꼬리달기가 생성되었습니다!";
 /** 텔레그램 본문 하단 CTA (인라인 버튼 위 안내) */
 const TELEGRAM_CLICK_FOOTER = "👇 클릭";
 const TELEGRAM_CLICK_FOOTER_BLOCK = `\n\n${TELEGRAM_CLICK_FOOTER}`;
-
-/** 꼬리달기 최초 생성 시 1회 발송(폼 값만 사용, DB 저장 없음) */
-export function buildNewEventTelegramHtml(opts: {
-  title: string;
-  notifyIcon?: string | null;
-  notifyHeadline?: string | null;
-  notifyExtra?: string | null;
-}): string {
-  const lead = `${opts.notifyIcon?.trim() || "📅"} `;
-  const headline = escapeHtml(opts.notifyHeadline?.trim() || DEFAULT_NEW_EVENT_HEADLINE);
-  const extraRaw = opts.notifyExtra?.trim();
-  const extra = extraRaw
-    ? `${escapeHtml(extraRaw).replace(/\r\n/g, "\n").replace(/\r/g, "\n")}\n`
-    : "";
-  return `${escapeHtml(lead)}<b>${headline}</b>\n\n${escapeHtml(opts.title)}\n${extra}${TELEGRAM_CLICK_FOOTER_BLOCK}`;
-}
 
 const TELEGRAM_HTML_SAFE_LEN = 3900;
 
@@ -173,15 +156,6 @@ function buildOpenButton(text: string, openUrl: string) {
   return { text, url: openUrl };
 }
 
-/** 꼬리달기 생성 알림 등 — event_notice_chat_room_id 가 비어 있으면 chat_room_id 로 폴백 */
-export function resolveEventNoticeChatRoomId(tenant: {
-  chat_room_id: string | null;
-  event_notice_chat_room_id: string | null;
-}): string | null {
-  const notice = (tenant.event_notice_chat_room_id ?? "").trim();
-  return notice || (tenant.chat_room_id ?? "").trim() || null;
-}
-
 /** event_notice_chat_room_id 컬럼만 사용(관리자 방송·인원 돌파 등) */
 export function getEventNoticeChatRoomIdStrict(tenant: {
   event_notice_chat_room_id: string | null;
@@ -211,22 +185,6 @@ export function getEventNoticeChatRoomThreadIdStrict(tenant: {
   event_notice_chat_room_thread_id?: number | string | null;
 }): number | undefined {
   return parseMessageThreadId(tenant.event_notice_chat_room_thread_id);
-}
-
-/**
- * resolveEventNoticeChatRoomId 와 짝 — notice 전용 방이면 event_notice 스레드,
- * chat_room_id 로 폴백이면 chat_room_thread_id 사용.
- */
-export function resolveEventNoticeThreadId(tenant: {
-  chat_room_thread_id?: number | string | null;
-  event_notice_chat_room_id?: string | null;
-  event_notice_chat_room_thread_id?: number | string | null;
-}): number | undefined {
-  const notice = (tenant.event_notice_chat_room_id ?? "").trim();
-  if (notice && notice !== "-1") {
-    return getEventNoticeChatRoomThreadIdStrict(tenant);
-  }
-  return getChatRoomThreadId(tenant);
 }
 
 /** 참가자 10·20·30… 명 돌파 알림 */

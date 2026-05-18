@@ -4,13 +4,6 @@ import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
-import {
-  sendMessage,
-  eventDetailUrl,
-  buildNewEventTelegramHtml,
-  resolveEventNoticeChatRoomId,
-  resolveEventNoticeThreadId,
-} from "@/lib/telegram";
 import { parseOptionNamesJson } from "@/lib/optionItemSync";
 import { toDateInputValue } from "@/lib/dateOnly";
 
@@ -27,9 +20,6 @@ export async function POST(request: NextRequest) {
     const description = String(formData.get("description") ?? "").trim() || null;
     const eventDate = String(formData.get("eventDate") ?? "");
     const isActive = formData.get("isActive") !== "false" ? 1 : 0;
-    const telegramNotifyIcon = String(formData.get("telegramNotifyIcon") ?? "").trim().slice(0, 32) || null;
-    const telegramNotifyHeadline = String(formData.get("telegramNotifyHeadline") ?? "").trim().slice(0, 120) || null;
-    const telegramNotifyExtra = String(formData.get("telegramNotifyExtra") ?? "").trim().slice(0, 500) || null;
     const eventJoinPrefix = String(formData.get("eventTelegramJoinPrefix") ?? "").trim().slice(0, 64) || null;
     const eventLeavePrefix = String(formData.get("eventTelegramLeavePrefix") ?? "").trim().slice(0, 64) || null;
 
@@ -84,23 +74,6 @@ export async function POST(request: NextRequest) {
     await execute(
       "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'title', ?))",
       [tenant.id, eventId, "ADMIN_CREATE_EVENT", username ?? null, title],
-    );
-
-    const eventNoticeChatRoomId = resolveEventNoticeChatRoomId(tenant);
-
-    await sendMessage(
-      eventNoticeChatRoomId,
-      buildNewEventTelegramHtml({
-        title,
-        notifyIcon: telegramNotifyIcon,
-        notifyHeadline: telegramNotifyHeadline,
-        notifyExtra: telegramNotifyExtra,
-      }),
-      {
-        webAppUrl: eventDetailUrl(tenant.slug, eventId),
-        buttonText: "바로가기",
-        messageThreadId: resolveEventNoticeThreadId(tenant),
-      },
     );
 
     return NextResponse.redirect(

@@ -85,36 +85,6 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
             </label>
           </div>
 
-          <details className="form-group" style={{ marginTop: "12px" }}>
-            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
-              텔레그램 알림 메세지
-            </summary>
-            <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
-              방에 보내는 1회 알림입니다. DB에 저장되지 않습니다. 비우면 기본 문구(📅·제목·링크)를 씁니다.
-            </p>
-            <div className="form-group">
-              <label>말머리(이모지 등)</label>
-              <input type="text" name="telegramNotifyIcon" maxLength={32} placeholder="기본: 📅" />
-            </div>
-            <div className="form-group">
-              <label>굵은 제목 한 줄</label>
-              <input
-                type="text"
-                name="telegramNotifyHeadline"
-                maxLength={120}
-                placeholder="기본: 새 꼬리달기가 생성되었습니다!"
-              />
-            </div>
-            <div className="form-group">
-              <label>추가 문구</label>
-              <textarea
-                name="telegramNotifyExtra"
-                maxLength={500}
-                placeholder="꼬리달기명·링크 위·아래에 붙는 안내 (줄바꿈 가능)"
-                style={{ minHeight: "72px" }}
-              />
-            </div>
-          </details>
 
           <details className="form-group" style={{ marginTop: "12px" }}>
             <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
