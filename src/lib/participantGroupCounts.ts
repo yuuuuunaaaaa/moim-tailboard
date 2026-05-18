@@ -1,5 +1,19 @@
 import { queryFirst, queryRows } from "@/lib/queryRows";
 
+/** 이벤트 전체 참가자 수(옵션 그룹과 무관) */
+export async function countEventParticipants(eventId: number): Promise<number> {
+  const row = await queryFirst<{ cnt: number }>(
+    "SELECT COUNT(*) AS cnt FROM participant WHERE event_id = ?",
+    [eventId],
+  );
+  return Number(row?.cnt ?? 0);
+}
+
+/** 10·20·30… 명 돌파 시 알림 */
+export function isParticipantCountMilestone(count: number): boolean {
+  return count > 0 && count % 10 === 0;
+}
+
 export type OptionGroupCountRow = {
   id: number;
   name: string;

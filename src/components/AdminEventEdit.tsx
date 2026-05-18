@@ -3,10 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Event, Tenant } from "@/types";
+import AdminBroadcastForm from "@/components/AdminBroadcastForm";
 
 interface Props {
   tenant: Tenant;
   events: Event[];
+}
+
+function sortByEventOrder(a: Event, b: Event): number {
+  return a.event_order - b.event_order || a.id - b.id;
+}
+
+function splitByActive(events: Event[]) {
+  const active = events.filter((e) => e.is_active).sort(sortByEventOrder);
+  const inactive = events.filter((e) => !e.is_active).sort(sortByEventOrder);
+  return { active, inactive };
 }
 
 interface DragSnapshot {
@@ -38,6 +49,7 @@ interface DragSnapshot {
 export default function AdminEventEdit({ tenant, events }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<Event[]>(events);
+  const [showAll, setShowAll] = useState(false);
   const [drag, setDrag] = useState<DragSnapshot | null>(null);
   // 순서 저장/실패 등 짧은 알림. AutoToast 와 동일한 디자인을 그대로 사용한다.
   const [toast, setToast] = useState<{ text: string; kind: "ok" | "error" } | null>(null);
@@ -105,7 +117,9 @@ export default function AdminEventEdit({ tenant, events }: Props) {
     [tenant.slug, router],
   );
 
-  const dragActive = drag !== null;
+  const { active: activeItems, inactive: inactiveItems } = splitByActive(items);
+  const canReorder = !showAll;
+  const dragActive = drag !== null && canReorder;
 
   // 드래그가 시작되었을 때만 window listener 등록 (한 번 등록되면 드롭까지 유지)
   useEffect(() => {
@@ -145,13 +159,13 @@ export default function AdminEventEdit({ tenant, events }: Props) {
       const dragId = cur.draggingId;
 
       setItems((prevItems) => {
-        const fromIdx = prevItems.findIndex((it) => it.id === dragId);
+        const { active, inactive } = splitByActive(prevItems);
+        const fromIdx = active.findIndex((it) => it.id === dragId);
         if (fromIdx === -1) return prevItems;
 
         let toIdx = fromIdx;
-        // 위로 가는 swap 후보(가장 가까운 것 하나)
         for (let i = 0; i < fromIdx; i++) {
-          const r = rects.get(prevItems[i].id);
+          const r = rects.get(active[i].id);
           if (!r) continue;
           if (centerY < r.top + r.height / 2) {
             toIdx = i;
@@ -159,9 +173,8 @@ export default function AdminEventEdit({ tenant, events }: Props) {
           }
         }
         if (toIdx === fromIdx) {
-          // 아래로 가는 swap 후보(끝까지 보고 가장 마지막에 매칭된 인덱스)
-          for (let i = fromIdx + 1; i < prevItems.length; i++) {
-            const r = rects.get(prevItems[i].id);
+          for (let i = fromIdx + 1; i < active.length; i++) {
+            const r = rects.get(active[i].id);
             if (!r) continue;
             if (centerY > r.top + r.height / 2) {
               toIdx = i;
@@ -171,9 +184,10 @@ export default function AdminEventEdit({ tenant, events }: Props) {
 
         if (toIdx === fromIdx) return prevItems;
 
-        const next = prevItems.slice();
-        const [moved] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, moved);
+        const nextActive = active.slice();
+        const [moved] = nextActive.splice(fromIdx, 1);
+        nextActive.splice(toIdx, 0, moved);
+        const next = [...nextActive, ...inactive];
         itemsRef.current = next;
         return next;
       });
@@ -207,6 +221,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
     e: React.PointerEvent<HTMLButtonElement>,
     eventId: number,
   ) => {
+    if (!canReorder) return;
     if (e.button !== undefined && e.button !== 0) return; // 좌클릭/터치만
     e.preventDefault();
     const li = (e.currentTarget as HTMLElement).closest(
@@ -230,8 +245,35 @@ export default function AdminEventEdit({ tenant, events }: Props) {
 
   const draggingEvent = drag ? items.find((it) => it.id === drag.draggingId) ?? null : null;
 
+  const renderEventList = (list: Event[]) => (
+    <ul className="event-admin-list" ref={canReorder && list === activeItems ? listRef : undefined}>
+      {list.map((ev) => {
+        const isDragging = drag?.draggingId === ev.id;
+        const liStyle: React.CSSProperties = {
+          visibility: isDragging ? "hidden" : "visible",
+          transition: drag ? "transform 150ms ease" : undefined,
+        };
+        return (
+          <li key={ev.id} data-event-id={ev.id} style={liStyle}>
+            <EventRow
+              event={ev}
+              tenantSlug={tenant.slug}
+              onPointerDown={(e) => handlePointerDown(e, ev.id)}
+              isDragHandleActive={isDragging}
+              reorderEnabled={canReorder}
+            />
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const hasInactive = inactiveItems.length > 0;
+  const listEmpty = showAll ? items.length === 0 : activeItems.length === 0;
+
   return (
     <div className="admin-grid">
+      <AdminBroadcastForm tenant={tenant} events={items} />
       {/* 꼬리달기 목록 */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <div
@@ -245,38 +287,52 @@ export default function AdminEventEdit({ tenant, events }: Props) {
           <h2 className="card__title" style={{ marginBottom: 0 }}>
             꼬리달기 목록
           </h2>
-          <a
-            className="btn btn--primary btn--sm"
-            href={`/admin/events/new?tenant=${encodeURIComponent(tenant.slug)}`}
-          >
-            + 꼬리달기 등록
-          </a>
+          <div className="admin-event-list-actions">
+            {hasInactive && (
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() => {
+                  setShowAll((v) => !v);
+                  setDrag(null);
+                  dragRef.current = null;
+                }}
+              >
+                {showAll ? "공개만 보기" : "전체보기"}
+              </button>
+            )}
+            <a
+              className="btn btn--primary btn--sm"
+              href={`/admin/events/new?tenant=${encodeURIComponent(tenant.slug)}`}
+            >
+              + 꼬리달기 등록
+            </a>
+          </div>
         </div>
 
-        {items.length === 0 ? (
+        {listEmpty ? (
           <p className="empty-state mt-0 mb-0">
-            아직 꼬리달기가 없습니다. 아래에서 만들어 주세요.
+            {items.length === 0
+              ? "아직 꼬리달기가 없습니다. 위에서 만들어 주세요."
+              : "공개된 꼬리달기가 없습니다. 전체보기에서 비공개 항목을 확인할 수 있습니다."}
           </p>
+        ) : showAll ? (
+          <div className="admin-event-list-sections">
+            {activeItems.length > 0 && (
+              <section className="admin-event-list-section">
+                <h3 className="admin-event-list-section__title">공개</h3>
+                {renderEventList(activeItems)}
+              </section>
+            )}
+            {inactiveItems.length > 0 && (
+              <section className="admin-event-list-section">
+                <h3 className="admin-event-list-section__title">비공개</h3>
+                {renderEventList(inactiveItems)}
+              </section>
+            )}
+          </div>
         ) : (
-          <ul className="event-admin-list" ref={listRef}>
-            {items.map((ev) => {
-              const isDragging = drag?.draggingId === ev.id;
-              const liStyle: React.CSSProperties = {
-                visibility: isDragging ? "hidden" : "visible",
-                transition: drag ? "transform 150ms ease" : undefined,
-              };
-              return (
-                <li key={ev.id} data-event-id={ev.id} style={liStyle}>
-                  <EventRow
-                    event={ev}
-                    tenantSlug={tenant.slug}
-                    onPointerDown={(e) => handlePointerDown(e, ev.id)}
-                    isDragHandleActive={isDragging}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+          renderEventList(activeItems)
         )}
 
         {/* Floating clone — 드래그 중인 행의 화면용 사본. 세로(Y)만 손가락을 따라간다. */}
@@ -342,6 +398,7 @@ interface EventRowProps {
   tenantSlug: string;
   onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => void;
   isDragHandleActive: boolean;
+  reorderEnabled?: boolean;
   /** floating 클론으로 그릴 때는 form/링크 등 상호작용을 숨겨 시각만 보여준다 */
   isClone?: boolean;
 }
@@ -357,6 +414,7 @@ function EventRow({
   tenantSlug,
   onPointerDown,
   isDragHandleActive,
+  reorderEnabled = true,
   isClone = false,
 }: EventRowProps) {
   const editHref = `/admin/events/${ev.id}/edit?tenant=${encodeURIComponent(tenantSlug)}`;
@@ -364,28 +422,32 @@ function EventRow({
 
   return (
     <div className={`event-admin-item ${!ev.is_active ? "event-admin-item--inactive" : ""}`}>
-      {/* 드래그 핸들 — 이 버튼만 드래그 시작점. 폭/터치영역은 .event-admin-item > .icon-btn 규칙에서 관리. */}
-      <button
-        type="button"
-        className="icon-btn"
-        title="드래그해서 순서 변경"
-        aria-label="순서 변경 핸들"
-        onPointerDown={onPointerDown}
-        style={{
-          cursor: isDragHandleActive ? "grabbing" : "grab",
-          touchAction: "none",
-          flex: "0 0 auto",
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="9" cy="6" r="1.4" />
-          <circle cx="15" cy="6" r="1.4" />
-          <circle cx="9" cy="12" r="1.4" />
-          <circle cx="15" cy="12" r="1.4" />
-          <circle cx="9" cy="18" r="1.4" />
-          <circle cx="15" cy="18" r="1.4" />
-        </svg>
-      </button>
+      {/* 드래그 핸들 — 공개 목록에서만 순서 변경 */}
+      {reorderEnabled ? (
+        <button
+          type="button"
+          className="icon-btn"
+          title="드래그해서 순서 변경"
+          aria-label="순서 변경 핸들"
+          onPointerDown={onPointerDown}
+          style={{
+            cursor: isDragHandleActive ? "grabbing" : "grab",
+            touchAction: "none",
+            flex: "0 0 auto",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="9" cy="6" r="1.4" />
+            <circle cx="15" cy="6" r="1.4" />
+            <circle cx="9" cy="12" r="1.4" />
+            <circle cx="15" cy="12" r="1.4" />
+            <circle cx="9" cy="18" r="1.4" />
+            <circle cx="15" cy="18" r="1.4" />
+          </svg>
+        </button>
+      ) : (
+        <span className="icon-btn icon-btn--spacer" aria-hidden />
+      )}
 
       <div className="event-admin-info">
         <div className="event-admin-title">{ev.title}</div>

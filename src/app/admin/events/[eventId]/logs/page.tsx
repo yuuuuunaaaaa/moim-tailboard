@@ -23,6 +23,7 @@ type ActionLogRow = {
 const ACTION_LABEL: Record<string, string> = {
   JOIN_EVENT: "참여",
   CANCEL_EVENT: "취소",
+  VIEW_EVENT: "조회",
 };
 
 function formatTs(v: Date | string) {
@@ -55,7 +56,9 @@ function parseMetadata(meta: unknown): Record<string, unknown> | null {
 function extractNameFromMetadata(meta: unknown): string {
   const obj = parseMetadata(meta);
   const name = obj?.name;
-  if (typeof name === "string") return name;
+  if (typeof name === "string" && name.trim()) return name;
+  const username = obj?.username;
+  if (typeof username === "string" && username.trim()) return `@${username.trim()}`;
   return "";
 }
 
@@ -115,7 +118,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
       al.metadata
     FROM action_log al
     WHERE al.tenant_id = ? AND al.event_id = ?
-      AND al.action IN ('JOIN_EVENT', 'CANCEL_EVENT')
+      AND al.action IN ('JOIN_EVENT', 'CANCEL_EVENT', 'VIEW_EVENT')
     ORDER BY al.created_at DESC, al.id DESC
     LIMIT 300
     `,
@@ -139,7 +142,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
       <main className="container container--wide">
         <a href={backToAdmin} className="back-link">← 관리</a>
 
-        <h1 style={{ marginBottom: 6 }}>참여/취소 로그</h1>
+        <h1 style={{ marginBottom: 6 }}>활동 로그</h1>
         <p className="page-subtitle" style={{ marginTop: 0 }}>
           {event.title}
         </p>
@@ -167,16 +170,26 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
                 <tbody>
                   {logs.map((l) => {
                     const actionText = ACTION_LABEL[l.action] ?? l.action;
-                    const name = extractNameFromMetadata(l.metadata) || "—";
                     const isJoin = l.action === "JOIN_EVENT";
                     const isCancel = l.action === "CANCEL_EVENT";
-                    const symbol = isJoin ? "+" : isCancel ? "−" : "";
+                    const isView = l.action === "VIEW_EVENT";
+                    const name =
+                      extractNameFromMetadata(l.metadata) || (isView ? "비로그인" : "—");
+                    const symbol = isJoin ? "+" : isCancel ? "−" : isView ? "○" : "";
                     const symbolBg = isJoin
                       ? "rgba(34,197,94,0.14)"
                       : isCancel
                         ? "rgba(239,68,68,0.14)"
-                        : "rgba(0,0,0,0.06)";
-                    const symbolColor = isJoin ? "#16a34a" : isCancel ? "#dc2626" : "var(--text)";
+                        : isView
+                          ? "rgba(59,130,246,0.12)"
+                          : "rgba(0,0,0,0.06)";
+                    const symbolColor = isJoin
+                      ? "#16a34a"
+                      : isCancel
+                        ? "#dc2626"
+                        : isView
+                          ? "#2563eb"
+                          : "var(--text)";
                     return (
                       <tr key={l.id}>
                         <td style={{ padding: "10px 8px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>

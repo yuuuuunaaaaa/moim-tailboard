@@ -4,7 +4,12 @@ import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
-import { sendMessage, eventDetailUrl, buildNewEventTelegramHtml } from "@/lib/telegram";
+import {
+  sendMessage,
+  eventDetailUrl,
+  buildNewEventTelegramHtml,
+  resolveEventNoticeChatRoomId,
+} from "@/lib/telegram";
 import { toDateInputValue } from "@/lib/dateOnly";
 
 // POST /api/admin/events — 꼬리달기 생성
@@ -79,10 +84,7 @@ export async function POST(request: NextRequest) {
       [tenant.id, eventId, "ADMIN_CREATE_EVENT", username ?? null, title],
     );
 
-    // 꼬리달기 생성 알림은 tenant.event_notice_chat_room_id 로 분리 전송.
-    // 값이 비어 있으면 기존 chat_room_id 로 폴백한다(마이그레이션 공백 대비).
-    const eventNoticeChatRoomId =
-      (tenant.event_notice_chat_room_id ?? "").trim() || tenant.chat_room_id;
+    const eventNoticeChatRoomId = resolveEventNoticeChatRoomId(tenant);
 
     await sendMessage(
       eventNoticeChatRoomId,

@@ -12,6 +12,7 @@ import TelegramAuth from "@/components/TelegramAuthNoSsr";
 import ParticipantList from "@/components/ParticipantList";
 import JoinParticipantForm from "@/components/JoinParticipantForm";
 import AutoToast from "@/components/AutoToast";
+import EventViewLogger from "@/components/EventViewLogger";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 
 interface Props {
@@ -105,6 +106,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
+      <EventViewLogger tenantSlug={tenant.slug} eventId={event.id} />
       <Header
         username={username}
         isAdmin={isAdmin}
