@@ -273,7 +273,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
 
   return (
     <div className="admin-grid">
-      <AdminBroadcastForm tenant={tenant} events={items} />
+      <AdminBroadcastForm tenant={tenant} />
       {/* 꼬리달기 목록 */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
         <div
@@ -305,7 +305,7 @@ export default function AdminEventEdit({ tenant, events }: Props) {
               className="btn btn--primary btn--sm"
               href={`/admin/events/new?tenant=${encodeURIComponent(tenant.slug)}`}
             >
-              + 꼬리달기 등록
+              + 등록
             </a>
           </div>
         </div>
