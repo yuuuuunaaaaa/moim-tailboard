@@ -170,6 +170,50 @@ function buildOpenButton(text: string, openUrl: string) {
   return { text, url: openUrl };
 }
 
+/** 꼬리달기 생성 알림 등 — event_notice_chat_room_id 가 비어 있으면 chat_room_id 로 폴백 */
+export function resolveEventNoticeChatRoomId(tenant: {
+  chat_room_id: string | null;
+  event_notice_chat_room_id: string | null;
+}): string | null {
+  const notice = (tenant.event_notice_chat_room_id ?? "").trim();
+  return notice || (tenant.chat_room_id ?? "").trim() || null;
+}
+
+/** event_notice_chat_room_id 컬럼만 사용(관리자 방송·인원 돌파 등) */
+export function getEventNoticeChatRoomIdStrict(tenant: {
+  event_notice_chat_room_id: string | null;
+}): string | null {
+  const id = (tenant.event_notice_chat_room_id ?? "").trim();
+  if (!id || id === "-1") return null;
+  return id;
+}
+
+/** 참가자 10·20·30… 명 돌파 알림 */
+export function buildParticipantMilestoneTelegramHtml(opts: {
+  eventTitle: string;
+  count: number;
+}): string {
+  const title = escapeHtml(opts.eventTitle);
+  const n = opts.count;
+  return `🎉 <b>[${title}]</b> 참가자 <b>${n}명</b> 돌파!`;
+}
+
+/** 관리자가 방에 직접 보내는 커스텀 알림(HTML). DB 저장 없음. */
+export function buildAdminBroadcastTelegramHtml(opts: {
+  body: string;
+  headline?: string | null;
+}): string {
+  const rawBody = opts.body.trim();
+  const body = escapeHtml(rawBody).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const headline = opts.headline?.trim();
+  if (headline) {
+    return `<b>${escapeHtml(headline)}</b>\n\n${body}`;
+  }
+  return body;
+}
+
+export type SendMessageResult = { ok: true } | { ok: false; error: string };
+
 export async function sendMessage(
   chatId: string | number | null | undefined,
   text: string,
@@ -177,15 +221,21 @@ export async function sendMessage(
     buttonText?: string;
     webAppUrl?: string;
   },
-): Promise<void> {
+): Promise<SendMessageResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token || !chatId || String(chatId) === "-1") return;
+  if (!token) {
+    return { ok: false, error: "텔레그램 봇이 설정되지 않았습니다." };
+  }
+  const id = chatId == null ? "" : String(chatId).trim();
+  if (!id || id === "-1") {
+    return { ok: false, error: "이 지역에 연결된 텔레그램 채팅방이 없습니다." };
+  }
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: id,
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
@@ -201,8 +251,19 @@ export async function sendMessage(
     if (!res.ok) {
       const body = await res.text();
       console.error("[telegram] sendMessage failed:", res.status, body);
+      let detail = "텔레그램 전송에 실패했습니다.";
+      try {
+        const parsed = JSON.parse(body) as { description?: string };
+        if (parsed.description) detail = parsed.description;
+      } catch {
+        /* keep default */
+      }
+      return { ok: false, error: detail };
     }
+    return { ok: true };
   } catch (err) {
-    console.error("[telegram] sendMessage error:", (err as Error).message);
+    const msg = (err as Error).message;
+    console.error("[telegram] sendMessage error:", msg);
+    return { ok: false, error: msg || "텔레그램 전송 중 오류가 발생했습니다." };
   }
 }

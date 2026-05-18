@@ -4,10 +4,19 @@ import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import {
+  countEventParticipants,
   fetchJoinDeltaPerOptionGroup,
   fetchTenantParticipantSnapshots,
+  isParticipantCountMilestone,
 } from "@/lib/participantGroupCounts";
-import { sendMessage, eventListUrl, buildParticipantTenantWideSummaryTelegramHtml } from "@/lib/telegram";
+import {
+  sendMessage,
+  eventDetailUrl,
+  eventListUrl,
+  buildParticipantMilestoneTelegramHtml,
+  buildParticipantTenantWideSummaryTelegramHtml,
+  getEventNoticeChatRoomIdStrict,
+} from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import type { Event } from "@/types";
@@ -101,6 +110,22 @@ export async function POST(request: NextRequest) {
       }),
       { webAppUrl: link, buttonText: "꼬리달기 목록" },
     );
+
+    const totalParticipants = await countEventParticipants(event.id);
+    const milestoneChatId = getEventNoticeChatRoomIdStrict(tenant);
+    if (milestoneChatId && isParticipantCountMilestone(totalParticipants)) {
+      await sendMessage(
+        milestoneChatId,
+        buildParticipantMilestoneTelegramHtml({
+          eventTitle: event.title,
+          count: totalParticipants,
+        }),
+        {
+          webAppUrl: eventDetailUrl(tenant.slug, event.id),
+          buttonText: "바로가기",
+        },
+      );
+    }
 
     return NextResponse.redirect(
       new URL(`/t/${tenant.slug}/events/${event.id}?toast=joined`, request.url),
