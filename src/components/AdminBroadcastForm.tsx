@@ -99,6 +99,7 @@ export default function AdminBroadcastForm({ tenant }: Props) {
           <div className="form-group">
             <label htmlFor="broadcast-headline">굵은 제목 <span className="optional">(선택)</span></label>
             <input
+              type="text"
               id="broadcast-headline"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
@@ -125,6 +126,7 @@ export default function AdminBroadcastForm({ tenant }: Props) {
           <div className="form-group">
             <label htmlFor="broadcast-button">하단 버튼 글자 <span className="optional">(선택)</span></label>
             <input
+              type="text"
               id="broadcast-button"
               value={buttonText}
               onChange={(e) => setButtonText(e.target.value)}
@@ -133,7 +135,7 @@ export default function AdminBroadcastForm({ tenant }: Props) {
               disabled={sending}
             />
             <p className="form-hint" style={{ marginTop: 8, marginBottom: 0 }}>
-              링크는 항상 이 지역의 꼬리달기 목록으로 연결됩니다.
+              링크는 항상 꼬리달기 목록으로 연결됩니다.
             </p>
           </div>
 

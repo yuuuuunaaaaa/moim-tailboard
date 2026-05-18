@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
+import {
+  parseOptionItemsFromFormData,
+  syncOptionGroupItems,
+  withTransaction,
+} from "@/lib/optionItemSync";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
 
@@ -23,8 +28,6 @@ export async function POST(
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
-    const itemsText = String(formData.get("itemsText") ?? "");
-
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
@@ -36,27 +39,16 @@ export async function POST(
     );
     if (!row) return new Response("Option group not found", { status: 404 });
 
-    await execute(
-      "UPDATE option_group SET name = ?, multiple_select = ? WHERE id = ?",
-      [groupName, multipleSelect, groupId],
-    );
+    const itemInputs = parseOptionItemsFromFormData(formData);
 
-    const names = itemsText
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n")
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    // 기존 항목 전체 교체(삭제된 항목 선택은 FK로 함께 정리됨)
-    await execute("DELETE FROM option_item WHERE option_group_id = ?", [groupId]);
-    if (names.length > 0) {
-      const values = names.map((n, idx) => [groupId, n, idx]);
-      await execute(
-        "INSERT INTO option_item (option_group_id, name, sort_order) VALUES ?",
-        [values],
-      );
-    }
+    const savedNames = await withTransaction(async (_conn, db) => {
+      await db.exec("UPDATE option_group SET name = ?, multiple_select = ? WHERE id = ?", [
+        groupName,
+        multipleSelect,
+        groupId,
+      ]);
+      return syncOptionGroupItems(groupId, itemInputs, db);
+    });
 
     await execute(
       "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'groupId', ?, 'groupName', ?, 'multipleSelect', ?, 'itemNames', ?))",
@@ -68,12 +60,15 @@ export async function POST(
         groupId,
         groupName,
         multipleSelect,
-        JSON.stringify(names),
+        JSON.stringify(savedNames),
       ],
     );
 
     return NextResponse.redirect(
-      new URL(`/admin/events/${eventId}?tenant=${tenant.slug}`, request.url),
+      new URL(
+        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=row_saved`,
+        request.url,
+      ),
       303,
     );
   } catch (err) {

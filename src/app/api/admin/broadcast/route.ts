@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ACTION_ADMIN_BROADCAST, insertActionLog } from "@/lib/actionLog";
 import { getPageContext } from "@/lib/auth";
 import { findTenantBySlug } from "@/lib/db";
 import { canAccessTenant } from "@/lib/tenantRestrict";
@@ -18,7 +19,7 @@ const DEFAULT_BUTTON_LABEL = "꼬리달기 목록";
 /** POST /api/admin/broadcast — 관리자 커스텀 방 알림(저장 없이 즉시 전송) */
 export async function POST(request: NextRequest) {
   try {
-    const { admin } = await getPageContext();
+    const { admin, username } = await getPageContext();
     if (!admin) {
       return NextResponse.json({ success: false, error: "관리자만 접근할 수 있습니다." }, { status: 403 });
     }
@@ -81,6 +82,16 @@ export async function POST(request: NextRequest) {
     if (!sent.ok) {
       return NextResponse.json({ success: false, error: sent.error }, { status: 502 });
     }
+
+    await insertActionLog({
+      tenantId: tenant.id,
+      eventId: null,
+      action: ACTION_ADMIN_BROADCAST,
+      metadata: {
+        username: username ?? admin.username ?? null,
+        headline: headline || null,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -2,6 +2,7 @@ import { execute } from "@/lib/queryRows";
 
 export const ACTION_VIEW_EVENT = "VIEW_EVENT";
 export const ACTION_VIEW_EVENT_LIST = "VIEW_EVENT_LIST";
+export const ACTION_ADMIN_BROADCAST = "ADMIN_BROADCAST";
 
 /** action_log INSERT — metadata 는 JSON_OBJECT 로만 넣어 SQL 인젝션을 피한다 */
 export async function insertActionLog(opts: {

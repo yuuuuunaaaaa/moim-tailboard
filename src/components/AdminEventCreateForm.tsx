@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import AdminOptionItemsField, { rowsFromItems, type OptionItemRow } from "@/components/AdminOptionItemsField";
 import type { Tenant } from "@/types";
 
 interface NewOptionGroup {
   id: number;
   name: string;
   multipleSelect: boolean;
-  optionText: string;
+  items: OptionItemRow[];
 }
 
 interface Props {
@@ -22,7 +23,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
 
   function addCreateGroup() {
     const id = createGroupIdx.current++;
-    setCreateGroups((prev) => [...prev, { id, name: "", multipleSelect: false, optionText: "" }]);
+    setCreateGroups((prev) => [...prev, { id, name: "", multipleSelect: false, items: rowsFromItems([]) }]);
   }
 
   function removeCreateGroup(id: number) {
@@ -38,7 +39,11 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
         <span key={g.id}>
           <input type="hidden" name="groupName" value={g.name} />
           <input type="hidden" name="multipleSelect" value={g.multipleSelect ? "true" : "false"} />
-          <input type="hidden" name="optionText" value={g.optionText} />
+          <input
+            type="hidden"
+            name="groupOptionNames"
+            value={JSON.stringify(g.items.map((r) => r.name.trim()).filter(Boolean))}
+          />
         </span>
       ))}
 
@@ -63,7 +68,7 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
         <div>
           <div className="form-group">
             <label>제목</label>
-            <input name="title" required placeholder="예: 3/7 인천 수련회" />
+            <input type="text" name="title" required placeholder="예: 3/7 인천 수련회" />
           </div>
           <div className="form-group">
             <label>설명 <span className="optional">(선택)</span></label>
@@ -89,11 +94,12 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
             </p>
             <div className="form-group">
               <label>말머리(이모지 등)</label>
-              <input name="telegramNotifyIcon" maxLength={32} placeholder="기본: 📅" />
+              <input type="text" name="telegramNotifyIcon" maxLength={32} placeholder="기본: 📅" />
             </div>
             <div className="form-group">
               <label>굵은 제목 한 줄</label>
               <input
+                type="text"
                 name="telegramNotifyHeadline"
                 maxLength={120}
                 placeholder="기본: 새 꼬리달기가 생성되었습니다!"
@@ -119,11 +125,11 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
             </p>
             <div className="form-group">
               <label>참가 신청 시</label>
-              <input name="eventTelegramJoinPrefix" maxLength={64} placeholder="예: ✅" />
+              <input type="text" name="eventTelegramJoinPrefix" maxLength={64} placeholder="예: ✅" />
             </div>
             <div className="form-group">
               <label>참가 취소 시</label>
-              <input name="eventTelegramLeavePrefix" maxLength={64} placeholder="예: 👋" />
+              <input type="text" name="eventTelegramLeavePrefix" maxLength={64} placeholder="예: 👋" />
             </div>
           </details>
         </div>
@@ -175,13 +181,12 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
                   ✕
                 </button>
               </div>
-              <textarea
-                placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"}
-                style={{ height: "80px", width: "100%" }}
-                value={g.optionText}
-                onChange={(e) =>
+              <AdminOptionItemsField
+                mode="controlled"
+                items={g.items}
+                onChange={(items) =>
                   setCreateGroups((prev) =>
-                    prev.map((x) => (x.id === g.id ? { ...x, optionText: e.target.value } : x)),
+                    prev.map((x) => (x.id === g.id ? { ...x, items } : x)),
                   )
                 }
               />

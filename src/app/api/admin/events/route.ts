@@ -11,6 +11,7 @@ import {
   resolveEventNoticeChatRoomId,
   resolveEventNoticeThreadId,
 } from "@/lib/telegram";
+import { parseOptionNamesJson } from "@/lib/optionItemSync";
 import { toDateInputValue } from "@/lib/dateOnly";
 
 // POST /api/admin/events — 꼬리달기 생성
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const groupNames = formData.getAll("groupName").map(String).filter(Boolean);
     const multipleSelects = formData.getAll("multipleSelect").map(String);
-    const optionTexts = formData.getAll("optionText").map(String);
+    const groupOptionNames = formData.getAll("groupOptionNames").map(String);
 
     for (let i = 0; i < groupNames.length; i++) {
       const gName = groupNames[i].trim();
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
         "INSERT INTO option_group (event_id, name, multiple_select, sort_order) VALUES (?, ?, ?, ?)",
         [eventId, gName, isMulti, i],
       );
-      const optNames = (optionTexts[i] || "").split("\n").map((s) => s.trim()).filter(Boolean);
+      const optNames = parseOptionNamesJson(groupOptionNames[i] ?? "");
       if (optNames.length > 0) {
         await execute(
           "INSERT INTO option_item (option_group_id, name, sort_order) VALUES ?",

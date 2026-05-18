@@ -8,6 +8,8 @@ import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGri
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
 import AdminEventVisibilityToggle from "@/components/AdminEventVisibilityToggle";
 import AutoToast from "@/components/AutoToast";
+import AdminOptionItemsField from "@/components/AdminOptionItemsField";
+import AdminAddOptionGroupForm from "@/components/AdminAddOptionGroupForm";
 import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
 
@@ -203,7 +205,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {groupsWithItems.map((g) => {
-                  const itemsText = g.items.map((i) => i.name).join("\n");
                   return (
                     <div key={g.id} className="option-group-card">
                       <div className="admin-og-row">
@@ -239,12 +240,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                               </button>
                             </div>
                           </div>
-                          <textarea
-                            name="itemsText"
-                            defaultValue={itemsText}
-                            placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"}
-                            style={{ height: "88px", width: "100%" }}
-                          />
+                          <AdminOptionItemsField initialItems={g.items} />
                         </form>
                         <form
                           method="post"
@@ -266,32 +262,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
 
           <div className="card" style={{ gridColumn: "1 / -1" }}>
             <h2 className="card__title">옵션 그룹 추가</h2>
-            <form method="post" action="/api/admin/options">
-              <input type="hidden" name="tenantSlug" value={tenant.slug} />
-              <input type="hidden" name="eventId" value={event.id} />
-              <div className="option-group-edit-head">
-                <input
-                  type="text"
-                  name="groupName"
-                  className="option-group-edit-name"
-                  required
-                  placeholder="그룹 이름 (예: 식사)"
-                  autoComplete="off"
-                />
-                <div className="option-group-edit-actions">
-                  <label className="option-group-edit-check">
-                    <input type="checkbox" name="multipleSelect" value="true" />
-                    복수선택
-                  </label>
-                </div>
-              </div>
-              <div className="row" style={{ marginTop: "8px" }}>
-                <textarea name="options" placeholder={"항목 (한 줄에 하나)\n예: 식사 O\n식사 X"} />
-              </div>
-              <button className="btn btn--secondary option-group-edit-btn" type="submit" style={{ marginTop: "10px" }}>
-                추가
-              </button>
-            </form>
+            <AdminAddOptionGroupForm tenantSlug={tenant.slug} eventId={event.id} />
           </div>
 
           <div className="card" style={{ gridColumn: "1 / -1" }}>

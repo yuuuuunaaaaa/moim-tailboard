@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
+import { parseOptionNamesJson } from "@/lib/optionItemSync";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
-    const options = String(formData.get("options") ?? "");
+    const optionNames = parseOptionNamesJson(String(formData.get("optionNames") ?? ""));
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
@@ -37,7 +38,6 @@ export async function POST(request: NextRequest) {
     );
     const optionGroupId = groupResult.insertId;
 
-    const optionNames = options.split("\n").map((s) => s.trim()).filter(Boolean);
     if (optionNames.length > 0) {
       const values = optionNames.map((name, idx) => [optionGroupId, name, idx]);
       await execute(
@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.redirect(
-      new URL(`/t/${tenant.slug}/events/${event.id}`, request.url),
+      new URL(
+        `/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=row_saved`,
+        request.url,
+      ),
       303,
     );
   } catch (err) {
