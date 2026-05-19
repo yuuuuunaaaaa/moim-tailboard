@@ -30,14 +30,18 @@ export async function POST(
       return new Response("Invalid participantId", { status: 400 });
     }
 
+    // 폼에 name 이 비어 있으면 이름 수정은 건너뛰고, 입력된 값이 있으면 그 값으로 변경.
+    const rawName = formData.get("name");
+    const nameInput = typeof rawName === "string" ? rawName.trim() : "";
+
     // 꼬리달기/참여자 소유 + 옵션 그룹 병렬 조회
     const [ev, p, groups] = await Promise.all([
       queryFirst<{ id: number }>(
         "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
         [eventId, tenant.id],
       ),
-      queryFirst<{ id: number }>(
-        "SELECT id FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
+      queryFirst<{ id: number; name: string }>(
+        "SELECT id, name FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
         [participantId, eventId],
       ),
       queryRows<{ id: number; multiple_select: number }>(
@@ -48,6 +52,12 @@ export async function POST(
 
     if (!ev) return new Response("Event not found", { status: 404 });
     if (!p) return new Response("Participant not found", { status: 404 });
+
+    const newName = nameInput || p.name;
+    const nameChanged = newName !== p.name;
+    if (nameChanged) {
+      await execute("UPDATE participant SET name = ? WHERE id = ?", [newName, participantId]);
+    }
 
     const groupIds = groups.map((g) => g.id);
     const itemRows = groupIds.length
@@ -99,7 +109,7 @@ export async function POST(
     }
 
     await execute(
-      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('username', ?, 'mappings', ?))",
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('username', ?, 'mappings', ?, 'oldName', ?, 'newName', ?))",
       [
         tenant.id,
         eventId,
@@ -107,6 +117,8 @@ export async function POST(
         "ADMIN_UPDATE_PARTICIPANT_OPTIONS",
         username ?? null,
         values.length,
+        nameChanged ? p.name : null,
+        nameChanged ? newName : null,
       ],
     );
 

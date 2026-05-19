@@ -48,6 +48,9 @@ export default function AdminParticipantOptionsGrid({
       fd.set("tenantSlug", tenantSlug);
       fd.set("participantId", String(pid));
 
+      const nameInput = container.querySelector<HTMLInputElement>('input[name="name"]');
+      if (nameInput) fd.set("name", nameInput.value.trim());
+
       // Collect checked/selected inputs for each group from the row.
       for (const g of groups) {
         const key = `g_${g.id}`;
@@ -155,6 +158,22 @@ export default function AdminParticipantOptionsGrid({
 
               {isExpanded && (
                 <div id={panelId} className="admin-participant-card__body">
+                  <div className="admin-participant-card__name-edit">
+                    <label
+                      htmlFor={`admin-p-name-${p.id}`}
+                      className="admin-participant-card__name-label"
+                    >
+                      이름
+                    </label>
+                    <input
+                      id={`admin-p-name-${p.id}`}
+                      type="text"
+                      name="name"
+                      defaultValue={p.name}
+                      placeholder="이름"
+                      disabled={isSubmitting}
+                    />
+                  </div>
                   <div className="admin-participant-card__groups">
                     {groups.map((g) => {
                       const key = `g_${g.id}`;

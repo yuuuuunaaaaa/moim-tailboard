@@ -51,8 +51,13 @@ export async function POST(request: NextRequest) {
     if (!participant || participant.tenant_id !== tenant.id) {
       return new Response("Participant not found", { status: 404 });
     }
-    if (participant.username !== username) {
-      return new Response("Not allowed to modify this participant", { status: 403 });
+    const isOwner = participant.username === username;
+    const isTenantAdmin = !!(admin && (admin.is_superadmin || admin.tenant_id === tenant.id));
+    if (!isOwner) {
+      // 삭제는 별도 admin delete API 를 사용. 여기서는 관리자에게 이름 수정만 허용한다.
+      if (mode === "delete" || !isTenantAdmin) {
+        return new Response("Not allowed to modify this participant", { status: 403 });
+      }
     }
 
     if (mode === "delete") {
