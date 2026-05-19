@@ -5,6 +5,7 @@ import { getPageContext } from "@/lib/auth";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Admin } from "@/types";
+import { formatKstDate } from "@/lib/dateFormat";
 
 interface Props {
   params: Promise<{ tenantSlug: string }>;
@@ -129,7 +130,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                         <tr key={a.id}>
                           <td><code>{a.username}</code></td>
                           <td>{a.name || "—"}</td>
-                          <td>{new Date(a.created_at).toLocaleDateString("ko-KR")}</td>
+                          <td>{formatKstDate(a.created_at)}</td>
                           <td className="actions">
                             <form
                               method="post"
@@ -153,7 +154,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                           <div className="admin-card-username"><code>{a.username}</code></div>
                           <div className="admin-card-meta">
                             {a.name ? a.name : "이름 없음"} ·{" "}
-                            {new Date(a.created_at).toLocaleDateString("ko-KR")}
+                            {formatKstDate(a.created_at)}
                           </div>
                         </div>
                         <form

@@ -5,6 +5,7 @@ import { queryFirst, queryRows } from "@/lib/queryRows";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
+import { formatKstDateTime } from "@/lib/dateFormat";
 
 interface Props {
   params: Promise<{ eventId: string }>;
@@ -26,11 +27,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 function formatTs(v: Date | string) {
-  const d = typeof v === "string" ? new Date(v) : v;
-  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return String(v);
-  // YYYY-MM-DD HH:mm
-  const iso = d.toISOString().replace("T", " ").slice(0, 16);
-  return iso;
+  return formatKstDateTime(v) || String(v);
 }
 
 function parseMetadata(meta: unknown): Record<string, unknown> | null {
