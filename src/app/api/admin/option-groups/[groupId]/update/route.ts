@@ -16,7 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   try {
-    const { admin, username } = await getPageContext();
+    const { admin, membership, username } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { groupId: groupIdStr } = await params;
@@ -30,7 +30,7 @@ export async function POST(
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
+    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
 
     // group이 실제로 해당 테넌트/꼬리달기 소속인지 확인
     const row = await queryFirst<{ id: number; event_id: number }>(

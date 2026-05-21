@@ -59,10 +59,10 @@ function extractNameFromMetadata(meta: unknown): string {
 }
 
 export default async function AdminEventLogsPage({ params, searchParams }: Props) {
-  const [{ admin, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
+  const [{ admin, membership, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
     await Promise.all([getPageContext(), params, searchParams]);
 
-  if (!admin) redirect("/login");
+  if (!admin || !membership) redirect("/login");
 
   const eventId = Number(eventIdStr);
   if (!Number.isFinite(eventId)) {
@@ -70,7 +70,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   }
 
   const slugParam = (sp.tenant ?? "").trim();
-  const res = await resolveAdminTenant(admin, slugParam);
+  const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {
     return (
@@ -85,10 +85,10 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   if (res.kind === "choose") {
     return (
       <>
-        <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
+        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
         <main className="container">
           <h1>참여/취소 로그</h1>
-          <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
+          <p className="page-subtitle">지역을 먼저 선택해 주세요.</p>
           <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
         </main>
       </>
@@ -128,7 +128,6 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
     <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
       <Header
-        username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
         tenantSlug={tenant.slug}

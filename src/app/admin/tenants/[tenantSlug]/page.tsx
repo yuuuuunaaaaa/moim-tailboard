@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { findTenantBySlug } from "@/lib/db";
-import { queryFirst, queryRows } from "@/lib/queryRows";
+import { queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
+import { canManageTenant } from "@/lib/adminMembership";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Admin } from "@/types";
@@ -15,7 +16,7 @@ interface Props {
 const ERROR_MSG: Record<string, string> = {
   username_required: "사용자명을 입력해 주세요.",
   username_duplicate:
-    "이 사용자명은 이미 다른 지역의 관리자로 등록되어 있습니다. 한 사람은 한 지역의 관리자만 될 수 있습니다.",
+    "이 사용자명은 이미 이 지역의 관리자로 등록되어 있습니다.",
   not_found: "해당 관리자를 찾을 수 없습니다.",
 };
 const SUCCESS_MSG: Record<string, string> = {
@@ -24,29 +25,23 @@ const SUCCESS_MSG: Record<string, string> = {
 };
 
 export default async function AdminTenantPage({ params, searchParams }: Props) {
-  const [{ admin, username, isAdmin, canChooseTenant }, { tenantSlug }, sp] = await Promise.all([
-    getPageContext(),
-    params,
-    searchParams,
-  ]);
-  if (!admin) redirect("/login");
+  const [{ admin, membership, username, isAdmin, canChooseTenant }, { tenantSlug }, sp] =
+    await Promise.all([getPageContext(), params, searchParams]);
+  if (!admin || !membership) redirect("/login");
 
   const tenant = await findTenantBySlug(tenantSlug);
   if (!tenant) {
     return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
   }
 
-  if (!admin.is_superadmin && admin.tenant_id !== tenant.id) {
-    const row = await queryFirst<{ slug: string }>(
-      "SELECT slug FROM tenant WHERE id = ? LIMIT 1",
-      [admin.tenant_id],
-    );
-    if (row?.slug) {
-      redirect(`/admin/tenants/${encodeURIComponent(row.slug)}`);
+  if (!canManageTenant(membership, tenant.id)) {
+    const fallback = membership.managedTenants[0];
+    if (fallback?.slug) {
+      redirect(`/admin/tenants/${encodeURIComponent(fallback.slug)}`);
     }
     return (
       <div style={{ padding: "48px", textAlign: "center" }}>
-        <h2>소속 지역만 조회할 수 있습니다.</h2>
+        <h2>관리 권한이 있는 지역만 조회할 수 있습니다.</h2>
       </div>
     );
   }
@@ -60,7 +55,6 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <Header
-        username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
         tenantSlug={tenant.slug}

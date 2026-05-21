@@ -22,7 +22,6 @@ export default async function EasterEggPage() {
   return (
     <>
       <Header
-        username={ctx.username}
         isAdmin={ctx.isAdmin}
         canChooseTenant={ctx.canChooseTenant}
         tenantSlug={tenantSlug}

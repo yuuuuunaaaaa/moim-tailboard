@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   try {
-    const { admin } = await getPageContext();
+    const { admin, membership } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { groupId: groupIdStr } = await params;
@@ -23,7 +23,7 @@ export async function POST(
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
+    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
 
     await execute(
       "DELETE FROM option_group WHERE id = ? AND EXISTS (SELECT 1 FROM event e WHERE e.id = option_group.event_id AND e.tenant_id = ?)",

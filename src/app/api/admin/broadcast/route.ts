@@ -19,7 +19,7 @@ const DEFAULT_BUTTON_LABEL = "꼬리달기 목록";
 /** POST /api/admin/broadcast — 관리자 커스텀 방 알림(저장 없이 즉시 전송) */
 export async function POST(request: NextRequest) {
   try {
-    const { admin, username } = await getPageContext();
+    const { admin, membership, username } = await getPageContext();
     if (!admin) {
       return NextResponse.json({ success: false, error: "관리자만 접근할 수 있습니다." }, { status: 403 });
     }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!tenant) {
       return NextResponse.json({ success: false, error: "지역을 찾을 수 없습니다." }, { status: 404 });
     }
-    if (!canAccessTenant(admin, tenant)) {
+    if (!canAccessTenant(admin, tenant, membership)) {
       return NextResponse.json({ success: false, error: "소속 지역만 전송할 수 있습니다." }, { status: 403 });
     }
 

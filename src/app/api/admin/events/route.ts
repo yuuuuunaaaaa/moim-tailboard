@@ -10,7 +10,7 @@ import { toDateInputValue } from "@/lib/dateOnly";
 // POST /api/admin/events — 꼬리달기 생성
 export async function POST(request: NextRequest) {
   try {
-    const { admin, username } = await getPageContext();
+    const { admin, membership, username } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const formData = await request.formData();
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) {
+    if (!canAccessTenant(admin, tenant, membership)) {
       return new Response("소속 지역만 등록할 수 있습니다.", { status: 403 });
     }
 

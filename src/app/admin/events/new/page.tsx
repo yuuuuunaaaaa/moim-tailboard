@@ -12,14 +12,14 @@ interface Props {
 export const metadata = { title: "등록 · 꼬리달기" };
 
 export default async function AdminEventNewPage({ searchParams }: Props) {
-  const [{ admin, username, isAdmin, canChooseTenant }, sp] = await Promise.all([
+  const [{ admin, membership, username, isAdmin, canChooseTenant }, sp] = await Promise.all([
     getPageContext(),
     searchParams,
   ]);
-  if (!admin) redirect("/login");
+  if (!admin || !membership) redirect("/login");
 
   const slugParam = (sp.tenant ?? "").trim();
-  const res = await resolveAdminTenant(admin, slugParam);
+  const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {
     return (
@@ -34,10 +34,10 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
   if (res.kind === "choose") {
     return (
       <>
-        <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
+        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
         <main className="container">
           <h1>꼬리달기 등록</h1>
-          <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
+          <p className="page-subtitle">등록할 지역을 선택해 주세요.</p>
           <ul className="event-list">
             {res.tenants.map((t) => (
               <li key={t.id} className="event-item">
@@ -60,7 +60,6 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <Header
-        username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
         tenantSlug={tenant.slug}

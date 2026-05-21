@@ -12,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { admin } = await getPageContext();
+    const { admin, membership } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { eventId: eventIdStr } = await params;
@@ -29,7 +29,7 @@ export async function POST(
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
+    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
 
     const dateOnly = toDateInputValue(eventDate);
     if (!dateOnly) return new Response("날짜 형식이 올바르지 않습니다.", { status: 400 });

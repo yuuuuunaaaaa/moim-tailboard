@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import { loadAdminMembershipCached } from "./adminMembership";
 import { queryFirst } from "./queryRows";
 import { verifyToken } from "./jwt-verify";
 import type { Admin } from "@/types";
@@ -57,7 +58,7 @@ const ADMIN_SELECT_BASE =
  * MySQL BIT(1) 등은 mysql2가 Buffer로 돌려줄 수 있음. Buffer는 바이트가 0이어도 객체로 truthy라
  * `!!row.is_superadmin`만 쓰면 비-superadmin도 전원 superadmin처럼 동작할 수 있다.
  */
-function normalizeIsSuperadmin(value: unknown): boolean {
+export function normalizeIsSuperadmin(value: unknown): boolean {
   if (value === true || value === 1) return true;
   if (value === false || value === 0 || value == null) return false;
   if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
@@ -74,14 +75,20 @@ function normalizeIsSuperadmin(value: unknown): boolean {
 export async function loadAdminByUsername(username: string): Promise<Admin | null> {
   const u = username.trim();
   try {
-    const row = await queryFirst<Admin>(ADMIN_SELECT_WITH_SUPER, [u]);
+    const row = await queryFirst<Admin>(
+      "SELECT id, telegram_id, username, tenant_id, name, is_superadmin FROM admin WHERE username = ? ORDER BY is_superadmin DESC, id ASC LIMIT 1",
+      [u],
+    );
     if (!row) return null;
     return { ...row, is_superadmin: normalizeIsSuperadmin(row.is_superadmin) };
   } catch (err: unknown) {
     const e = err as { code?: string; errno?: number };
     // MySQL: ER_BAD_FIELD_ERROR — 기존 DB에 is_superadmin 컬럼이 없을 때
     if (e?.code === "ER_BAD_FIELD_ERROR" || e?.errno === 1054) {
-      const row = await queryFirst<Admin>(ADMIN_SELECT_BASE, [u]);
+      const row = await queryFirst<Admin>(
+        `${ADMIN_SELECT_BASE} ORDER BY id ASC LIMIT 1`,
+        [u],
+      );
       if (!row) return null;
       return { ...row, is_superadmin: false };
     }
@@ -117,15 +124,23 @@ export const loadAdminByUsernameCached = cache(async (username: string): Promise
 export const getPageContext = cache(async () => {
   const authUser = await getAuthUser();
   const effectiveUsername = authUser?.username ?? null;
-  const admin = effectiveUsername ? await loadAdminByUsernameCached(effectiveUsername) : null;
+  const membership = effectiveUsername
+    ? await loadAdminMembershipCached(effectiveUsername)
+    : null;
+  const admin = membership?.admin ?? null;
   const isAdmin = !!admin;
   const canChooseTenant = isAdmin && !!admin?.is_superadmin;
+  const managedTenants = membership?.managedTenants ?? [];
+  const managedTenantIds = membership?.managedTenantIds ?? [];
 
   return {
     authUser,
     admin,
+    membership,
     username: effectiveUsername,
     isAdmin,
     canChooseTenant,
+    managedTenants,
+    managedTenantIds,
   };
 });

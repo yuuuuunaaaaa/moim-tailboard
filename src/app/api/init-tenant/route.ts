@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findTenantBySlug } from "@/lib/db";
-import { queryFirst } from "@/lib/queryRows";
-import { loadAdminByUsername } from "@/lib/auth";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { verifyToken } from "@/lib/jwt-verify";
 import { TENANT_COOKIE_NAME, TENANT_COOKIE_MAX_AGE } from "@/lib/tenantRestrict";
 
 /**
  * 비로그인 또는 쿠키 미설정 시 allowed_tenant_slug 설정 후 리다이렉트.
- * 로그인한 일반 관리자는 소속 지역 slug만 쿠키에 바인딩(다른 지역으로는 설정 불가).
+ * 로그인한 일반 관리자는 관리 권한이 있는 지역 slug만 쿠키에 바인딩.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -25,17 +24,16 @@ export async function GET(request: NextRequest) {
 
   const token = request.cookies.get("auth_token")?.value;
   const authUser = token ? await verifyToken(token) : null;
-  const admin = authUser ? await loadAdminByUsername(authUser.username) : null;
+  const membership = authUser
+    ? await loadAdminMembershipCached(authUser.username)
+    : null;
 
-  if (admin && !admin.is_superadmin) {
-    if (tenant.id !== admin.tenant_id) {
-      const row = await queryFirst<{ slug: string }>(
-        "SELECT slug FROM tenant WHERE id = ? LIMIT 1",
-        [admin.tenant_id],
-      );
-      if (row?.slug) {
+  if (membership && !membership.admin.is_superadmin) {
+    if (!canManageTenant(membership, tenant.id)) {
+      const fallback = membership.managedTenants[0];
+      if (fallback?.slug) {
         return NextResponse.redirect(
-          new URL(`/t/${encodeURIComponent(row.slug)}/events`, request.url),
+          new URL(`/t/${encodeURIComponent(fallback.slug)}/events`, request.url),
         );
       }
       return NextResponse.redirect(new URL("/", request.url));

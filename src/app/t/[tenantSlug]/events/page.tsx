@@ -25,9 +25,9 @@ export default async function EventListPage({ params }: Props) {
     return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
   }
 
-  const { admin, username, isAdmin, canChooseTenant } = ctx;
+  const { admin, membership, username, isAdmin, canChooseTenant } = ctx;
   const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
-  const access = checkTenantAccess(admin, tenant, allowedSlug);
+  const access = checkTenantAccess(admin, tenant, allowedSlug, membership);
 
   if (access === "forbidden") {
     return (
@@ -54,7 +54,6 @@ export default async function EventListPage({ params }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <Header
-        username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
         tenantSlug={tenantSlug}

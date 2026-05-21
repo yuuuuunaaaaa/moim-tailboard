@@ -4,6 +4,7 @@ import { getPageContext } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/adminTenant";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
+import AdminTenantSelect from "@/components/AdminTenantSelect";
 import AutoToast from "@/components/AutoToast";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
@@ -22,15 +23,15 @@ const TOAST_TEXT: Record<string, string> = {
 };
 
 export default async function AdminPage({ searchParams }: Props) {
-  const { admin, username, isAdmin, canChooseTenant } = await getPageContext();
-  if (!admin) redirect("/login");
+  const { admin, membership, username, isAdmin, canChooseTenant } = await getPageContext();
+  if (!admin || !membership) redirect("/login");
 
   const sp = await searchParams;
   const slugParam = (sp.tenant ?? "").trim();
   const toastKey = (sp.toast ?? "").trim();
   const toastText = TOAST_TEXT[toastKey] ?? "";
 
-  const res = await resolveAdminTenant(admin, slugParam);
+  const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {
     return (
@@ -50,14 +51,13 @@ export default async function AdminPage({ searchParams }: Props) {
     return (
       <>
         <Header
-          username={username}
           isAdmin={isAdmin}
           canChooseTenant={canChooseTenant}
           showAdminLink
         />
         <main className="container">
           <h1>관리 — 지역 선택</h1>
-          <p className="page-subtitle">관리할 지역을 선택하세요. (최고 관리자)</p>
+          <p className="page-subtitle">관리할 지역을 선택하세요.</p>
           <ul className="event-list">
             {res.tenants.map((t) => (
               <li key={t.id} className="event-item">
@@ -86,7 +86,6 @@ export default async function AdminPage({ searchParams }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <Header
-        username={username}
         isAdmin={isAdmin}
         canChooseTenant={canChooseTenant}
         tenantSlug={tenant.slug}
@@ -96,23 +95,7 @@ export default async function AdminPage({ searchParams }: Props) {
         <main className="container container--wide">
           <h1>관리</h1>
           <div className="tenant-pills">
-            {tenants.length > 1 && (
-              <select
-                defaultValue={tenant.slug}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "999px",
-                  border: "1px solid var(--border)",
-                  fontSize: "0.9375rem",
-                  maxWidth: "100%",
-                  minWidth: 0,
-                }}
-              >
-                {tenants.map((t) => (
-                  <option key={t.id} value={t.slug}>{t.name}</option>
-                ))}
-              </select>
-            )}
+            <AdminTenantSelect tenants={tenants} currentSlug={tenant.slug} />
             <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
             <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
           </div>

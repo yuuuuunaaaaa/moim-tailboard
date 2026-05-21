@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { queryFirst } from "@/lib/queryRows";
 import { insertActionLog, ACTION_VIEW_EVENT } from "@/lib/actionLog";
@@ -24,8 +25,9 @@ export async function POST(request: NextRequest) {
     const allowedSlug = request.cookies.get(TENANT_COOKIE_NAME)?.value;
     const auth = await getUserFromRequest(request);
     const username = auth?.username ?? null;
-    const admin = username ? await loadAdminByUsernameCached(username) : null;
-    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug)) {
+    const membership = username ? await loadAdminMembershipCached(username) : null;
+    const admin = membership?.admin ?? null;
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug, membership)) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 

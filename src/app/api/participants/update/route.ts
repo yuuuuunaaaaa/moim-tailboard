@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -39,8 +40,9 @@ export async function POST(request: NextRequest) {
     if (!tenant) return new Response("Tenant not found", { status: 404 });
 
     const allowedSlug = request.cookies.get(TENANT_COOKIE_NAME)?.value;
-    const admin = await loadAdminByUsernameCached(username);
-    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug)) {
+    const membership = await loadAdminMembershipCached(username);
+    const admin = membership?.admin ?? null;
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug, membership)) {
       return new Response("접근이 거부되었습니다.", { status: 403 });
     }
 
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
       return new Response("Participant not found", { status: 404 });
     }
     const isOwner = participant.username === username;
-    const isTenantAdmin = !!(admin && (admin.is_superadmin || admin.tenant_id === tenant.id));
+    const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
     if (!isOwner) {
       // 삭제는 별도 admin delete API 를 사용. 여기서는 관리자에게 이름 수정만 허용한다.
       if (mode === "delete" || !isTenantAdmin) {

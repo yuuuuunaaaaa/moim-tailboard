@@ -9,7 +9,7 @@ import type { Tenant } from "@/types";
 export const metadata = { title: "꼬리달기" };
 
 export default async function HomePage() {
-  const { username, isAdmin, canChooseTenant } = await getPageContext();
+  const { username, isAdmin, canChooseTenant, managedTenants } = await getPageContext();
 
   /**
    * 로그인한 사용자가 /에 도달한 경우:
@@ -17,19 +17,12 @@ export default async function HomePage() {
    * - 관리 지역이 여러 개 → 목록 표시 (superadmin 처럼)
    * - 관리자가 아닌 참가자 → 마지막 방문 테넌트 쿠키로 이동 (없으면 안내)
    */
-  let myTenants: Pick<Tenant, "id" | "slug" | "name">[] = [];
+  const myTenants: Pick<Tenant, "id" | "slug" | "name">[] =
+    username && !canChooseTenant
+      ? managedTenants.map((t) => ({ id: t.id, slug: t.slug, name: t.name }))
+      : [];
 
   if (username && !canChooseTenant) {
-    // admin 테이블에서 이 username 이 관리하는 테넌트 전체 조회 (다중 지역 지원)
-    myTenants = await queryRows<Pick<Tenant, "id" | "slug" | "name">>(
-      `SELECT t.id, t.slug, t.name
-       FROM tenant t
-       INNER JOIN admin a ON a.tenant_id = t.id
-       WHERE a.username = ? AND a.is_superadmin = 0
-       ORDER BY t.name ASC`,
-      [username],
-    );
-
     if (myTenants.length === 1) {
       // 지역이 하나뿐이면 바로 이동
       redirect(`/t/${encodeURIComponent(myTenants[0].slug)}/events`);
@@ -56,7 +49,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} />
+      <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} />
       <main className="container">
         {showTenantList ? (
           <>
