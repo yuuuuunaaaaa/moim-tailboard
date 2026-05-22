@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/adminTenant";
+import { isSuperadminForTenant } from "@/lib/superadmin";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
 import AdminTenantSelect from "@/components/AdminTenantSelect";
@@ -75,6 +76,7 @@ export default async function AdminPage({ searchParams }: Props) {
   }
 
   const { tenant, tenants } = res;
+  const isSuperadmin = isSuperadminForTenant(membership, tenant.id);
 
   // 관리 목록 정렬: 직접 지정한 순서(event_order ASC) → 공개 우선(is_active DESC) → 가까운 날짜(event_date DESC)
   const events = await queryRows<Event>(
@@ -97,7 +99,13 @@ export default async function AdminPage({ searchParams }: Props) {
           <div className="tenant-pills">
             <AdminTenantSelect tenants={tenants} currentSlug={tenant.slug} />
             <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
-            <a href={`/admin/tenants/${tenant.slug}`}>관리자 설정</a>
+            {isSuperadmin && (
+              <>
+                <a href={`/admin/tenants/${tenant.slug}`}>관리자</a>
+                <a href={`/admin/tenants/${tenant.slug}/logs`}>로그</a>
+                <a href={`/admin/tenants/${tenant.slug}/settings`}>텔레그램</a>
+              </>
+            )}
           </div>
           <AdminEventEdit tenant={tenant} events={events} />
           {toastText && (

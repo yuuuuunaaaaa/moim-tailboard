@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
-import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
+import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
@@ -32,7 +32,7 @@ export async function POST(
     const admin = membership?.admin ?? null;
 
     if (!tenantSlug) {
-      if (admin) return await responseWhenTenantSlugMissing(admin);
+      return await responseWhenTenantSlugMissingForRequest();
       return new Response("tenantSlug required", { status: 400 });
     }
 

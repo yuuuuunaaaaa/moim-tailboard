@@ -169,28 +169,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               <div className="row admin-edit-row admin-event-field">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />
               </div>
-              <div className="row admin-edit-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
-                  <input
-                    type="text"
-                    name="eventTelegramJoinPrefix"
-                    maxLength={64}
-                    placeholder="비우면 👤"
-                    defaultValue={event.telegram_participant_join_prefix ?? ""}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0, marginTop: 10 }}>
-                  <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
-                  <input
-                    type="text"
-                    name="eventTelegramLeavePrefix"
-                    maxLength={64}
-                    placeholder="비우면 👤"
-                    defaultValue={event.telegram_participant_leave_prefix ?? ""}
-                  />
-                </div>
-              </div>
               <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>
               </div>

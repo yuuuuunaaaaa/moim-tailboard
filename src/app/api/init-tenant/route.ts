@@ -28,16 +28,14 @@ export async function GET(request: NextRequest) {
     ? await loadAdminMembershipCached(authUser.username)
     : null;
 
-  if (membership && !membership.admin.is_superadmin) {
-    if (!canManageTenant(membership, tenant.id)) {
-      const fallback = membership.managedTenants[0];
-      if (fallback?.slug) {
-        return NextResponse.redirect(
-          new URL(`/t/${encodeURIComponent(fallback.slug)}/events`, request.url),
-        );
-      }
-      return NextResponse.redirect(new URL("/", request.url));
+  if (membership && !canManageTenant(membership, tenant.id)) {
+    const fallback = membership.managedTenants[0];
+    if (fallback?.slug) {
+      return NextResponse.redirect(
+        new URL(`/t/${encodeURIComponent(fallback.slug)}/events`, request.url),
+      );
     }
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   const response = NextResponse.redirect(new URL(next, request.url));

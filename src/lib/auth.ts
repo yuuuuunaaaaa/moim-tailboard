@@ -129,9 +129,10 @@ export const getPageContext = cache(async () => {
     : null;
   const admin = membership?.admin ?? null;
   const isAdmin = !!admin;
-  const canChooseTenant = isAdmin && !!admin?.is_superadmin;
   const managedTenants = membership?.managedTenants ?? [];
   const managedTenantIds = membership?.managedTenantIds ?? [];
+  const superadminTenantIds = membership?.superadminTenantIds ?? [];
+  const canChooseTenant = isAdmin && managedTenants.length > 1;
 
   return {
     authUser,
@@ -142,5 +143,6 @@ export const getPageContext = cache(async () => {
     canChooseTenant,
     managedTenants,
     managedTenantIds,
+    superadminTenantIds,
   };
 });

@@ -25,6 +25,8 @@ export type AdminMembership = {
   admin: Admin;
   managedTenants: Tenant[];
   managedTenantIds: number[];
+  /** is_superadmin=1 인 admin 행이 연결된 지역 ID (지역당 최대 1명) */
+  superadminTenantIds: number[];
 };
 
 type AdminRow = Admin & { is_superadmin: unknown };
@@ -45,18 +47,15 @@ async function loadAdminMembershipUncached(username: string): Promise<AdminMembe
     is_superadmin: normalizeIsSuperadmin(rows[0]!.is_superadmin),
   };
 
-  if (primary.is_superadmin) {
-    const managedTenants = await queryRows<Tenant>(
-      `SELECT ${TENANT_SELECT} FROM tenant ORDER BY name ASC`,
-    );
-    return {
-      admin: primary,
-      managedTenants,
-      managedTenantIds: managedTenants.map((t) => t.id),
-    };
-  }
-
   const tenantIds = [...new Set(rows.map((r) => r.tenant_id))];
+  const superadminTenantIds = [
+    ...new Set(
+      rows
+        .filter((r) => normalizeIsSuperadmin(r.is_superadmin))
+        .map((r) => r.tenant_id),
+    ),
+  ];
+
   if (tenantIds.length === 0) return null;
 
   const managedTenants = await queryRows<Tenant>(
@@ -68,6 +67,7 @@ async function loadAdminMembershipUncached(username: string): Promise<AdminMembe
     admin: primary,
     managedTenants,
     managedTenantIds: managedTenants.map((t) => t.id),
+    superadminTenantIds,
   };
 }
 

@@ -84,24 +84,6 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
               공개 (목록에 표시)
             </label>
           </div>
-
-
-          <details className="form-group" style={{ marginTop: "12px" }}>
-            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
-              참가/취소 방 알림 말머리 (이 꼬리달기에 저장)
-            </summary>
-            <p className="form-hint" style={{ marginTop: "8px", marginBottom: "10px" }}>
-              신청(+1)·취소(-1) 텔레그램 알림 앞 이모지/문구입니다. 비우면 👤. 꼬리달기마다 다르게 둘 수 있습니다.
-            </p>
-            <div className="form-group">
-              <label>참가 신청 시</label>
-              <input type="text" name="eventTelegramJoinPrefix" maxLength={64} placeholder="예: ✅" />
-            </div>
-            <div className="form-group">
-              <label>참가 취소 시</label>
-              <input type="text" name="eventTelegramLeavePrefix" maxLength={64} placeholder="예: 👋" />
-            </div>
-          </details>
         </div>
 
         <div>

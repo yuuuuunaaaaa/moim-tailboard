@@ -26,7 +26,7 @@ create table admin
     telegram_id   int                                      null comment '텔레그램 사용자 ID (unique)',
     name          varchar(255)                             null comment '관리자 표시 이름 (선택)',
     created_at    datetime(3) default CURRENT_TIMESTAMP(3) not null,
-    is_superadmin bit         default b'0'                 not null comment '최고 관리자 여부',
+    is_superadmin bit         default b'0'                 not null comment '해당 tenant_id 지역 최고 관리자(지역당 1명)',
     constraint uq_admin_telegram_id
         unique (telegram_id),
     constraint fk_admin_tenant

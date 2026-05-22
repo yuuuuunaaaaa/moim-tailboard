@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { findTenantBySlug } from "@/lib/db";
 import { queryRows } from "@/lib/queryRows";
-import { getPageContext } from "@/lib/auth";
+import { getPageContext, normalizeIsSuperadmin } from "@/lib/auth";
 import { canManageTenant } from "@/lib/adminMembership";
+import { isSuperadminForTenant } from "@/lib/superadmin";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Admin } from "@/types";
@@ -18,6 +19,7 @@ const ERROR_MSG: Record<string, string> = {
   username_duplicate:
     "이 사용자명은 이미 이 지역의 관리자로 등록되어 있습니다.",
   not_found: "해당 관리자를 찾을 수 없습니다.",
+  cannot_remove_superadmin: "최고 관리자는 이 화면에서 삭제할 수 없습니다.",
 };
 const SUCCESS_MSG: Record<string, string> = {
   added: "관리자를 추가했습니다.",
@@ -25,9 +27,12 @@ const SUCCESS_MSG: Record<string, string> = {
 };
 
 export default async function AdminTenantPage({ params, searchParams }: Props) {
-  const [{ admin, membership, username, isAdmin, canChooseTenant }, { tenantSlug }, sp] =
-    await Promise.all([getPageContext(), params, searchParams]);
-  if (!admin || !membership) redirect("/login");
+  const [{ membership, isAdmin, canChooseTenant }, { tenantSlug }, sp] = await Promise.all([
+    getPageContext(),
+    params,
+    searchParams,
+  ]);
+  if (!membership) redirect("/login");
 
   const tenant = await findTenantBySlug(tenantSlug);
   if (!tenant) {
@@ -46,8 +51,23 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
     );
   }
 
-  const admins = await queryRows<Admin & { created_at: string }>(
-    "SELECT id, telegram_id, username, name, created_at FROM admin WHERE tenant_id = ? ORDER BY id ASC",
+  if (!isSuperadminForTenant(membership, tenant.id)) {
+    return (
+      <>
+        <TenantSlugPersist slug={tenant.slug} />
+        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} tenantSlug={tenant.slug} showAdminLink />
+        <main className="container">
+          <h2>접근 권한 없음</h2>
+          <p className="page-subtitle">관리자 추가·삭제는 해당 지역 최고 관리자만 할 수 있습니다.</p>
+          <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
+        </main>
+      </>
+    );
+  }
+
+  const admins = await queryRows<Admin & { created_at: string; is_superadmin: unknown }>(
+    `SELECT id, telegram_id, username, name, is_superadmin, created_at
+     FROM admin WHERE tenant_id = ? ORDER BY is_superadmin DESC, id ASC`,
     [tenant.id],
   );
 
@@ -65,7 +85,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>관리자</h1>
         <p className="page-subtitle">
-          이 지역의 관리자를 추가·삭제할 수 있습니다. 사용자명으로 식별됩니다.
+          이 지역의 일반 관리자를 추가·삭제합니다. 최고 관리자는 지역당 1명입니다.
         </p>
 
         {sp.error && ERROR_MSG[sp.error] && (
@@ -113,6 +133,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                   <table className="table admin-list-table">
                     <thead>
                       <tr>
+                        <th>역할</th>
                         <th>사용자명</th>
                         <th>이름</th>
                         <th>추가일</th>
@@ -120,46 +141,61 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {admins.map((a) => (
-                        <tr key={a.id}>
-                          <td><code>{a.username}</code></td>
-                          <td>{a.name || "—"}</td>
-                          <td>{formatKstDate(a.created_at)}</td>
-                          <td className="actions">
-                            <form
-                              method="post"
-                              action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
-                              style={{ display: "inline" }}
-                            >
-                              <button type="submit" className="btn btn--danger btn--sm">삭제</button>
-                            </form>
-                          </td>
-                        </tr>
-                      ))}
+                      {admins.map((a) => {
+                        const isSa = normalizeIsSuperadmin(a.is_superadmin);
+                        return (
+                          <tr key={a.id}>
+                            <td>{isSa ? "최고" : "관리"}</td>
+                            <td><code>{a.username}</code></td>
+                            <td>{a.name || "—"}</td>
+                            <td>{formatKstDate(a.created_at)}</td>
+                            <td className="actions">
+                              {isSa ? (
+                                <span className="form-hint" title="최고 관리자는 삭제할 수 없습니다">—</span>
+                              ) : (
+                                <form
+                                  method="post"
+                                  action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
+                                  style={{ display: "inline" }}
+                                >
+                                  <button type="submit" className="btn btn--danger btn--sm">삭제</button>
+                                </form>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
 
                 <ul className="admin-card-list admin-only-mobile">
-                  {admins.map((a) => (
-                    <li key={a.id} className="admin-card">
-                      <div className="admin-card-head">
-                        <div className="admin-card-title">
-                          <div className="admin-card-username"><code>{a.username}</code></div>
-                          <div className="admin-card-meta">
-                            {a.name ? a.name : "이름 없음"} ·{" "}
-                            {formatKstDate(a.created_at)}
+                  {admins.map((a) => {
+                    const isSa = normalizeIsSuperadmin(a.is_superadmin);
+                    return (
+                      <li key={a.id} className="admin-card">
+                        <div className="admin-card-head">
+                          <div className="admin-card-title">
+                            <div className="admin-card-username">
+                              <code>{a.username}</code>
+                              {isSa && <span className="admin-card-badge">최고</span>}
+                            </div>
+                            <div className="admin-card-meta">
+                              {a.name ? a.name : "이름 없음"} · {formatKstDate(a.created_at)}
+                            </div>
                           </div>
+                          {!isSa && (
+                            <form
+                              method="post"
+                              action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
+                            >
+                              <button type="submit" className="btn btn--danger btn--sm admin-card-btn">삭제</button>
+                            </form>
+                          )}
                         </div>
-                        <form
-                          method="post"
-                          action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}
-                        >
-                          <button type="submit" className="btn btn--danger btn--sm admin-card-btn">삭제</button>
-                        </form>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}

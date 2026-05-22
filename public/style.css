@@ -734,6 +734,55 @@ html, body { overflow-x: clip; }
 .alert--error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
 .alert--success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
 .admin-list-table .actions { white-space: nowrap; }
+
+/* 지역 활동 로그 — 좁은 화면에서 가로 스크롤 */
+main.page-tenant-logs {
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+.audit-log-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface, var(--bg));
+}
+.audit-log-table {
+  width: max-content;
+  min-width: 680px;
+  margin: 0;
+}
+.audit-log-table th,
+.audit-log-table td {
+  white-space: nowrap;
+  vertical-align: top;
+}
+.audit-log-table__time {
+  min-width: 10.5rem;
+}
+.audit-log-table th:nth-child(2),
+.audit-log-table td:nth-child(2) {
+  min-width: 6.5rem;
+}
+.audit-log-table th:nth-child(3),
+.audit-log-table td:nth-child(3) {
+  min-width: 8rem;
+  max-width: 14rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.audit-log-table__content {
+  min-width: 12rem;
+  max-width: 22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .admin-card-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
 .admin-card {
   background: var(--bg);
