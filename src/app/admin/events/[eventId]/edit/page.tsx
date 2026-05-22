@@ -28,7 +28,7 @@ const TOAST_TEXT: Record<string, string> = {
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
-  const [{ admin, membership, username, isAdmin }, { eventId: eventIdStr }, sp] =
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
     await Promise.all([getPageContext(), params, searchParams]);
 
   if (!admin || !membership) redirect("/login");

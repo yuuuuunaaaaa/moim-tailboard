@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
 import { formatKstDateTime } from "@/lib/dateFormat";
+import { ACTION_LABEL } from "@/lib/actionLogLabels";
 
 interface Props {
   params: Promise<{ eventId: string }>;
@@ -19,11 +20,6 @@ type ActionLogRow = {
   action: string;
   created_at: Date | string;
   metadata: unknown;
-};
-
-const ACTION_LABEL: Record<string, string> = {
-  JOIN_EVENT: "참여",
-  CANCEL_EVENT: "취소",
 };
 
 function formatTs(v: Date | string) {

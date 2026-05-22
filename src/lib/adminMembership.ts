@@ -4,7 +4,11 @@ import { queryRows } from "@/lib/queryRows";
 import { canManageTenantAccess } from "@/lib/tenantRestrict";
 import type { Admin, Tenant } from "@/types";
 
-function normalizeIsSuperadmin(value: unknown): boolean {
+/**
+ * MySQL BIT(1) 등은 mysql2가 Buffer로 돌려줄 수 있음. Buffer는 바이트가 0이어도 객체로 truthy라
+ * `!!row.is_superadmin`만 쓰면 비-superadmin도 전원 superadmin처럼 동작할 수 있다.
+ */
+export function normalizeIsSuperadmin(value: unknown): boolean {
   if (value === true || value === 1) return true;
   if (value === false || value === 0 || value == null) return false;
   if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
@@ -71,7 +75,8 @@ async function loadAdminMembershipUncached(username: string): Promise<AdminMembe
   };
 }
 
-const MEMBERSHIP_CACHE_TTL = (() => {
+/** 0이면 캐시 비활성(개발 시 DB 변경 즉시 반영). 미설정 시 300초. */
+export const ADMIN_CACHE_TTL = (() => {
   const raw = process.env.ADMIN_CACHE_REVALIDATE_SECONDS;
   if (raw === undefined || raw === "") return 300;
   const n = Number(raw);
@@ -79,12 +84,12 @@ const MEMBERSHIP_CACHE_TTL = (() => {
 })();
 
 const loadAdminMembershipDataCached =
-  MEMBERSHIP_CACHE_TTL === 0
+  ADMIN_CACHE_TTL === 0
     ? loadAdminMembershipUncached
     : unstable_cache(
         async (username: string) => loadAdminMembershipUncached(username),
         ["loadAdminMembership"],
-        { revalidate: MEMBERSHIP_CACHE_TTL },
+        { revalidate: ADMIN_CACHE_TTL },
       );
 
 export const loadAdminMembershipCached = cache(

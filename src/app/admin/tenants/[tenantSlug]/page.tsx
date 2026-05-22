@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { findTenantBySlug } from "@/lib/db";
 import { queryRows } from "@/lib/queryRows";
-import { getPageContext, normalizeIsSuperadmin } from "@/lib/auth";
+import { getPageContext } from "@/lib/auth";
+import { normalizeIsSuperadmin } from "@/lib/adminMembership";
 import { canManageTenant } from "@/lib/adminMembership";
 import { isSuperadminForTenant } from "@/lib/superadmin";
 import Header from "@/components/Header";
