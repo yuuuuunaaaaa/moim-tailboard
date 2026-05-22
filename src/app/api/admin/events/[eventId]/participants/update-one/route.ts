@@ -1,134 +1,131 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPageContext } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
-import { execute, queryFirst, queryRows } from "@/lib/queryRows";
-import { canAccessTenant } from "@/lib/tenantRestrict";
+import { isDevBypassEnabled } from "@/lib/dev";
+import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
+import { syncParticipantOptionsFromForm } from "@/lib/syncParticipantOptions";
+import { execute, queryFirst } from "@/lib/queryRows";
+import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 
-// POST /api/admin/events/[eventId]/participants/update-one — 참여자 옵션 1행 저장
+// POST /api/admin/events/[eventId]/participants/update-one — 참여자 1행 이름·옵션 저장 (관리자 또는 본인)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { admin, membership, username } = await getPageContext();
-    if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
-
     const { eventId: eventIdStr } = await params;
     const eventId = Number(eventIdStr);
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
-    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
+    const from = String(formData.get("from") ?? "admin").trim() === "event" ? "event" : "admin";
+    const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
+
+    const auth = await getUserFromRequest(request);
+    let username = auth?.username ?? null;
+    if (!username && isDevBypassEnabled()) username = usernameFromForm;
+    if (!username) return new Response("로그인이 필요합니다.", { status: 401 });
+
+    const membership = await loadAdminMembershipCached(username);
+    const admin = membership?.admin ?? null;
+
+    if (!tenantSlug) {
+      if (admin) return await responseWhenTenantSlugMissing(admin);
+      return new Response("tenantSlug required", { status: 400 });
+    }
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
+
+    const allowedSlug = request.cookies.get(TENANT_COOKIE_NAME)?.value;
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug, membership)) {
+      return new Response("접근이 거부되었습니다.", { status: 403 });
+    }
 
     const participantId = Number(formData.get("participantId"));
     if (!Number.isFinite(participantId) || participantId <= 0) {
       return new Response("Invalid participantId", { status: 400 });
     }
 
-    // 폼에 name 이 비어 있으면 이름 수정은 건너뛰고, 입력된 값이 있으면 그 값으로 변경.
     const rawName = formData.get("name");
     const nameInput = typeof rawName === "string" ? rawName.trim() : "";
+    const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
+    const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
 
-    // 꼬리달기/참여자 소유 + 옵션 그룹 병렬 조회
-    const [ev, p, groups] = await Promise.all([
+    const [ev, p] = await Promise.all([
       queryFirst<{ id: number }>(
         "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
         [eventId, tenant.id],
       ),
-      queryFirst<{ id: number; name: string }>(
-        "SELECT id, name FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
+      queryFirst<{ id: number; name: string; student_no: string | null; username: string | null }>(
+        "SELECT id, name, student_no, username FROM participant WHERE id = ? AND event_id = ? LIMIT 1",
         [participantId, eventId],
-      ),
-      queryRows<{ id: number; multiple_select: number }>(
-        "SELECT id, multiple_select FROM option_group WHERE event_id = ?",
-        [eventId],
       ),
     ]);
 
     if (!ev) return new Response("Event not found", { status: 404 });
     if (!p) return new Response("Participant not found", { status: 404 });
 
+    const isOwner = p.username === username;
+    const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
+    if (!isOwner && !isTenantAdmin) {
+      return new Response("권한이 없습니다.", { status: 403 });
+    }
+
     const newName = nameInput || p.name;
     const nameChanged = newName !== p.name;
-    if (nameChanged) {
-      await execute("UPDATE participant SET name = ? WHERE id = ?", [newName, participantId]);
-    }
+    const studentChanged = studentNo !== p.student_no;
 
-    const groupIds = groups.map((g) => g.id);
-    const itemRows = groupIds.length
-      ? await queryRows<{ id: number; option_group_id: number }>(
-          "SELECT id, option_group_id FROM option_item WHERE option_group_id IN (?)",
-          [groupIds],
-        )
-      : [];
-    const itemById = new Map<number, { id: number; option_group_id: number }>();
-    itemRows.forEach((r) => itemById.set(r.id, r));
-
-    await execute(
-      "DELETE FROM participant_option WHERE participant_id = ?",
-      [participantId],
-    );
-
-    const values: Array<[number, number]> = [];
-    for (const g of groups) {
-      const key = `g_${g.id}`;
-      const rawVals = formData.getAll(key).map(String).filter(Boolean);
-      for (const v of rawVals) {
-        const optId = Number(v);
-        if (!Number.isFinite(optId) || optId <= 0) continue;
-        const item = itemById.get(optId);
-        if (!item) continue;
-        if (item.option_group_id !== g.id) continue;
-        values.push([participantId, optId]);
-      }
-      // 단일 선택인 경우 중복 방지 — 마지막 선택만 유지
-      if (!g.multiple_select && values.length > 0) {
-        const last = values.filter((t) => itemById.get(t[1])?.option_group_id === g.id);
-        if (last.length > 1) {
-          const keep = last[last.length - 1]!;
-          for (let i = values.length - 1; i >= 0; i--) {
-            const opt = values[i]!;
-            if (itemById.get(opt[1])?.option_group_id === g.id && opt[1] !== keep[1]) {
-              values.splice(i, 1);
-            }
-          }
-        }
-      }
-    }
-
-    if (values.length > 0) {
-      await execute(
-        "INSERT INTO participant_option (participant_id, option_item_id) VALUES ?",
-        [values],
+    if (!allowDuplicate && (nameChanged || studentChanged)) {
+      const duplicate = await findParticipantByNameAndStudentNo(
+        eventId,
+        newName,
+        studentNo,
+        participantId,
       );
+      if (duplicate) {
+        const toastPath =
+          from === "event"
+            ? `/t/${tenant.slug}/events/${eventId}?toast=duplicate`
+            : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=duplicate`;
+        return NextResponse.redirect(new URL(toastPath, request.url), 303);
+      }
     }
 
+    if (nameChanged || studentChanged) {
+      await execute("UPDATE participant SET name = ?, student_no = ? WHERE id = ?", [
+        newName,
+        studentNo,
+        participantId,
+      ]);
+    }
+
+    const optionCount = await syncParticipantOptionsFromForm(eventId, participantId, formData);
+
+    const action = isTenantAdmin && !isOwner ? "ADMIN_UPDATE_PARTICIPANT_OPTIONS" : "UPDATE_PARTICIPANT";
     await execute(
-      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('username', ?, 'mappings', ?, 'oldName', ?, 'newName', ?))",
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('username', ?, 'optionCount', ?, 'oldName', ?, 'newName', ?))",
       [
         tenant.id,
         eventId,
         participantId,
-        "ADMIN_UPDATE_PARTICIPANT_OPTIONS",
-        username ?? null,
-        values.length,
+        action,
+        username,
+        optionCount,
         nameChanged ? p.name : null,
         nameChanged ? newName : null,
       ],
     );
 
-    return NextResponse.redirect(
-      new URL(
-        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=row_saved`,
-        request.url,
-      ),
-      303,
-    );
+    const toast = from === "event" ? "updated" : "row_saved";
+    const redirectPath =
+      from === "event"
+        ? `/t/${tenant.slug}/events/${eventId}?toast=${toast}`
+        : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=${toast}`;
+
+    return NextResponse.redirect(new URL(redirectPath, request.url), 303);
   } catch (err) {
     console.error("POST /api/admin/events/[eventId]/participants/update-one:", err);
     return new Response("Internal server error", { status: 500 });

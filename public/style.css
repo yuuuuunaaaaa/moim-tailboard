@@ -452,6 +452,9 @@ html, body { overflow-x: clip; }
 .p-edit-form { padding: 8px 0 4px 1.8em; }
 .p-edit-fields { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .p-edit-fields input { flex: 1; min-width: 100px; }
+.p-edit-option-groups { margin-bottom: 12px; }
+.p-edit-option-group { margin-bottom: 12px; border: 0; padding: 0; }
+.p-edit-option-group .option-group__name { font-weight: 600; font-size: 0.9375rem; margin-bottom: 8px; }
 .p-edit-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 /* 안내 문구는 한 줄 전체, 아니오·확인은 같은 줄 2열 */
 .p-delete-confirm {

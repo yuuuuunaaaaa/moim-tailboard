@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Spinner from "@/components/Spinner";
-import type { OptionGroup, OptionItem, Participant } from "@/types";
-
-type GroupWithItems = OptionGroup & { items: OptionItem[] };
+import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
+import type { OptionGroupWithItems } from "@/lib/participantOptionGroups";
+import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
+import type { Participant } from "@/types";
 
 export default function AdminParticipantOptionsGrid({
   eventId,
@@ -15,9 +16,9 @@ export default function AdminParticipantOptionsGrid({
 }: {
   eventId: number;
   tenantSlug: string;
-  groups: GroupWithItems[];
+  groups: OptionGroupWithItems[];
   participants: Participant[];
-  participantOptMap: Record<number, number[]>; // option_item_id list
+  participantOptMap: Record<number, number[]>;
 }) {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -44,40 +45,14 @@ export default function AdminParticipantOptionsGrid({
       const container = document.querySelector<HTMLElement>(`[data-pid="${pid}"]`);
       if (!container) throw new Error("Participant form not found");
 
-      const fd = new FormData();
-      fd.set("tenantSlug", tenantSlug);
-      fd.set("participantId", String(pid));
-
-      const nameInput = container.querySelector<HTMLInputElement>('input[name="name"]');
-      if (nameInput) fd.set("name", nameInput.value.trim());
-
-      // Collect checked/selected inputs for each group from the row.
-      for (const g of groups) {
-        const key = `g_${g.id}`;
-        const inputs = container.querySelectorAll<HTMLInputElement>(`input[name="${key}"]`);
-        inputs.forEach((el) => {
-          if (el.type === "checkbox") {
-            if (el.checked) fd.append(key, el.value);
-            return;
-          }
-          if (el.type === "radio") {
-            if (el.checked && el.value !== "") fd.append(key, el.value);
-          }
-        });
-      }
-
-      const res = await fetch(`/api/admin/events/${eventId}/participants/update-one`, {
-        method: "POST",
-        body: fd,
-        credentials: "include",
+      await submitParticipantRowUpdate({
+        eventId,
+        tenantSlug,
+        participantId: pid,
+        container,
+        groups,
+        from: "admin",
       });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Save failed (${res.status})`);
-      }
-
-      window.location.href = `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenantSlug)}&toast=row_saved`;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "저장 중 오류가 발생했습니다.";
       window.alert(msg);
@@ -174,66 +149,12 @@ export default function AdminParticipantOptionsGrid({
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="admin-participant-card__groups">
-                    {groups.map((g) => {
-                      const key = `g_${g.id}`;
-                      const hasAnyInGroup = g.items.some((opt) => selected.has(opt.id));
-                      return (
-                        <fieldset key={g.id} className="admin-option-group" disabled={isSubmitting}>
-                          <legend className="admin-option-group__title">
-                            {g.name}
-                            <span className="admin-option-group__meta">
-                              {g.multiple_select ? "복수 선택" : "하나만 선택"}
-                            </span>
-                          </legend>
-
-                          {g.items.length === 0 ? (
-                            <span className="admin-option-group__empty">옵션 없음</span>
-                          ) : g.multiple_select ? (
-                            <div className="admin-option-group__choices">
-                              {g.items.map((opt) => (
-                                <label key={opt.id} className="admin-option-choice">
-                                  <input
-                                    type="checkbox"
-                                    name={key}
-                                    value={opt.id}
-                                    defaultChecked={selected.has(opt.id)}
-                                    disabled={isSubmitting}
-                                  />
-                                  <span>{opt.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="admin-option-group__choices">
-                              <label className="admin-option-choice admin-option-choice--muted">
-                                <input
-                                  type="radio"
-                                  name={key}
-                                  value=""
-                                  defaultChecked={!hasAnyInGroup}
-                                  disabled={isSubmitting}
-                                />
-                                <span>미선택</span>
-                              </label>
-                              {g.items.map((opt) => (
-                                <label key={opt.id} className="admin-option-choice">
-                                  <input
-                                    type="radio"
-                                    name={key}
-                                    value={opt.id}
-                                    defaultChecked={selected.has(opt.id)}
-                                    disabled={isSubmitting}
-                                  />
-                                  <span>{opt.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </fieldset>
-                      );
-                    })}
-                  </div>
+                  <ParticipantOptionInputs
+                    groups={groups}
+                    selectedOptionItemIds={[...selected]}
+                    disabled={isSubmitting}
+                    variant="admin"
+                  />
 
                   {pendingDeleteId === p.id ? (
                     <div className="p-delete-confirm" role="group" aria-label="참여 삭제 확인">
@@ -294,4 +215,3 @@ export default function AdminParticipantOptionsGrid({
     </div>
   );
 }
-
