@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -14,7 +15,6 @@ import {
   getChatRoomThreadId,
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
-import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import type { Participant } from "@/types";
 
 type ParticipantWithEvent = Participant & { tenant_id: number; event_id: number };
@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
     const participantId = Number(formData.get("participantId"));
-    const name = String(formData.get("name") ?? "").trim();
-    const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
     const mode = String(formData.get("mode") ?? "");
     const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
 
@@ -39,8 +37,9 @@ export async function POST(request: NextRequest) {
     if (!tenant) return new Response("Tenant not found", { status: 404 });
 
     const allowedSlug = request.cookies.get(TENANT_COOKIE_NAME)?.value;
-    const admin = await loadAdminByUsernameCached(username);
-    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug)) {
+    const membership = await loadAdminMembershipCached(username);
+    const admin = membership?.admin ?? null;
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug, membership)) {
       return new Response("접근이 거부되었습니다.", { status: 403 });
     }
 
@@ -52,92 +51,51 @@ export async function POST(request: NextRequest) {
       return new Response("Participant not found", { status: 404 });
     }
     const isOwner = participant.username === username;
-    const isTenantAdmin = !!(admin && (admin.is_superadmin || admin.tenant_id === tenant.id));
     if (!isOwner) {
-      // 삭제는 별도 admin delete API 를 사용. 여기서는 관리자에게 이름 수정만 허용한다.
-      if (mode === "delete" || !isTenantAdmin) {
-        return new Response("Not allowed to modify this participant", { status: 403 });
-      }
+      return new Response("Not allowed to modify this participant", { status: 403 });
     }
 
-    if (mode === "delete") {
-      const removedByGroup = await fetchLeaveRemovedCountPerOptionGroup(participant.id);
-
-      // 로그 기록 → participant_id 를 NULL 로 덮어쓰기 → DELETE 순서는 기존 동작을 유지
-      await execute(
-        "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?))",
-        [tenant.id, participant.event_id, participant.id, "CANCEL_EVENT", participant.name],
-      );
-      await execute("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [
-        participant.id,
-      ]);
-      await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
-
-      const ev = await queryFirst<{ telegram_participant_leave_prefix: string | null }>(
-        "SELECT telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
-        [participant.event_id],
-      );
-
-      const snapshots = await fetchTenantParticipantSnapshots(
-        tenant.id,
-        participant.event_id,
-        "leave",
-        removedByGroup,
-      );
-
-      await sendMessage(
-        tenant.chat_room_id,
-        buildParticipantTenantWideSummaryTelegramHtml({
-          events: snapshots,
-          prefix: ev?.telegram_participant_leave_prefix ?? "",
-        }),
-        {
-          webAppUrl: eventListUrl(tenant.slug),
-          buttonText: "꼬리달기 목록",
-          messageThreadId: getChatRoomThreadId(tenant),
-        },
-      );
-    } else {
-      const newName = name || participant.name;
-      const newStudentNo = studentNo;
-      const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
-      if (!allowDuplicate) {
-        const duplicate = await findParticipantByNameAndStudentNo(
-          participant.event_id,
-          newName,
-          newStudentNo,
-          participant.id,
-        );
-        if (duplicate) {
-          return NextResponse.redirect(
-            new URL(
-              `/t/${tenant.slug}/events/${participant.event_id}?toast=duplicate`,
-              request.url,
-            ),
-            303,
-          );
-        }
-      }
-      await execute(
-        "UPDATE participant SET name = ?, student_no = ? WHERE id = ?",
-        [newName, newStudentNo, participant.id],
-      );
-      await execute(
-        "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('oldName', ?, 'oldStudentNo', ?, 'newName', ?, 'newStudentNo', ?))",
-        [
-          tenant.id,
-          participant.event_id,
-          participant.id,
-          "UPDATE_PARTICIPANT",
-          participant.name,
-          participant.student_no,
-          newName,
-          newStudentNo,
-        ],
-      );
+    if (mode !== "delete") {
+      return new Response("이름·옵션 수정은 update-one API를 사용하세요.", { status: 400 });
     }
 
-    const toast = mode === "delete" ? "cancelled" : "updated";
+    const removedByGroup = await fetchLeaveRemovedCountPerOptionGroup(participant.id);
+
+    await execute(
+      "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?))",
+      [tenant.id, participant.event_id, participant.id, "CANCEL_EVENT", participant.name],
+    );
+    await execute("UPDATE action_log SET participant_id = NULL WHERE participant_id = ?", [
+      participant.id,
+    ]);
+    await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
+
+    const ev = await queryFirst<{ telegram_participant_leave_prefix: string | null }>(
+      "SELECT telegram_participant_leave_prefix FROM event WHERE id = ? LIMIT 1",
+      [participant.event_id],
+    );
+
+    const snapshots = await fetchTenantParticipantSnapshots(
+      tenant.id,
+      participant.event_id,
+      "leave",
+      removedByGroup,
+    );
+
+    await sendMessage(
+      tenant.chat_room_id,
+      buildParticipantTenantWideSummaryTelegramHtml({
+        events: snapshots,
+        prefix: ev?.telegram_participant_leave_prefix ?? "",
+      }),
+      {
+        webAppUrl: eventListUrl(tenant.slug),
+        buttonText: "꼬리달기 목록",
+        messageThreadId: getChatRoomThreadId(tenant),
+      },
+    );
+
+    const toast = "cancelled";
     return NextResponse.redirect(
       new URL(`/t/${tenant.slug}/events/${participant.event_id}?toast=${toast}`, request.url),
       303,

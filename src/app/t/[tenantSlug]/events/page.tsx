@@ -25,9 +25,9 @@ export default async function EventListPage({ params }: Props) {
     return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
   }
 
-  const { admin, username, isAdmin, canChooseTenant } = ctx;
+  const { admin, membership, isAdmin } = ctx;
   const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
-  const access = checkTenantAccess(admin, tenant, allowedSlug);
+  const access = checkTenantAccess(admin, tenant, allowedSlug, membership);
 
   if (access === "forbidden") {
     return (
@@ -53,14 +53,8 @@ export default async function EventListPage({ params }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        username={username}
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenantSlug}
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenantSlug} showAdminLink />
       <main className="container">
-        {canChooseTenant && <a href="/?stay=1" className="back-link">← 지역 선택</a>}
         <p className="page-subtitle">
           진행 중인 꼬리달기에 <EasterEggTrigger>참여할 수 있습니다.</EasterEggTrigger>
         </p>

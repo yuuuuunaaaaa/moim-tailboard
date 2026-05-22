@@ -21,12 +21,7 @@ export default async function EasterEggPage() {
 
   return (
     <>
-      <Header
-        username={ctx.username}
-        isAdmin={ctx.isAdmin}
-        canChooseTenant={ctx.canChooseTenant}
-        tenantSlug={tenantSlug}
-      />
+      <Header isAdmin={ctx.isAdmin} tenantSlug={tenantSlug} />
       <main className="container">
         <a href={backHref} className="back-link">← 돌아가기</a>
 

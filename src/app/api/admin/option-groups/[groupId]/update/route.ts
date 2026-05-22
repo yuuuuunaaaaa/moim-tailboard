@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
-import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
+import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import {
   parseOptionItemsFromFormData,
@@ -16,7 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   try {
-    const { admin, username } = await getPageContext();
+    const { admin, membership, username } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { groupId: groupIdStr } = await params;
@@ -24,13 +24,13 @@ export async function POST(
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
-    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
+    if (!tenantSlug) return await responseWhenTenantSlugMissingForRequest();
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
+    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
 
     // group이 실제로 해당 테넌트/꼬리달기 소속인지 확인
     const row = await queryFirst<{ id: number; event_id: number }>(

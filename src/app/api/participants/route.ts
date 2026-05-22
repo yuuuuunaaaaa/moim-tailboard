@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, loadAdminByUsernameCached } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
+import { loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -45,8 +46,9 @@ export async function POST(request: NextRequest) {
     if (!tenant) return new Response("Tenant not found", { status: 404 });
 
     const allowedSlug = request.cookies.get(TENANT_COOKIE_NAME)?.value;
-    const admin = await loadAdminByUsernameCached(username);
-    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug)) {
+    const membership = await loadAdminMembershipCached(username);
+    const admin = membership?.admin ?? null;
+    if (!isTenantAccessGrantedForApi(admin, tenant, allowedSlug, membership)) {
       return new Response("접근이 거부되었습니다.", { status: 403 });
     }
 

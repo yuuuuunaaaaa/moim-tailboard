@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { queryFirst, queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
-import { resolveAdminTenant } from "@/lib/adminTenant";
+import { redirectAdminIfChoose, resolveAdminTenant } from "@/lib/adminTenant";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
@@ -28,10 +28,10 @@ const TOAST_TEXT: Record<string, string> = {
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
-  const [{ admin, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
     await Promise.all([getPageContext(), params, searchParams]);
 
-  if (!admin) redirect("/login");
+  if (!admin || !membership) redirect("/login");
 
   const eventId = Number(eventIdStr);
   if (!Number.isFinite(eventId)) {
@@ -42,7 +42,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   const toast = (sp.toast ?? "").trim();
   const toastText = TOAST_TEXT[toast] ?? "";
 
-  const res = await resolveAdminTenant(admin, slugParam);
+  const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {
     return (
@@ -54,18 +54,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   if (res.kind === "redirect") {
     redirect(`/admin/events/${eventId}/edit?tenant=${encodeURIComponent(res.canonicalSlug)}`);
   }
-  if (res.kind === "choose") {
-    return (
-      <>
-        <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
-        <main className="container">
-          <h1>꼬리달기 수정</h1>
-          <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
-          <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
-        </main>
-      </>
-    );
-  }
+  redirectAdminIfChoose(res);
 
   const { tenant } = res;
 
@@ -126,14 +115,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   return (
     <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        username={username}
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
 
@@ -169,28 +151,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               </div>
               <div className="row admin-edit-row admin-event-field">
                 <textarea name="description" defaultValue={event.description ?? ""} placeholder="설명(선택)" />
-              </div>
-              <div className="row admin-edit-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: "0.8125rem" }}>참가 신청 방 알림 말머리</label>
-                  <input
-                    type="text"
-                    name="eventTelegramJoinPrefix"
-                    maxLength={64}
-                    placeholder="비우면 👤"
-                    defaultValue={event.telegram_participant_join_prefix ?? ""}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0, marginTop: 10 }}>
-                  <label style={{ fontSize: "0.8125rem" }}>참가 취소 방 알림 말머리</label>
-                  <input
-                    type="text"
-                    name="eventTelegramLeavePrefix"
-                    maxLength={64}
-                    placeholder="비우면 👤"
-                    defaultValue={event.telegram_participant_leave_prefix ?? ""}
-                  />
-                </div>
               </div>
               <div className="admin-edit-actions">
                 <button className="btn btn--primary btn--sm" type="submit">저장</button>

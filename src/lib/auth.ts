@@ -2,21 +2,11 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import { loadAdminMembershipCached, normalizeIsSuperadmin, ADMIN_CACHE_TTL } from "./adminMembership";
 import { queryFirst } from "./queryRows";
 import { verifyToken } from "./jwt-verify";
 import type { Admin } from "@/types";
 import { getDevDefaultUsername, isDevBypassEnabled } from "@/lib/dev";
-
-/** 0이면 캐시 비활성(개발 시 DB 변경 즉시 반영). 미설정 시 300초. */
-function adminCacheRevalidateSeconds(): number {
-  const raw = process.env.ADMIN_CACHE_REVALIDATE_SECONDS;
-  if (raw === undefined || raw === "") return 300;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : 300;
-}
-
-// 모듈 로드 시점 상수: unstable_cache 사용 여부 결정에 사용 (클로저 재생성 방지)
-const ADMIN_CACHE_TTL = adminCacheRevalidateSeconds();
 
 /**
  * Route Handler에서 쿠키의 JWT를 검증해 username을 얻습니다.
@@ -48,40 +38,30 @@ export async function getAuthUser(): Promise<{ username: string } | null> {
   return null;
 }
 
-const ADMIN_SELECT_WITH_SUPER =
-  "SELECT id, telegram_id, username, tenant_id, name, is_superadmin FROM admin WHERE username = ? LIMIT 1";
 const ADMIN_SELECT_BASE =
   "SELECT id, telegram_id, username, tenant_id, name FROM admin WHERE username = ? LIMIT 1";
 
-/**
- * MySQL BIT(1) 등은 mysql2가 Buffer로 돌려줄 수 있음. Buffer는 바이트가 0이어도 객체로 truthy라
- * `!!row.is_superadmin`만 쓰면 비-superadmin도 전원 superadmin처럼 동작할 수 있다.
- */
-function normalizeIsSuperadmin(value: unknown): boolean {
-  if (value === true || value === 1) return true;
-  if (value === false || value === 0 || value == null) return false;
-  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
-    return value.length > 0 && value[0] === 1;
-  }
-  if (typeof value === "string") {
-    const s = value.trim().toLowerCase();
-    return s === "1" || s === "true";
-  }
-  return false;
-}
+// 하위 호환: 기존에 @/lib/auth에서 import하던 코드를 위해 re-export합니다.
+export { normalizeIsSuperadmin };
 
 /** username으로 관리자 행 조회 (서비스 로직 전용; 로그인 시에는 호출하지 않음) */
 export async function loadAdminByUsername(username: string): Promise<Admin | null> {
   const u = username.trim();
   try {
-    const row = await queryFirst<Admin>(ADMIN_SELECT_WITH_SUPER, [u]);
+    const row = await queryFirst<Admin>(
+      "SELECT id, telegram_id, username, tenant_id, name, is_superadmin FROM admin WHERE username = ? ORDER BY is_superadmin DESC, id ASC LIMIT 1",
+      [u],
+    );
     if (!row) return null;
     return { ...row, is_superadmin: normalizeIsSuperadmin(row.is_superadmin) };
   } catch (err: unknown) {
     const e = err as { code?: string; errno?: number };
     // MySQL: ER_BAD_FIELD_ERROR — 기존 DB에 is_superadmin 컬럼이 없을 때
     if (e?.code === "ER_BAD_FIELD_ERROR" || e?.errno === 1054) {
-      const row = await queryFirst<Admin>(ADMIN_SELECT_BASE, [u]);
+      const row = await queryFirst<Admin>(
+        `${ADMIN_SELECT_BASE} ORDER BY id ASC LIMIT 1`,
+        [u],
+      );
       if (!row) return null;
       return { ...row, is_superadmin: false };
     }
@@ -117,15 +97,22 @@ export const loadAdminByUsernameCached = cache(async (username: string): Promise
 export const getPageContext = cache(async () => {
   const authUser = await getAuthUser();
   const effectiveUsername = authUser?.username ?? null;
-  const admin = effectiveUsername ? await loadAdminByUsernameCached(effectiveUsername) : null;
+  const membership = effectiveUsername
+    ? await loadAdminMembershipCached(effectiveUsername)
+    : null;
+  const admin = membership?.admin ?? null;
   const isAdmin = !!admin;
-  const canChooseTenant = isAdmin && !!admin?.is_superadmin;
-
+  const managedTenants = membership?.managedTenants ?? [];
+  const managedTenantIds = membership?.managedTenantIds ?? [];
+  const superadminTenantIds = membership?.superadminTenantIds ?? [];
   return {
     authUser,
     admin,
+    membership,
     username: effectiveUsername,
     isAdmin,
-    canChooseTenant,
+    managedTenants,
+    managedTenantIds,
+    superadminTenantIds,
   };
 });

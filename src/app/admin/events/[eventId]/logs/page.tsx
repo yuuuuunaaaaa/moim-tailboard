@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { getPageContext } from "@/lib/auth";
-import { resolveAdminTenant } from "@/lib/adminTenant";
+import { redirectAdminIfChoose, resolveAdminTenant } from "@/lib/adminTenant";
 import { queryFirst, queryRows } from "@/lib/queryRows";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
 import { formatKstDateTime } from "@/lib/dateFormat";
+import { ACTION_LABEL } from "@/lib/actionLogLabels";
 
 interface Props {
   params: Promise<{ eventId: string }>;
@@ -19,11 +20,6 @@ type ActionLogRow = {
   action: string;
   created_at: Date | string;
   metadata: unknown;
-};
-
-const ACTION_LABEL: Record<string, string> = {
-  JOIN_EVENT: "참여",
-  CANCEL_EVENT: "취소",
 };
 
 function formatTs(v: Date | string) {
@@ -59,10 +55,10 @@ function extractNameFromMetadata(meta: unknown): string {
 }
 
 export default async function AdminEventLogsPage({ params, searchParams }: Props) {
-  const [{ admin, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
     await Promise.all([getPageContext(), params, searchParams]);
 
-  if (!admin) redirect("/login");
+  if (!admin || !membership) redirect("/login");
 
   const eventId = Number(eventIdStr);
   if (!Number.isFinite(eventId)) {
@@ -70,7 +66,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   }
 
   const slugParam = (sp.tenant ?? "").trim();
-  const res = await resolveAdminTenant(admin, slugParam);
+  const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {
     return (
@@ -82,18 +78,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   if (res.kind === "redirect") {
     redirect(`/admin/events/${eventId}/logs?tenant=${encodeURIComponent(res.canonicalSlug)}`);
   }
-  if (res.kind === "choose") {
-    return (
-      <>
-        <Header username={username} isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
-        <main className="container">
-          <h1>참여/취소 로그</h1>
-          <p className="page-subtitle">최고 관리자는 지역을 먼저 선택해 주세요.</p>
-          <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
-        </main>
-      </>
-    );
-  }
+  redirectAdminIfChoose(res);
 
   const { tenant } = res;
 
@@ -127,14 +112,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   return (
     <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        username={username}
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={backToAdmin} className="back-link">← 관리</a>
 

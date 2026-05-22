@@ -188,6 +188,9 @@ export default function ParticipantList({
             <ul className="p-list" id="p-view-flat">
               {participants.map((p, idx) => {
                 const perGroup = derived.participantOptGroups.get(p.id);
+                const selectedOptionItemIds = perGroup
+                  ? [...perGroup.values()].flat().map((oi) => oi.id)
+                  : [];
                 const isEditing = editingId === p.id;
                 const isOwner = !!username && p.username === username;
                 const canAdminEdit = isAdmin && !isOwner;
@@ -237,8 +240,12 @@ export default function ParticipantList({
                     {canOpenEditor && isEditing && (
                       <ParticipantEditForm
                         participant={p}
+                        eventId={eventId}
                         tenantSlug={tenantSlug}
                         participants={participants}
+                        optionGroups={optionGroups}
+                        optionItems={optionItems}
+                        selectedOptionItemIds={selectedOptionItemIds}
                         pendingDeleteId={pendingDeleteId}
                         submittingId={submittingId}
                         setPendingDeleteId={setPendingDeleteId}

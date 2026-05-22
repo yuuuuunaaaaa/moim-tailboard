@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
-import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
+import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
@@ -12,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { admin } = await getPageContext();
+    const { admin, membership } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { eventId: eventIdStr } = await params;
@@ -20,7 +20,7 @@ export async function POST(
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
-    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
+    if (!tenantSlug) return await responseWhenTenantSlugMissingForRequest();
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim() || null;
     const eventDate = String(formData.get("eventDate") ?? "");
@@ -29,7 +29,7 @@ export async function POST(
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) return new Response("권한이 없습니다.", { status: 403 });
+    if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
 
     const dateOnly = toDateInputValue(eventDate);
     if (!dateOnly) return new Response("날짜 형식이 올바르지 않습니다.", { status: 400 });

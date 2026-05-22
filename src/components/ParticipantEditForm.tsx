@@ -1,27 +1,34 @@
 "use client";
 
-import type { Participant } from "@/types";
+import { useMemo } from "react";
+import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
+import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
+import { buildOptionGroupsWithItems } from "@/lib/participantOptionGroups";
+import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
 
 type Props = {
   participant: Participant;
+  eventId: number;
   tenantSlug: string;
   participants: Participant[];
+  optionGroups?: OptionGroup[];
+  optionItems?: OptionItem[];
+  selectedOptionItemIds?: number[];
   pendingDeleteId: number | null;
   submittingId: number | null;
   setPendingDeleteId: (id: number | null) => void;
   setEditingId: (id: number | null) => void;
   setSubmittingId: (id: number | null) => void;
-  /** owner: 본인 참여 (삭제 = 참여 취소, 방 알림 발송)
-   *  admin: 관리자가 다른 사람 참여 편집 (삭제 = 관리자 삭제, 방 알림 없음) */
   role: "owner" | "admin";
   onAdminDelete?: (participantId: number) => void;
 };
 
 export default function ParticipantEditForm({
   participant: p,
+  eventId,
   tenantSlug,
   participants,
   pendingDeleteId,
@@ -31,7 +38,15 @@ export default function ParticipantEditForm({
   setSubmittingId,
   role,
   onAdminDelete,
+  optionGroups = [],
+  optionItems = [],
+  selectedOptionItemIds = [],
 }: Props) {
+  const groups = useMemo(
+    () => buildOptionGroupsWithItems(optionGroups, optionItems),
+    [optionGroups, optionItems],
+  );
+
   const {
     formRef,
     showDuplicateConfirm,
@@ -45,10 +60,30 @@ export default function ParticipantEditForm({
   const isSubmitting = submittingId === p.id;
   const isAdmin = role === "admin";
 
+  const saveRow = async (formEl: HTMLFormElement) => {
+    setSubmittingId(p.id);
+    try {
+      await submitParticipantRowUpdate({
+        eventId,
+        tenantSlug,
+        participantId: p.id,
+        container: formEl,
+        groups,
+        from: "event",
+        allowDuplicate,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "저장 중 오류가 발생했습니다.";
+      window.alert(msg);
+      setSubmittingId(null);
+    }
+  };
+
   return (
     <form
       ref={formRef}
       className="p-edit-form"
+      data-pid={p.id}
       method="post"
       action="/api/participants/update"
       onSubmit={(e) => {
@@ -56,13 +91,17 @@ export default function ParticipantEditForm({
           e.preventDefault();
           return;
         }
-        handleDuplicateSubmit(e, () => setSubmittingId(p.id));
+        if (isDeleting) return;
+
+        handleDuplicateSubmit(e, () => {
+          e.preventDefault();
+          void saveRow(e.currentTarget);
+        });
       }}
     >
       <input type="hidden" name="tenantSlug" value={tenantSlug} />
       <input type="hidden" name="participantId" value={p.id} />
       <input type="hidden" name="allowDuplicate" value={allowDuplicate ? "1" : "0"} />
-      {/* admin 분기: 삭제 submit 자체를 막고 별도 admin delete API 사용 → mode 는 항상 update */}
       <input
         type="hidden"
         name="mode"
@@ -70,8 +109,14 @@ export default function ParticipantEditForm({
       />
       <input type="hidden" name="studentNo" value={p.student_no || ""} />
       <div className="p-edit-fields">
-        <input type="text" name="name" defaultValue={p.name} placeholder="이름" />
+        <input type="text" name="name" defaultValue={p.name} placeholder="이름" disabled={isSubmitting} />
       </div>
+      <ParticipantOptionInputs
+        groups={groups}
+        selectedOptionItemIds={selectedOptionItemIds}
+        disabled={isSubmitting}
+        variant="inline"
+      />
       <div className="p-edit-actions">
         <button
           className="btn btn--secondary btn--sm"

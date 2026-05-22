@@ -406,6 +406,86 @@ html, body { overflow-x: clip; }
   color: var(--primary);
   text-decoration: none;
 }
+
+/* admin layout: 복수 소속 시 우하단 FAB */
+.admin-layout-root--fab {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+.admin-manage-tenant-fab {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-manage-tenant-fab:hover,
+.admin-manage-tenant-fab:focus-visible {
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    0 4px 10px rgba(0, 0, 0, 0.12);
+}
+.admin-manage-tenant-fab:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+.admin-manage-tenant-fab__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: center;
+  pointer-events: none;
+}
+/* /admin 메인: 꼬리달기 목록·superadmin 링크 */
+.admin-manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.admin-manage-actions a {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+.admin-manage-actions a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  text-decoration: none;
+}
 /* 모바일 우선: 관리 화면은 단일 열 */
 .admin-grid {
   display: grid;
@@ -452,6 +532,9 @@ html, body { overflow-x: clip; }
 .p-edit-form { padding: 8px 0 4px 1.8em; }
 .p-edit-fields { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .p-edit-fields input { flex: 1; min-width: 100px; }
+.p-edit-option-groups { margin-bottom: 12px; }
+.p-edit-option-group { margin-bottom: 12px; border: 0; padding: 0; }
+.p-edit-option-group .option-group__name { font-weight: 600; font-size: 0.9375rem; margin-bottom: 8px; }
 .p-edit-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 /* 안내 문구는 한 줄 전체, 아니오·확인은 같은 줄 2열 */
 .p-delete-confirm {
@@ -731,6 +814,55 @@ html, body { overflow-x: clip; }
 .alert--error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
 .alert--success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
 .admin-list-table .actions { white-space: nowrap; }
+
+/* 지역 활동 로그 — 좁은 화면에서 가로 스크롤 */
+main.page-tenant-logs {
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+.audit-log-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface, var(--bg));
+}
+.audit-log-table {
+  width: max-content;
+  min-width: 680px;
+  margin: 0;
+}
+.audit-log-table th,
+.audit-log-table td {
+  white-space: nowrap;
+  vertical-align: top;
+}
+.audit-log-table__time {
+  min-width: 10.5rem;
+}
+.audit-log-table th:nth-child(2),
+.audit-log-table td:nth-child(2) {
+  min-width: 6.5rem;
+}
+.audit-log-table th:nth-child(3),
+.audit-log-table td:nth-child(3) {
+  min-width: 8rem;
+  max-width: 14rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.audit-log-table__content {
+  min-width: 12rem;
+  max-width: 22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .admin-card-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
 .admin-card {
   background: var(--bg);
@@ -741,6 +873,15 @@ html, body { overflow-x: clip; }
 }
 .admin-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .admin-card-username { font-weight: 700; }
+.admin-list-table .actions .badge,
+.admin-card-action-badge {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-card-action-badge {
+  flex-shrink: 0;
+  align-self: center;
+}
 .admin-card-meta { margin-top: 4px; font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
 .admin-card-btn { min-height: 44px; }
 @media (max-width: 640px) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageContext } from "@/lib/auth";
-import { responseWhenTenantSlugMissing } from "@/lib/adminTenantSlug";
+import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { parseOptionNamesJson } from "@/lib/optionItemSync";
 import { execute, queryFirst } from "@/lib/queryRows";
@@ -9,12 +9,12 @@ import { canAccessTenant } from "@/lib/tenantRestrict";
 // POST /api/admin/options — 옵션 그룹 추가
 export async function POST(request: NextRequest) {
   try {
-    const { admin, username } = await getPageContext();
+    const { admin, membership, username } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
-    if (!tenantSlug) return await responseWhenTenantSlugMissing(admin);
+    if (!tenantSlug) return await responseWhenTenantSlugMissingForRequest();
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
-    if (!canAccessTenant(admin, tenant)) {
+    if (!canAccessTenant(admin, tenant, membership)) {
       return new Response("소속 지역만 수정할 수 있습니다.", { status: 403 });
     }
 
