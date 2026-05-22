@@ -46,7 +46,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
   }
 
-  const { admin, membership, username, isAdmin, canChooseTenant } = ctx;
+  const { admin, membership, username, isAdmin } = ctx;
   const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
   const access = checkTenantAccess(admin, tenant, allowedSlug, membership);
 
@@ -107,12 +107,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <EventViewLogger tenantSlug={tenant.slug} eventId={event.id} />
-      <Header
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenantSlug}
-        showEventListLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenantSlug} showEventListLink showAdminLink />
       {!username && <TelegramAuth tenantSlug={tenantSlug} />}
       <main className="container container--wide">
         {toastText && (

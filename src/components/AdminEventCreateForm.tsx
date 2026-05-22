@@ -13,11 +13,10 @@ interface NewOptionGroup {
 
 interface Props {
   tenant: Tenant;
-  tenants: Tenant[];
   username: string | null | undefined;
 }
 
-export default function AdminEventCreateForm({ tenant, tenants, username }: Props) {
+export default function AdminEventCreateForm({ tenant, username }: Props) {
   const [createGroups, setCreateGroups] = useState<NewOptionGroup[]>([]);
   const createGroupIdx = useRef(0);
 
@@ -46,23 +45,6 @@ export default function AdminEventCreateForm({ tenant, tenants, username }: Prop
           />
         </span>
       ))}
-
-      {tenants.length > 1 && (
-        <div className="form-group">
-          <label>지역</label>
-          <select
-            name="tenantSlug"
-            defaultValue={tenant.slug}
-            onChange={(e) => {
-              window.location.href = `/admin/events/new?tenant=${encodeURIComponent(e.target.value)}`;
-            }}
-          >
-            {tenants.map((t) => (
-              <option key={t.id} value={t.slug}>{t.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <div className="admin-grid" style={{ marginBottom: 0 }}>
         <div>

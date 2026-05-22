@@ -406,6 +406,86 @@ html, body { overflow-x: clip; }
   color: var(--primary);
   text-decoration: none;
 }
+
+/* admin layout: 복수 소속 시 우하단 FAB */
+.admin-layout-root--fab {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+.admin-manage-tenant-fab {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-manage-tenant-fab:hover,
+.admin-manage-tenant-fab:focus-visible {
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    0 4px 10px rgba(0, 0, 0, 0.12);
+}
+.admin-manage-tenant-fab:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+.admin-manage-tenant-fab__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: center;
+  pointer-events: none;
+}
+/* /admin 메인: 꼬리달기 목록·superadmin 링크 */
+.admin-manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.admin-manage-actions a {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+.admin-manage-actions a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  text-decoration: none;
+}
 /* 모바일 우선: 관리 화면은 단일 열 */
 .admin-grid {
   display: grid;
@@ -793,6 +873,15 @@ main.page-tenant-logs {
 }
 .admin-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .admin-card-username { font-weight: 700; }
+.admin-list-table .actions .badge,
+.admin-card-action-badge {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-card-action-badge {
+  flex-shrink: 0;
+  align-self: center;
+}
 .admin-card-meta { margin-top: 4px; font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
 .admin-card-btn { min-height: 44px; }
 @media (max-width: 640px) {

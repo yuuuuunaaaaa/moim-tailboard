@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { Tenant } from "@/types";
 import type { AdminMembership } from "@/lib/adminMembership";
 
@@ -53,4 +54,11 @@ export function resolveAdminTenant(
   }
 
   return { kind: "ok", tenant: found, tenants: managedTenants };
+}
+
+/** 엄격 모델: 소속 choose 는 `/admin` 에서만. missing·redirect 처리 후 호출. */
+export function redirectAdminIfChoose(
+  res: AdminTenantResult,
+): asserts res is Extract<AdminTenantResult, { kind: "ok" }> {
+  if (res.kind === "choose") redirect("/admin");
 }

@@ -21,7 +21,7 @@ function threadInputValue(v: number | null | undefined): string {
 }
 
 export default async function AdminTenantSettingsPage({ params, searchParams }: Props) {
-  const [{ membership, isAdmin, canChooseTenant }, { tenantSlug }, sp] = await Promise.all([
+  const [{ membership, isAdmin }, { tenantSlug }, sp] = await Promise.all([
     getPageContext(),
     params,
     searchParams,
@@ -36,7 +36,7 @@ export default async function AdminTenantSettingsPage({ params, searchParams }: 
   if (!isSuperadminForTenant(membership, tenant.id)) {
     return (
       <>
-        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} tenantSlug={tenant.slug} showAdminLink />
+        <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink />
         <main className="container">
           <h2>접근 권한 없음</h2>
           <p className="page-subtitle">텔레그램 설정은 해당 지역 최고 관리자만 변경할 수 있습니다.</p>
@@ -49,13 +49,7 @@ export default async function AdminTenantSettingsPage({ params, searchParams }: 
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>텔레그램 설정</h1>

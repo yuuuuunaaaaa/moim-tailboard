@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPageContext } from "@/lib/auth";
+import { hasMultipleAdminTenants } from "@/lib/adminMembership";
 import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import type { Tenant } from "@/types";
@@ -8,7 +9,8 @@ import type { Tenant } from "@/types";
 export const metadata = { title: "꼬리달기" };
 
 export default async function HomePage() {
-  const { username, isAdmin, canChooseTenant, managedTenants } = await getPageContext();
+  const { username, isAdmin, managedTenants, membership } = await getPageContext();
+  const canChooseTenant = hasMultipleAdminTenants(membership);
 
   const myTenants: Pick<Tenant, "id" | "slug" | "name">[] = isAdmin
     ? managedTenants.map((t) => ({ id: t.id, slug: t.slug, name: t.name }))
@@ -30,12 +32,12 @@ export default async function HomePage() {
 
   return (
     <>
-      <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} />
+      <Header isAdmin={isAdmin} />
       <main className="container">
         {showTenantList ? (
           <>
-            <h1>지역 선택</h1>
-            <p className="page-subtitle">참여할 지역을 선택하세요.</p>
+            <h1>소속 선택</h1>
+            <p className="page-subtitle">참여할 소속을 선택하세요.</p>
             {myTenants.length === 0 ? (
               <div className="empty-state">등록된 지역이 없습니다.</div>
             ) : (

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPageContext } from "@/lib/auth";
-import { resolveAdminTenant } from "@/lib/adminTenant";
+import { redirectAdminIfChoose, resolveAdminTenant } from "@/lib/adminTenant";
 import { queryFirst, queryRows } from "@/lib/queryRows";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
@@ -59,7 +59,7 @@ function extractNameFromMetadata(meta: unknown): string {
 }
 
 export default async function AdminEventLogsPage({ params, searchParams }: Props) {
-  const [{ admin, membership, username, isAdmin, canChooseTenant }, { eventId: eventIdStr }, sp] =
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
     await Promise.all([getPageContext(), params, searchParams]);
 
   if (!admin || !membership) redirect("/login");
@@ -82,18 +82,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   if (res.kind === "redirect") {
     redirect(`/admin/events/${eventId}/logs?tenant=${encodeURIComponent(res.canonicalSlug)}`);
   }
-  if (res.kind === "choose") {
-    return (
-      <>
-        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} showAdminLink />
-        <main className="container">
-          <h1>참여/취소 로그</h1>
-          <p className="page-subtitle">지역을 먼저 선택해 주세요.</p>
-          <p><a href="/admin" className="btn btn--secondary">관리로 이동</a></p>
-        </main>
-      </>
-    );
-  }
+  redirectAdminIfChoose(res);
 
   const { tenant } = res;
 
@@ -127,13 +116,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   return (
     <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={backToAdmin} className="back-link">← 관리</a>
 

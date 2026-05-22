@@ -27,7 +27,7 @@ const SUCCESS_MSG: Record<string, string> = {
 };
 
 export default async function AdminTenantPage({ params, searchParams }: Props) {
-  const [{ membership, isAdmin, canChooseTenant }, { tenantSlug }, sp] = await Promise.all([
+  const [{ membership, isAdmin }, { tenantSlug }, sp] = await Promise.all([
     getPageContext(),
     params,
     searchParams,
@@ -55,7 +55,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
     return (
       <>
         <TenantSlugPersist slug={tenant.slug} />
-        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} tenantSlug={tenant.slug} showAdminLink />
+        <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink />
         <main className="container">
           <h2>접근 권한 없음</h2>
           <p className="page-subtitle">관리자 추가·삭제는 해당 지역 최고 관리자만 할 수 있습니다.</p>
@@ -74,13 +74,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>관리자</h1>
@@ -145,13 +139,15 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                         const isSa = normalizeIsSuperadmin(a.is_superadmin);
                         return (
                           <tr key={a.id}>
-                            <td>{isSa ? "최고" : "관리"}</td>
+                            <td>{isSa ? "" : "관리"}</td>
                             <td><code>{a.username}</code></td>
                             <td>{a.name || "—"}</td>
                             <td>{formatKstDate(a.created_at)}</td>
                             <td className="actions">
                               {isSa ? (
-                                <span className="form-hint" title="최고 관리자는 삭제할 수 없습니다">—</span>
+                                <span className="badge badge--on" title="최고 관리자는 삭제할 수 없습니다">
+                                  최고관리자
+                                </span>
                               ) : (
                                 <form
                                   method="post"
@@ -178,13 +174,16 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
                           <div className="admin-card-title">
                             <div className="admin-card-username">
                               <code>{a.username}</code>
-                              {isSa && <span className="admin-card-badge">최고</span>}
                             </div>
                             <div className="admin-card-meta">
                               {a.name ? a.name : "이름 없음"} · {formatKstDate(a.created_at)}
                             </div>
                           </div>
-                          {!isSa && (
+                          {isSa ? (
+                            <span className="badge badge--on admin-card-action-badge" title="최고 관리자는 삭제할 수 없습니다">
+                              최고관리자
+                            </span>
+                          ) : (
                             <form
                               method="post"
                               action={`/api/admin/tenants/${tenant.slug}/admins/${a.id}/delete`}

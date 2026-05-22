@@ -101,3 +101,8 @@ export function canManageTenant(
 ): boolean {
   return canManageTenantAccess(membership, tenantId);
 }
+
+/** admin 테이블에 같은 username 으로 연결된 tenant 가 2개 이상 */
+export function hasMultipleAdminTenants(membership: AdminMembership | null | undefined): boolean {
+  return (membership?.managedTenants.length ?? 0) > 1;
+}

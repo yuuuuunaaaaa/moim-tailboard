@@ -5,7 +5,6 @@ import { resolveAdminTenant } from "@/lib/adminTenant";
 import { isSuperadminForTenant } from "@/lib/superadmin";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
-import AdminTenantSelect from "@/components/AdminTenantSelect";
 import AutoToast from "@/components/AutoToast";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import type { Event } from "@/types";
@@ -24,7 +23,7 @@ const TOAST_TEXT: Record<string, string> = {
 };
 
 export default async function AdminPage({ searchParams }: Props) {
-  const { admin, membership, username, isAdmin, canChooseTenant } = await getPageContext();
+  const { admin, membership, isAdmin } = await getPageContext();
   if (!admin || !membership) redirect("/login");
 
   const sp = await searchParams;
@@ -51,14 +50,10 @@ export default async function AdminPage({ searchParams }: Props) {
     }
     return (
       <>
-        <Header
-          isAdmin={isAdmin}
-          canChooseTenant={canChooseTenant}
-          showAdminLink
-        />
+        <Header isAdmin={isAdmin} showAdminLink />
         <main className="container">
-          <h1>관리 — 지역 선택</h1>
-          <p className="page-subtitle">관리할 지역을 선택하세요.</p>
+          <h1>관리 — 소속 선택</h1>
+          <p className="page-subtitle">관리할 소속을 선택하세요.</p>
           <ul className="event-list">
             {res.tenants.map((t) => (
               <li key={t.id} className="event-item">
@@ -89,24 +84,20 @@ export default async function AdminPage({ searchParams }: Props) {
       <TenantSlugPersist slug={tenant.slug} />
       <Header
         isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
         tenantSlug={tenant.slug}
         showAdminLink
+        showEventListLink
       />
       <div className="page-admin">
         <main className="container container--wide">
           <h1>관리</h1>
-          <div className="tenant-pills">
-            <AdminTenantSelect tenants={tenants} currentSlug={tenant.slug} />
-            <a href={`/t/${tenant.slug}/events`}>꼬리달기 목록</a>
-            {isSuperadmin && (
-              <>
-                <a href={`/admin/tenants/${tenant.slug}`}>관리자</a>
-                <a href={`/admin/tenants/${tenant.slug}/logs`}>로그</a>
-                <a href={`/admin/tenants/${tenant.slug}/settings`}>텔레그램</a>
-              </>
-            )}
-          </div>
+          {isSuperadmin && (
+            <div className="admin-manage-actions">
+              <a href={`/admin/tenants/${tenant.slug}`}>관리자</a>
+              <a href={`/admin/tenants/${tenant.slug}/logs`}>로그</a>
+              <a href={`/admin/tenants/${tenant.slug}/settings`}>텔레그램</a>
+            </div>
+          )}
           <AdminEventEdit tenant={tenant} events={events} />
           {toastText && (
             <AutoToast

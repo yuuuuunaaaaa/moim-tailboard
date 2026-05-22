@@ -132,15 +132,12 @@ export const getPageContext = cache(async () => {
   const managedTenants = membership?.managedTenants ?? [];
   const managedTenantIds = membership?.managedTenantIds ?? [];
   const superadminTenantIds = membership?.superadminTenantIds ?? [];
-  const canChooseTenant = isAdmin && managedTenants.length > 1;
-
   return {
     authUser,
     admin,
     membership,
     username: effectiveUsername,
     isAdmin,
-    canChooseTenant,
     managedTenants,
     managedTenantIds,
     superadminTenantIds,

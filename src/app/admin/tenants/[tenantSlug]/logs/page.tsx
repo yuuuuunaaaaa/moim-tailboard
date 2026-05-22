@@ -24,7 +24,7 @@ type LogRow = {
 export const metadata = { title: "활동 로그 · 꼬리달기" };
 
 export default async function AdminTenantLogsPage({ params }: Props) {
-  const [{ membership, isAdmin, canChooseTenant }, { tenantSlug }] = await Promise.all([
+  const [{ membership, isAdmin }, { tenantSlug }] = await Promise.all([
     getPageContext(),
     params,
   ]);
@@ -38,7 +38,7 @@ export default async function AdminTenantLogsPage({ params }: Props) {
   if (!isSuperadminForTenant(membership, tenant.id)) {
     return (
       <>
-        <Header isAdmin={isAdmin} canChooseTenant={canChooseTenant} tenantSlug={tenant.slug} showAdminLink />
+        <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink />
         <main className="container">
           <h2>접근 권한 없음</h2>
           <p className="page-subtitle">활동 로그는 해당 지역 최고 관리자만 볼 수 있습니다.</p>
@@ -61,13 +61,7 @@ export default async function AdminTenantLogsPage({ params }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header
-        isAdmin={isAdmin}
-        canChooseTenant={canChooseTenant}
-        tenantSlug={tenant.slug}
-        showAdminLink
-        showEventsLink
-      />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
       <main className="container container--wide page-tenant-logs">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>활동 로그</h1>
