@@ -30,7 +30,7 @@ export default async function EasterEggPage() {
           <div className="egg-scanlines" aria-hidden="true" />
 
           <div className="egg-crt">
-            <div className="egg-sub egg-sub--top">★ SECRET LEVEL UNLOCKED ★</div>
+            <div className="egg-sub egg-sub--top">★SECRET LEVEL UNLOCKED★</div>
 
             <div className="egg-poster">
               {/* eslint-disable-next-line @next/next/no-img-element */}
