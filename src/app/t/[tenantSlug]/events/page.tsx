@@ -9,6 +9,7 @@ import TenantSlugPersist from "@/components/TenantSlugPersist";
 import EasterEggTrigger from "@/components/EasterEggTrigger";
 import type { Event } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
+import { getRandomBibleVerse } from "@/lib/bibleVerse";
 
 interface Props {
   params: Promise<{ tenantSlug: string }>;
@@ -45,10 +46,13 @@ export default async function EventListPage({ params }: Props) {
 
   // 참여자 목록은 이미 is_active = 1 만 보이므로 공개여부는 정렬에서 의미가 없다.
   // 정렬 규칙(공개여부 > event_order > 날짜) 중 뒤 두 단계만 적용한다.
-  const events = await queryRows<Event>(
-    "SELECT * FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_order ASC, event_date DESC, id ASC",
-    [tenant.id],
-  );
+  const [events, verse] = await Promise.all([
+    queryRows<Event>(
+      "SELECT * FROM event WHERE tenant_id = ? AND is_active = 1 ORDER BY event_order ASC, event_date DESC, id ASC",
+      [tenant.id],
+    ),
+    getRandomBibleVerse(),
+  ]);
 
   return (
     <>
@@ -56,7 +60,7 @@ export default async function EventListPage({ params }: Props) {
       <Header isAdmin={isAdmin} tenantSlug={tenantSlug} showAdminLink />
       <main className="container">
         <p className="page-subtitle">
-          진행 중인 꼬리달기에 <EasterEggTrigger>참여할 수 있습니다.</EasterEggTrigger>
+          진행 중<EasterEggTrigger>인 </EasterEggTrigger> 꼬리달기에 참여할 수 있습니다.
         </p>
         {events.length === 0 ? (
           <div className="empty-state">
@@ -84,6 +88,12 @@ export default async function EventListPage({ params }: Props) {
           </ul>
         )}
       </main>
+      <footer className="bible-verse-footer">
+        <div className="container">
+          <p className="bible-verse-footer__text">{verse.t}</p>
+          <p className="bible-verse-footer__ref">— {verse.w}</p>
+        </div>
+      </footer>
     </>
   );
 }
