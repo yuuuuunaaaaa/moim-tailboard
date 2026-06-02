@@ -122,7 +122,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   return (
     <div className="page-admin-edit">
       <TenantSlugPersist slug={tenant.slug} />
-      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={backToAdmin} className="back-link">← 관리</a>
 

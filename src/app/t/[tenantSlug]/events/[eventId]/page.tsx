@@ -107,7 +107,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     <>
       <TenantSlugPersist slug={tenant.slug} />
       <EventViewLogger tenantSlug={tenant.slug} eventId={event.id} />
-      <Header isAdmin={isAdmin} tenantSlug={tenantSlug} showEventListLink showAdminLink />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showEventListLink showAdminLink />
       {!username && <TelegramAuth tenantSlug={tenantSlug} />}
       <main className="container container--wide">
         {toastText && (

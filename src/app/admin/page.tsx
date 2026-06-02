@@ -66,6 +66,7 @@ export default async function AdminPage({ searchParams }: Props) {
       <Header
         isAdmin={isAdmin}
         tenantSlug={tenant.slug}
+        tenantName={tenant.name}
         showAdminLink
         showEventListLink
       />
