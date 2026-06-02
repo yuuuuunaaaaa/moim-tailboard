@@ -22,6 +22,7 @@ import {
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
+import { collectOptionItemIdsFromForm } from "@/lib/syncParticipantOptions";
 import type { Event } from "@/types";
 
 // POST /api/participants — 참여 신청 (JWT → username → DB)
@@ -32,7 +33,6 @@ export async function POST(request: NextRequest) {
     const eventId = Number(formData.get("eventId"));
     const name = String(formData.get("name") ?? "").trim();
     const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
-    const optionItemIds = formData.getAll("optionItemIds").map(Number).filter(Boolean);
     const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
 
     const auth = await getUserFromRequest(request);
@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       [eventId, tenant.id],
     );
     if (!event) return new Response("Event not found", { status: 404 });
+
+    const optionItemIds = await collectOptionItemIdsFromForm(event.id, formData);
 
     const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
     if (!allowDuplicate) {

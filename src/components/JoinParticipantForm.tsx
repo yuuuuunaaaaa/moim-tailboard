@@ -71,6 +71,7 @@ export default function JoinParticipantForm({
 
       {optionGroups.map((group) => {
         const groupOptions = groupedItems.get(group.id) || [];
+        const fieldName = `g_${group.id}`;
         return (
           <div key={group.id} className="form-group option-group">
             <div className="option-group__name">{group.name}</div>
@@ -78,7 +79,7 @@ export default function JoinParticipantForm({
               <div className="checkbox-group">
                 {groupOptions.map((opt) => (
                   <label key={opt.id}>
-                    <input type="checkbox" name="optionItemIds" value={opt.id} />
+                    <input type="checkbox" name={fieldName} value={opt.id} />
                     {opt.name}
                     {opt.limit_enabled && opt.limit_count ? ` (정원 ${opt.limit_count}명)` : ""}
                   </label>
@@ -88,7 +89,7 @@ export default function JoinParticipantForm({
               <div className="radio-group">
                 {groupOptions.map((opt) => (
                   <label key={opt.id}>
-                    <input type="radio" name="optionItemIds" value={opt.id} />
+                    <input type="radio" name={fieldName} value={opt.id} />
                     {opt.name}
                     {opt.limit_enabled && opt.limit_count ? ` (정원 ${opt.limit_count}명)` : ""}
                   </label>
