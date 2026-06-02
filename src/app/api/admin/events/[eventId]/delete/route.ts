@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { admin, membership, username } = await getPageContext();
+    const { admin, membership } = await getPageContext();
     if (!admin) return new Response("관리자만 접근할 수 있습니다.", { status: 403 });
 
     const { eventId: eventIdStr } = await params;
@@ -39,20 +39,12 @@ export async function POST(
         return new Response("꼬리달기를 찾을 수 없습니다.", { status: 404 });
       }
 
-      await q.exec("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
+      await q.exec("DELETE FROM action_log WHERE tenant_id = ? AND event_id = ?", [
+        tenant.id,
+        eventId,
+      ]);
 
-      // 꼬리달기 삭제 후 기록 — FK ON DELETE SET NULL 이면 event_id/participant_id 는 NULL로 유지됨
-      await q.exec(
-        `INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata)
-         VALUES (?, NULL, NULL, ?, JSON_OBJECT('deletedEventId', ?, 'title', ?, 'username', ?))`,
-        [
-          tenant.id,
-          "ADMIN_DELETE_EVENT",
-          eventId,
-          evRow.title ?? "",
-          username ?? admin.username ?? null,
-        ],
-      );
+      await q.exec("DELETE FROM event WHERE id = ? AND tenant_id = ?", [eventId, tenant.id]);
 
       await conn.commit();
     } catch (e) {

@@ -42,7 +42,8 @@ export function extractTenantSlugFromReturnPath(pathWithSearch: string): string 
 
 function returnPathTenantMatchesSlug(path: string, slug: string): boolean {
   const fromPath = extractTenantSlugFromReturnPath(path);
-  if (!fromPath) return true;
+  // `/` 등 테넌트 정보가 없는 경로는 webapp startapp slug 와 매칭되지 않음 → 목록으로 폴백
+  if (!fromPath) return false;
   return fromPath === slug;
 }
 
