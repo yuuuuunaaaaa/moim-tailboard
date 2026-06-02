@@ -1,8 +1,15 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
-import { resolveAdminTenant } from "@/lib/adminTenant";
+import {
+  redirectAdminIfChoose,
+  redirectAdminIfRedirect,
+  redirectUnlessAdminTenantParam,
+  resolveAdminTenant,
+} from "@/lib/adminTenant";
 import { isSuperadminForTenant } from "@/lib/superadmin";
+import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import AdminEventEdit from "@/components/AdminEventEdit";
 import AutoToast from "@/components/AutoToast";
@@ -15,8 +22,6 @@ interface Props {
 
 export const metadata = { title: "관리 · 꼬리달기" };
 
-// 관리 메인에서 보여줄 수 있는 토스트 종류.
-// 다른 라우트(예: 토글 API) 가 redirect URL 에 ?toast=... 를 붙여 전달한다.
 const TOAST_TEXT: Record<string, string> = {
   event_toggled_active: "공개로 전환했습니다.",
   event_toggled_inactive: "비공개로 전환했습니다.",
@@ -26,8 +31,12 @@ export default async function AdminPage({ searchParams }: Props) {
   const { admin, membership, isAdmin } = await getPageContext();
   if (!admin || !membership) redirect("/login");
 
-  const sp = await searchParams;
+  const [sp, cookieStore] = await Promise.all([searchParams, cookies()]);
   const slugParam = (sp.tenant ?? "").trim();
+  const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+
+  redirectUnlessAdminTenantParam(slugParam, membership, allowedSlug);
+
   const toastKey = (sp.toast ?? "").trim();
   const toastText = TOAST_TEXT[toastKey] ?? "";
 
@@ -40,40 +49,12 @@ export default async function AdminPage({ searchParams }: Props) {
       </div>
     );
   }
-  if (res.kind === "redirect") {
-    redirect(`/admin?tenant=${encodeURIComponent(res.canonicalSlug)}`);
-  }
+  redirectAdminIfRedirect(res);
+  redirectAdminIfChoose(res);
 
-  if (res.kind === "choose") {
-    if (res.tenants.length === 0) {
-      return <div style={{ padding: "48px", textAlign: "center" }}>등록된 지역이 없습니다.</div>;
-    }
-    return (
-      <>
-        <Header isAdmin={isAdmin} showAdminLink />
-        <main className="container">
-          <h1>관리 — 소속 선택</h1>
-          <p className="page-subtitle">관리할 소속을 선택하세요.</p>
-          <ul className="event-list">
-            {res.tenants.map((t) => (
-              <li key={t.id} className="event-item">
-                <a href={`/admin?tenant=${encodeURIComponent(t.slug)}`}>{t.name}</a>
-                <div className="event-meta">{t.slug}</div>
-              </li>
-            ))}
-          </ul>
-          <p style={{ marginTop: "24px" }}>
-            <a href="/" className="back-link">← 참여용 지역 목록(메인)</a>
-          </p>
-        </main>
-      </>
-    );
-  }
-
-  const { tenant, tenants } = res;
+  const { tenant } = res;
   const isSuperadmin = isSuperadminForTenant(membership, tenant.id);
 
-  // 관리 목록 정렬: 직접 지정한 순서(event_order ASC) → 공개 우선(is_active DESC) → 가까운 날짜(event_date DESC)
   const events = await queryRows<Event>(
     "SELECT id, title, description, event_date, is_active, event_order, telegram_participant_join_prefix, telegram_participant_leave_prefix FROM event WHERE tenant_id = ? ORDER BY event_order ASC, is_active DESC, event_date DESC, id ASC",
     [tenant.id],

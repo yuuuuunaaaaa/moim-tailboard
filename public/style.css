@@ -488,6 +488,55 @@ html, body { overflow-x: clip; }
   text-align: center;
   pointer-events: none;
 }
+
+.admin-manage-tenant-fab-wrap {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+}
+
+.admin-manage-tenant-fab-wrap .admin-manage-tenant-fab {
+  position: static;
+}
+
+.admin-manage-tenant-fab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: transparent;
+}
+
+.admin-manage-tenant-fab-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  min-width: 140px;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.admin-manage-tenant-fab-menu__item {
+  display: block;
+  padding: 10px 14px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.admin-manage-tenant-fab-menu__item:hover,
+.admin-manage-tenant-fab-menu__item:focus-visible {
+  background: var(--surface-muted, #f3f4f6);
+  color: var(--primary);
+  text-decoration: none;
+}
 /* /admin 메인: 꼬리달기 목록·superadmin 링크 */
 .admin-manage-actions {
   display: flex;

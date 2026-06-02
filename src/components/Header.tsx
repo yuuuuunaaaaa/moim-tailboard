@@ -34,9 +34,8 @@ export default async function Header({
     process.env.ALLOW_LOCAL_WITHOUT_AUTH === "1" && process.env.NODE_ENV === "development";
   const brandHref = tenantSlug ? `/t/${tenantSlug}/events` : isDevBypass ? "/?stay=1" : "/";
   const resolvedAdminHref =
-    adminHref ??
-    (tenantSlug ? `/admin?tenant=${encodeURIComponent(tenantSlug)}` : "/admin");
-  const showManageLink = hasAdminAccess && showAdminLink !== false;
+    adminHref ?? `/admin?tenant=${encodeURIComponent(tenantSlug!)}`;
+  const showManageLink = hasAdminAccess && showAdminLink !== false && !!tenantSlug;
 
   return (
     <header className="page-header">

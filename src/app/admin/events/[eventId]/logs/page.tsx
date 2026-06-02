@@ -1,6 +1,12 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPageContext } from "@/lib/auth";
-import { redirectAdminIfChoose, resolveAdminTenant } from "@/lib/adminTenant";
+import {
+  redirectAdminIfChoose,
+  redirectUnlessAdminTenantParam,
+  resolveAdminTenant,
+} from "@/lib/adminTenant";
+import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { queryFirst, queryRows } from "@/lib/queryRows";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
@@ -55,8 +61,8 @@ function extractNameFromMetadata(meta: unknown): string {
 }
 
 export default async function AdminEventLogsPage({ params, searchParams }: Props) {
-  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
-    await Promise.all([getPageContext(), params, searchParams]);
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp, cookieStore] =
+    await Promise.all([getPageContext(), params, searchParams, cookies()]);
 
   if (!admin || !membership) redirect("/login");
 
@@ -66,6 +72,10 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   }
 
   const slugParam = (sp.tenant ?? "").trim();
+  const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+
+  redirectUnlessAdminTenantParam(slugParam, membership, allowedSlug);
+
   const res = resolveAdminTenant(membership, slugParam);
 
   if (res.kind === "missing") {

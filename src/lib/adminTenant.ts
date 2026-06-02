@@ -56,9 +56,37 @@ export function resolveAdminTenant(
   return { kind: "ok", tenant: found, tenants: managedTenants };
 }
 
-/** 엄격 모델: 소속 choose 는 `/admin` 에서만. missing·redirect 처리 후 호출. */
-export function redirectAdminIfChoose(
-  res: AdminTenantResult,
-): asserts res is Extract<AdminTenantResult, { kind: "ok" }> {
-  if (res.kind === "choose") redirect("/admin");
+/** ?tenant= 없을 때 이벤트 목록(또는 홈)으로 보냄 — 관리는 목록 헤더에서만 진입 */
+export function redirectUnlessAdminTenantParam(
+  slugParam: string,
+  membership: AdminMembership,
+  allowedSlug?: string,
+): void {
+  if (slugParam.trim()) return;
+
+  const cookieSlug = allowedSlug?.trim();
+  if (cookieSlug && membership.managedTenants.some((t) => t.slug === cookieSlug)) {
+    redirect(`/t/${encodeURIComponent(cookieSlug)}/events`);
+  }
+
+  if (membership.managedTenants.length === 1) {
+    redirect(`/t/${encodeURIComponent(membership.managedTenants[0]!.slug)}/events`);
+  }
+
+  redirect("/");
+}
+
+/** invalid slug 등 — 해당 지역 꼬리달기 목록으로 */
+export function redirectAdminIfRedirect(res: AdminTenantResult): void {
+  if (res.kind === "redirect") {
+    redirect(`/t/${encodeURIComponent(res.canonicalSlug)}/events`);
+  }
+}
+
+/** 소속 선택 UI 없음 — 홈(텔레그램 링크 안내)으로 */
+export function redirectAdminIfChoose(res: AdminTenantResult): asserts res is Extract<
+  AdminTenantResult,
+  { kind: "ok" }
+> {
+  if (res.kind === "choose") redirect("/");
 }
