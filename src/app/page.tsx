@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { getPageContext } from "@/lib/auth";
 import { hasMultipleAdminTenants } from "@/lib/adminMembership";
 import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
+import TelegramWebAppHomeRedirect from "@/components/TelegramWebAppHomeRedirectNoSsr";
 import type { Tenant } from "@/types";
 
 export const metadata = { title: "꼬리달기" };
@@ -16,22 +18,25 @@ export default async function HomePage() {
     ? managedTenants.map((t) => ({ id: t.id, slug: t.slug, name: t.name }))
     : [];
 
+  const cookieStore = await cookies();
+  const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value?.trim();
+
   if (username && isAdmin) {
     if (myTenants.length === 1) {
       redirect(`/t/${encodeURIComponent(myTenants[0]!.slug)}/events`);
     }
-  } else if (username) {
-    const cookieStore = await cookies();
-    const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value?.trim();
-    if (allowedSlug) {
-      redirect(`/t/${encodeURIComponent(allowedSlug)}/events`);
-    }
+  } else if (username && allowedSlug) {
+    redirect(`/t/${encodeURIComponent(allowedSlug)}/events`);
   }
 
   const showTenantList = canChooseTenant || myTenants.length > 1;
 
   return (
     <>
+      {username && (
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      )}
+      {username && <TelegramWebAppHomeRedirect />}
       <Header isAdmin={isAdmin} />
       <main className="container">
         {showTenantList ? (

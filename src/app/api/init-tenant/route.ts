@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findTenantBySlug } from "@/lib/db";
 import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { verifyToken } from "@/lib/jwt-verify";
+import { pickPostLoginPath } from "@/lib/loginReturnPath";
 import { TENANT_COOKIE_NAME, TENANT_COOKIE_MAX_AGE } from "@/lib/tenantRestrict";
 
 /**
@@ -11,7 +12,7 @@ import { TENANT_COOKIE_NAME, TENANT_COOKIE_MAX_AGE } from "@/lib/tenantRestrict"
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const slug = searchParams.get("slug");
-  const next = searchParams.get("next") || "/";
+  const nextRaw = searchParams.get("next");
 
   if (!slug) {
     return NextResponse.redirect(new URL("/", request.url));
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  const next = pickPostLoginPath(tenant.slug, nextRaw);
   const response = NextResponse.redirect(new URL(next, request.url));
   response.cookies.set(TENANT_COOKIE_NAME, tenant.slug, {
     maxAge: TENANT_COOKIE_MAX_AGE,
