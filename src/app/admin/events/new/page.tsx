@@ -48,7 +48,7 @@ export default async function AdminEventNewPage({ searchParams }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} showAdminLink showEventListLink />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showAdminLink showEventListLink />
       <main className="container container--wide">
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>꼬리달기 등록</h1>

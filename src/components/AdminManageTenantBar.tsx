@@ -38,7 +38,7 @@ export default function AdminManageTenantBar({ tenants }: { tenants: TenantOptio
           {others.map((t) => (
             <li key={t.slug} role="none">
               <a
-                href={`/t/${encodeURIComponent(t.slug)}/events`}
+                href={`/api/init-tenant?slug=${encodeURIComponent(t.slug)}&next=${encodeURIComponent(`/t/${t.slug}/events`)}`}
                 className="admin-manage-tenant-fab-menu__item"
                 role="menuitem"
                 onClick={() => setOpen(false)}

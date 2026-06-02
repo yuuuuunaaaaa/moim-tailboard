@@ -57,7 +57,7 @@ export default async function EventListPage({ params }: Props) {
   return (
     <>
       <TenantSlugPersist slug={tenant.slug} />
-      <Header isAdmin={isAdmin} tenantSlug={tenantSlug} showAdminLink />
+      <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showAdminLink />
       <main className="container">
         <p className="page-subtitle">
           진행 중<EasterEggTrigger>인 </EasterEggTrigger> 꼬리달기에 참여할 수 있습니다.

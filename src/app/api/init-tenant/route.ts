@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findTenantBySlug } from "@/lib/db";
+import { findTenantBySlugCached } from "@/lib/db";
 import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { verifyToken } from "@/lib/jwt-verify";
 import { pickPostLoginPath } from "@/lib/loginReturnPath";
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  const tenant = await findTenantBySlug(slug);
+  const tenant = await findTenantBySlugCached(slug);
   if (!tenant) {
     return NextResponse.redirect(new URL("/", request.url));
   }
