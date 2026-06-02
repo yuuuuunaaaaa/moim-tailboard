@@ -34,7 +34,7 @@ export default async function EventListPage({ params }: Props) {
     return (
       <div style={{ padding: "48px", textAlign: "center" }}>
         <h2>접근이 거부되었습니다.</h2>
-        <p>{admin ? "소속 지역만 접근할 수 있습니다." : "다른 지역에는 접근할 수 없습니다."}</p>
+        <p>{admin ? "소속된 데이터에만 접근할 수 있습니다." : "다른 소속에는 접근할 수 없습니다."}</p>
       </div>
     );
   }

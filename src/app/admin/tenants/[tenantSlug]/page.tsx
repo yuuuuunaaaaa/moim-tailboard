@@ -59,7 +59,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
         <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showAdminLink />
         <main className="container">
           <h2>접근 권한 없음</h2>
-          <p className="page-subtitle">관리자 추가·삭제는 해당 지역 최고 관리자만 할 수 있습니다.</p>
+          <p className="page-subtitle">관리자 추가·삭제는 해당 소속의 최고 관리자만 할 수 있습니다.</p>
           <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         </main>
       </>
@@ -80,7 +80,7 @@ export default async function AdminTenantPage({ params, searchParams }: Props) {
         <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         <h1>관리자</h1>
         <p className="page-subtitle">
-          이 지역의 일반 관리자를 추가·삭제합니다. 최고 관리자는 지역당 1명입니다.
+          이 소속의 일반 관리자를 추가·삭제합니다. 최고 관리자는 소속당 1명입니다.
         </p>
 
         {sp.error && ERROR_MSG[sp.error] && (

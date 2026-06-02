@@ -34,7 +34,7 @@ export default function AdminManageTenantBar({ tenants }: { tenants: TenantOptio
         />
       )}
       {open && others.length > 0 && (
-        <ul className="admin-manage-tenant-fab-menu" role="menu" aria-label="다른 지역 꼬리달기 목록">
+        <ul className="admin-manage-tenant-fab-menu" role="menu" aria-label="다른 소속 꼬리달기 목록">
           {others.map((t) => (
             <li key={t.slug} role="none">
               <a
@@ -52,14 +52,14 @@ export default function AdminManageTenantBar({ tenants }: { tenants: TenantOptio
       <button
         type="button"
         className="admin-manage-tenant-fab"
-        aria-label={`다른 지역 목록 (현재: ${label})`}
+        aria-label={`다른 소속 목록 (현재: ${label})`}
         aria-expanded={open}
         aria-haspopup="menu"
-        title={`다른 지역 · ${label}`}
+        title={`다른 소속 · ${label}`}
         onClick={() => setOpen((v) => !v)}
       >
         <span className="admin-manage-tenant-fab__text">
-          <span>지역</span>
+          <span>소속</span>
           <span>전환</span>
         </span>
       </button>

@@ -17,7 +17,7 @@ export function sanitizeInternalReturnPath(raw: string): string | null {
   }
 }
 
-/** `/t/{slug}/…` 또는 `?tenant=` / `?tenantSlug=` 에서 지역 slug 추출 */
+/** `/t/{slug}/…` 또는 `?tenant=` / `?tenantSlug=` 에서 소속 slug 추출 */
 export function extractTenantSlugFromReturnPath(pathWithSearch: string): string {
   const trimmed = pathWithSearch.trim();
   const q = trimmed.indexOf("?");

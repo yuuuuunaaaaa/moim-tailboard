@@ -30,7 +30,7 @@ export default async function AdminTenantSettingsPage({ params, searchParams }: 
 
   const tenant = await findTenantBySlug(tenantSlug);
   if (!tenant) {
-    return <div style={{ padding: "48px", textAlign: "center" }}>지역을 찾을 수 없습니다.</div>;
+    return <div style={{ padding: "48px", textAlign: "center" }}>소속을 찾을 수 없습니다.</div>;
   }
 
   if (!isSuperadminForTenant(membership, tenant.id)) {
@@ -39,7 +39,7 @@ export default async function AdminTenantSettingsPage({ params, searchParams }: 
         <Header isAdmin={isAdmin} tenantSlug={tenant.slug} tenantName={tenant.name} showAdminLink />
         <main className="container">
           <h2>접근 권한 없음</h2>
-          <p className="page-subtitle">텔레그램 설정은 해당 지역 최고 관리자만 변경할 수 있습니다.</p>
+          <p className="page-subtitle">텔레그램 설정은 해당 소속의 최고 관리자만 변경할 수 있습니다.</p>
           <a href={`/admin?tenant=${encodeURIComponent(tenant.slug)}`} className="back-link">← 관리</a>
         </main>
       </>

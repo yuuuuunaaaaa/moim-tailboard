@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant, membership)) {
-      return new Response("소속 지역만 수정할 수 있습니다.", { status: 403 });
+      return new Response("소속의 데이터만 수정할 수 있습니다.", { status: 403 });
     }
 
     const event = await queryFirst<{ id: number }>(

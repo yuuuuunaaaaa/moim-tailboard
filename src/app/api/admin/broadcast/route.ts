@@ -33,15 +33,15 @@ export async function POST(request: NextRequest) {
 
     const tenantSlug = typeof body.tenantSlug === "string" ? body.tenantSlug.trim() : "";
     if (!tenantSlug) {
-      return NextResponse.json({ success: false, error: "지역이 필요합니다." }, { status: 400 });
+      return NextResponse.json({ success: false, error: "소속이 필요합니다." }, { status: 400 });
     }
 
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) {
-      return NextResponse.json({ success: false, error: "지역을 찾을 수 없습니다." }, { status: 404 });
+      return NextResponse.json({ success: false, error: "소속을 찾을 수 없습니다." }, { status: 404 });
     }
     if (!canAccessTenant(admin, tenant, membership)) {
-      return NextResponse.json({ success: false, error: "소속 지역만 전송할 수 있습니다." }, { status: 403 });
+      return NextResponse.json({ success: false, error: "소속 텔레그램 방으로만 전송할 수 있습니다." }, { status: 403 });
     }
 
     const message = typeof body.message === "string" ? body.message.trim() : "";
