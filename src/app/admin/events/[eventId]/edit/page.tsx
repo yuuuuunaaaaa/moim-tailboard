@@ -1,7 +1,13 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { queryFirst, queryRows } from "@/lib/queryRows";
 import { getPageContext } from "@/lib/auth";
-import { redirectAdminIfChoose, resolveAdminTenant } from "@/lib/adminTenant";
+import {
+  redirectAdminIfChoose,
+  redirectUnlessAdminTenantParam,
+  resolveAdminTenant,
+} from "@/lib/adminTenant";
+import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
@@ -28,8 +34,8 @@ const TOAST_TEXT: Record<string, string> = {
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
-  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp] =
-    await Promise.all([getPageContext(), params, searchParams]);
+  const [{ admin, membership, isAdmin }, { eventId: eventIdStr }, sp, cookieStore] =
+    await Promise.all([getPageContext(), params, searchParams, cookies()]);
 
   if (!admin || !membership) redirect("/login");
 
@@ -41,6 +47,9 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   const slugParam = (sp.tenant ?? "").trim();
   const toast = (sp.toast ?? "").trim();
   const toastText = TOAST_TEXT[toast] ?? "";
+  const allowedSlug = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+
+  redirectUnlessAdminTenantParam(slugParam, membership, allowedSlug);
 
   const res = resolveAdminTenant(membership, slugParam);
 
