@@ -230,7 +230,7 @@ export async function sendMessage(
   }
   const id = chatId == null ? "" : String(chatId).trim();
   if (!id || id === "-1") {
-    return { ok: false, error: "이 지역에 연결된 텔레그램 채팅방이 없습니다." };
+    return { ok: false, error: "이 소속에 연결된 텔레그램 채팅방이 없습니다." };
   }
   const messageThreadId = parseMessageThreadId(opts?.messageThreadId);
   try {

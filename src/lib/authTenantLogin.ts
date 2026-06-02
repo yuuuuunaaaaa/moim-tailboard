@@ -2,9 +2,9 @@ import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembershi
 import { findTenantBySlug } from "@/lib/db";
 
 export const ERR_LOGIN_TENANT_REQUIRED =
-  "지역이 포함된 링크로 접속해 주세요. (소속 지역 텔레그램에서 공유된 링크 또는 주소에 ?tenantSlug= 가 있어야 합니다.)";
+  "소속이 포함된 링크로 접속해 주세요. (소속된 텔레그램에서 공유된 링크 또는 주소에 ?tenantSlug= 가 있어야 합니다.)";
 
-/** 텔레그램 로그인: 관리자는 소속 지역 링크 필요 (복수 지역이면 slug 로 구분) */
+/** 텔레그램 로그인: 관리자는 소속 링크 필요 (복수 소속이면 slug 로 구분) */
 export async function assertLoginTenantContext(
   username: string,
   tenantSlug: string,
@@ -27,11 +27,11 @@ export async function assertLoginTenantContext(
 
   const tenant = await findTenantBySlug(tenantSlug);
   if (!tenant) {
-    return { ok: false, status: 404, error: "지역을 찾을 수 없습니다." };
+    return { ok: false, status: 404, error: "소속을 찾을 수 없습니다." };
   }
 
   if (!canManageTenant(membership, tenant.id)) {
-    return { ok: false, status: 403, error: "관리 권한이 있는 지역 링크로만 로그인할 수 있습니다." };
+    return { ok: false, status: 403, error: "관리 권한이 있는 소속 링크로만 로그인할 수 있습니다." };
   }
 
   return { ok: true };

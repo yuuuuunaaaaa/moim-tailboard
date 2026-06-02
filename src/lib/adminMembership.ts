@@ -29,7 +29,7 @@ export type AdminMembership = {
   admin: Admin;
   managedTenants: Tenant[];
   managedTenantIds: number[];
-  /** is_superadmin=1 인 admin 행이 연결된 지역 ID (지역당 최대 1명) */
+  /** is_superadmin=1 인 admin 행이 연결된 소속 ID (소속당 최대 1명) */
   superadminTenantIds: number[];
 };
 

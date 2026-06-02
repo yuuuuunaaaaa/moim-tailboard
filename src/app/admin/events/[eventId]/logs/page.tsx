@@ -81,7 +81,7 @@ export default async function AdminEventLogsPage({ params, searchParams }: Props
   if (res.kind === "missing") {
     return (
       <div style={{ padding: "48px", textAlign: "center" }}>
-        {res.reason === "admin_tenant_not_found" ? "소속 지역을 찾을 수 없습니다." : "지역을 찾을 수 없습니다."}
+        {res.reason === "admin_tenant_not_found" ? "소속된 데이터를 찾을 수 없습니다." : "소속을 찾을 수 없습니다."}
       </div>
     );
   }
