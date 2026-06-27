@@ -5,13 +5,14 @@ export type BibleVerse = {
   t: string;
   i: string;
   w: string;
+  theme?: string;
 };
 
 let cache: BibleVerse[] | null = null;
 
 async function loadVerses(): Promise<BibleVerse[]> {
   if (cache) return cache;
-  const filePath = path.join(process.cwd(), "public/bible-json/k_bible_1950_dos_kr.json");
+  const filePath = path.join(process.cwd(), "public/bible-json/curated.json");
   const raw = await readFile(filePath, "utf-8");
   cache = JSON.parse(raw) as BibleVerse[];
   return cache;
