@@ -24,6 +24,7 @@ const TOAST_TEXT: Record<string, string> = {
   joined: "참여 신청이 완료되었습니다.",
   updated: "수정이 완료되었습니다.",
   cancelled: "참여가 취소되었습니다.",
+  cancel_blocked_day: "당일에는 취소할 수 없습니다. 임원에게 직접 취소 문의하세요.",
   participant_deleted: "참여 기록을 삭제했습니다.",
   duplicate: "같은 이름으로 이미 참여한 기록이 있습니다. 계속하려면 확인 후 다시 제출해 주세요.",
 };
@@ -143,6 +144,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             username={username}
             tenantSlug={tenant.slug}
             eventId={event.id}
+            eventDate={eventDateStr}
             isAdmin={isAdmin}
           />
         </div>

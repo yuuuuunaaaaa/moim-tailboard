@@ -12,6 +12,7 @@ interface Props {
   username: string | null | undefined;
   tenantSlug: string;
   eventId: number;
+  eventDate: string;
   isAdmin?: boolean;
 }
 
@@ -28,6 +29,7 @@ export default function ParticipantList({
   username,
   tenantSlug,
   eventId,
+  eventDate,
   isAdmin = false,
 }: Props) {
   const [showFlat, setShowFlat] = useState(false);
@@ -242,6 +244,7 @@ export default function ParticipantList({
                         participant={p}
                         eventId={eventId}
                         tenantSlug={tenantSlug}
+                        eventDate={eventDate}
                         participants={participants}
                         optionGroups={optionGroups}
                         optionItems={optionItems}
