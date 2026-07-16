@@ -273,6 +273,11 @@ export default function TelegramAuth({
           <p className="login-error-title">
             텔레그램에 <strong>공개 사용자명(username)</strong>이 없으면 자동 로그인이 되지 않습니다.
           </p>
+          <img
+            className="login-error-guide-img"
+            src="/image/username_info.jpeg"
+            alt="텔레그램 프로필에서 Username(@username) 위치 안내"
+          />
         </div>
       )}
 
