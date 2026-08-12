@@ -4,6 +4,7 @@ import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst, queryRows } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
+import { isEventClosed } from "@/lib/eventClosed";
 
 // POST /api/admin/events/[eventId]/participants/batch-update — 참여자 옵션 배치 수정
 export async function POST(
@@ -27,8 +28,8 @@ export async function POST(
 
     // 꼬리달기 소유 확인 + 그룹·참여자 목록 병렬 조회
     const [ev, groups, participants] = await Promise.all([
-      queryFirst<{ id: number }>(
-        "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
+      queryFirst<{ id: number; is_closed: number }>(
+        "SELECT id, is_closed FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
         [eventId, tenant.id],
       ),
       queryRows<{ id: number; multiple_select: number }>(
@@ -42,6 +43,15 @@ export async function POST(
     ]);
 
     if (!ev) return new Response("Event not found", { status: 404 });
+    if (isEventClosed(ev)) {
+      return NextResponse.redirect(
+        new URL(
+          `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`,
+          request.url,
+        ),
+        303,
+      );
+    }
 
     const groupIds = groups.map((g) => g.id);
     const participantIds = participants.map((r) => r.id);

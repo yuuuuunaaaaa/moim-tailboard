@@ -82,6 +82,9 @@ export default async function EventListPage({ params }: Props) {
                     <path d="M16 2v4M8 2v4M3 10h18" />
                   </svg>
                   {toDateInputValue(event.event_date)}
+                  {!!event.is_closed && (
+                    <span className="badge badge--closed" style={{ marginLeft: 8 }}>마감</span>
+                  )}
                 </div>
               </li>
             ))}

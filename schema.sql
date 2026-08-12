@@ -51,6 +51,11 @@ CREATE TABLE event (
   event_date DATE NOT NULL,
   -- 꼬리달기 노출/비노출 여부
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  -- 마감 여부. 1이면 참가·수정·취소 불가 (목록에는 계속 노출)
+  -- 기존 DB에는 ALTER로 추가:
+  --   ALTER TABLE event ADD COLUMN is_closed TINYINT(1) NOT NULL DEFAULT 0
+  --     COMMENT '마감 여부 (참가/수정/취소 불가)' AFTER is_active;
+  is_closed TINYINT(1) NOT NULL DEFAULT 0 COMMENT '마감 여부 (참가/수정/취소 불가)',
   -- 화면 표시 순서 (관리자가 드래그앤드롭으로 직접 지정). 작을수록 위.
   -- 기존 DB에는 ALTER로 추가:
   --   ALTER TABLE event ADD COLUMN event_order INT NOT NULL DEFAULT 0

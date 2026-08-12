@@ -8,6 +8,7 @@ import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import { syncParticipantOptionsFromForm } from "@/lib/syncParticipantOptions";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
+import { isEventClosed } from "@/lib/eventClosed";
 
 // POST /api/admin/events/[eventId]/participants/update-one — 참여자 1행 이름·옵션 저장 (관리자 또는 본인)
 export async function POST(
@@ -55,8 +56,8 @@ export async function POST(
     const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
 
     const [ev, p] = await Promise.all([
-      queryFirst<{ id: number }>(
-        "SELECT id FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
+      queryFirst<{ id: number; is_closed: number }>(
+        "SELECT id, is_closed FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
         [eventId, tenant.id],
       ),
       queryFirst<{ id: number; name: string; student_no: string | null; username: string | null }>(
@@ -66,6 +67,13 @@ export async function POST(
     ]);
 
     if (!ev) return new Response("Event not found", { status: 404 });
+    if (isEventClosed(ev)) {
+      const toastPath =
+        from === "event"
+          ? `/t/${tenant.slug}/events/${eventId}?toast=event_closed`
+          : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`;
+      return NextResponse.redirect(new URL(toastPath, request.url), 303);
+    }
     if (!p) return new Response("Participant not found", { status: 404 });
 
     const isOwner = p.username === username;

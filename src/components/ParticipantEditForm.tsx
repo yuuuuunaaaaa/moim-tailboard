@@ -3,22 +3,16 @@
 import { useMemo, useState } from "react";
 import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
-import AlertModal from "@/components/AlertModal";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
 import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
-import { isEventDayToday } from "@/lib/dateOnly";
 import { buildOptionGroupsWithItems } from "@/lib/participantOptionGroups";
 import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
-
-const CANCEL_BLOCKED_ON_EVENT_DAY =
-  "당일에는 취소할 수 없습니다.\n임원에게 직접 취소 문의하세요.";
 
 type Props = {
   participant: Participant;
   eventId: number;
   tenantSlug: string;
-  eventDate: string;
   participants: Participant[];
   optionGroups?: OptionGroup[];
   optionItems?: OptionItem[];
@@ -36,7 +30,6 @@ export default function ParticipantEditForm({
   participant: p,
   eventId,
   tenantSlug,
-  eventDate,
   participants,
   pendingDeleteId,
   submittingId,
@@ -66,15 +59,6 @@ export default function ParticipantEditForm({
   const isDeleting = pendingDeleteId === p.id;
   const isSubmitting = submittingId === p.id;
   const isAdmin = role === "admin";
-  const [showCancelBlockedModal, setShowCancelBlockedModal] = useState(false);
-
-  const handleDeleteClick = () => {
-    if (!isAdmin && isEventDayToday(eventDate)) {
-      setShowCancelBlockedModal(true);
-      return;
-    }
-    setPendingDeleteId(p.id);
-  };
 
   const saveRow = async (formEl: HTMLFormElement) => {
     setSubmittingId(p.id);
@@ -97,12 +81,6 @@ export default function ParticipantEditForm({
 
   return (
     <>
-      {showCancelBlockedModal && (
-        <AlertModal
-          message={CANCEL_BLOCKED_ON_EVENT_DAY}
-          onClose={() => setShowCancelBlockedModal(false)}
-        />
-      )}
     <form
       ref={formRef}
       className="p-edit-form"
@@ -212,7 +190,7 @@ export default function ParticipantEditForm({
             className="btn btn--danger btn--sm"
             type="button"
             disabled={isSubmitting}
-            onClick={handleDeleteClick}
+            onClick={() => setPendingDeleteId(p.id)}
           >
             삭제
           </button>

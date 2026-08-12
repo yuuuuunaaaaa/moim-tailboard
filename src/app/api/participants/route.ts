@@ -23,6 +23,7 @@ import {
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
 import { collectOptionItemIdsFromForm } from "@/lib/syncParticipantOptions";
+import { isEventClosed } from "@/lib/eventClosed";
 import type { Event } from "@/types";
 
 // POST /api/participants — 참여 신청 (JWT → username → DB)
@@ -57,6 +58,12 @@ export async function POST(request: NextRequest) {
       [eventId, tenant.id],
     );
     if (!event) return new Response("Event not found", { status: 404 });
+    if (isEventClosed(event)) {
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${event.id}?toast=event_closed`, request.url),
+        303,
+      );
+    }
 
     const optionItemIds = await collectOptionItemIdsFromForm(event.id, formData);
 

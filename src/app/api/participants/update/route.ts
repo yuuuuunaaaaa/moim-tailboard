@@ -15,10 +15,14 @@ import {
   getChatRoomThreadId,
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
-import { isEventDayToday, toDateInputValue } from "@/lib/dateOnly";
+import { isEventClosed } from "@/lib/eventClosed";
 import type { Participant } from "@/types";
 
-type ParticipantWithEvent = Participant & { tenant_id: number; event_id: number; event_date: Date | string };
+type ParticipantWithEvent = Participant & {
+  tenant_id: number;
+  event_id: number;
+  is_closed: number;
+};
 
 // POST /api/participants/update — 수정 또는 취소 (JWT → username → DB)
 export async function POST(request: NextRequest) {
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const participant = await queryFirst<ParticipantWithEvent>(
-      "SELECT p.*, e.tenant_id, e.id AS event_id, e.event_date FROM participant p JOIN event e ON p.event_id = e.id WHERE p.id = ? LIMIT 1",
+      "SELECT p.*, e.tenant_id, e.id AS event_id, e.is_closed FROM participant p JOIN event e ON p.event_id = e.id WHERE p.id = ? LIMIT 1",
       [participantId],
     );
     if (!participant || participant.tenant_id !== tenant.id) {
@@ -60,10 +64,10 @@ export async function POST(request: NextRequest) {
       return new Response("이름·옵션 수정은 update-one API를 사용하세요.", { status: 400 });
     }
 
-    if (isEventDayToday(toDateInputValue(participant.event_date))) {
+    if (isEventClosed(participant)) {
       return NextResponse.redirect(
         new URL(
-          `/t/${tenant.slug}/events/${participant.event_id}?toast=cancel_blocked_day`,
+          `/t/${tenant.slug}/events/${participant.event_id}?toast=event_closed`,
           request.url,
         ),
         303,

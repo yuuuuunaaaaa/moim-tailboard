@@ -1,4 +1,5 @@
 import { toDateInputValue } from "@/lib/dateOnly";
+import { isEventClosed, EVENT_CLOSED_MESSAGE } from "@/lib/eventClosed";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { findTenantBySlugCached } from "@/lib/db";
@@ -24,7 +25,7 @@ const TOAST_TEXT: Record<string, string> = {
   joined: "참여 신청이 완료되었습니다.",
   updated: "수정이 완료되었습니다.",
   cancelled: "참여가 취소되었습니다.",
-  cancel_blocked_day: "당일에는 취소할 수 없습니다. 임원에게 직접 취소 문의하세요.",
+  event_closed: EVENT_CLOSED_MESSAGE,
   participant_deleted: "참여 기록을 삭제했습니다.",
   duplicate: "같은 이름으로 이미 참여한 기록이 있습니다. 계속하려면 확인 후 다시 제출해 주세요.",
 };
@@ -102,6 +103,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   ]);
 
   const eventDateStr = toDateInputValue(event.event_date);
+  const closed = isEventClosed(event);
   const toastText = typeof sp?.toast === "string" ? TOAST_TEXT[sp.toast] ?? "" : "";
 
   return (
@@ -117,23 +119,34 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <a href={`/t/${tenant.slug}/events`} className="back-link">
           ← 꼬리달기 목록
         </a>
-        <h1>{event.title}</h1>
+        <h1>
+          {event.title}
+          {closed && (
+            <span className="badge badge--closed" style={{ marginLeft: 10, verticalAlign: "middle" }}>
+              마감
+            </span>
+          )}
+        </h1>
         <p className="page-subtitle">
-          {eventDateStr} · {event.description ? event.description : "꼬리달기에 참여해 주세요."}
+          {eventDateStr} · {closed ? "마감된 꼬리달기입니다." : event.description ? event.description : "꼬리달기에 참여해 주세요."}
         </p>
 
         <div className="layout-half">
           <div className="card">
             <h2 className="card__title">참여 신청</h2>
-            <JoinParticipantForm
-              tenantSlug={tenant.slug}
-              eventId={event.id}
-              username={username}
-              isDevBypass={isDevBypass}
-              optionGroups={optionGroups}
-              optionItems={optionItems}
-              participants={participants}
-            />
+            {closed ? (
+              <p className="empty-state mt-0 mb-0">{EVENT_CLOSED_MESSAGE}</p>
+            ) : (
+              <JoinParticipantForm
+                tenantSlug={tenant.slug}
+                eventId={event.id}
+                username={username}
+                isDevBypass={isDevBypass}
+                optionGroups={optionGroups}
+                optionItems={optionItems}
+                participants={participants}
+              />
+            )}
           </div>
 
           <ParticipantList
@@ -144,8 +157,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             username={username}
             tenantSlug={tenant.slug}
             eventId={event.id}
-            eventDate={eventDateStr}
             isAdmin={isAdmin}
+            isClosed={closed}
           />
         </div>
       </main>

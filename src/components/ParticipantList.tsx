@@ -12,8 +12,8 @@ interface Props {
   username: string | null | undefined;
   tenantSlug: string;
   eventId: number;
-  eventDate: string;
   isAdmin?: boolean;
+  isClosed?: boolean;
 }
 
 /** 이름 + (학번) 형식으로 조합. join 결과를 cache 해 두고 여러 뷰에서 재사용. */
@@ -29,8 +29,8 @@ export default function ParticipantList({
   username,
   tenantSlug,
   eventId,
-  eventDate,
   isAdmin = false,
+  isClosed = false,
 }: Props) {
   const [showFlat, setShowFlat] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -196,7 +196,7 @@ export default function ParticipantList({
                 const isEditing = editingId === p.id;
                 const isOwner = !!username && p.username === username;
                 const canAdminEdit = isAdmin && !isOwner;
-                const canOpenEditor = isOwner || canAdminEdit;
+                const canOpenEditor = !isClosed && (isOwner || canAdminEdit);
 
                 return (
                   <li key={p.id} className="p-item" id={`p-item-${p.id}`}>
@@ -244,7 +244,6 @@ export default function ParticipantList({
                         participant={p}
                         eventId={eventId}
                         tenantSlug={tenantSlug}
-                        eventDate={eventDate}
                         participants={participants}
                         optionGroups={optionGroups}
                         optionItems={optionItems}

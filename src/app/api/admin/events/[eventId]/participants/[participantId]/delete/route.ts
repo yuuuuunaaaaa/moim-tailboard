@@ -4,6 +4,7 @@ import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { canAccessTenant } from "@/lib/tenantRestrict";
+import { isEventClosed } from "@/lib/eventClosed";
 
 /** 관리자가 참여자 삭제 — DB 정리만 하고 텔레그램 알림은 보내지 않음 */
 export async function POST(
@@ -38,8 +39,9 @@ export async function POST(
       id: number;
       name: string;
       username: string;
+      is_closed: number;
     }>(
-      `SELECT p.id, p.name, p.username
+      `SELECT p.id, p.name, p.username, e.is_closed
        FROM participant p
        JOIN event e ON p.event_id = e.id
        WHERE p.id = ? AND p.event_id = ? AND e.tenant_id = ?
@@ -48,6 +50,15 @@ export async function POST(
     );
     if (!participant) {
       return new Response("Participant not found", { status: 404 });
+    }
+    if (isEventClosed(participant)) {
+      return NextResponse.redirect(
+        new URL(
+          `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`,
+          request.url,
+        ),
+        303,
+      );
     }
 
     await execute(

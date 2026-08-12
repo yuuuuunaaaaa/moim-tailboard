@@ -59,7 +59,14 @@ export function EventRow({
       )}
 
       <div className="event-admin-info">
-        <div className="event-admin-title">{ev.title}</div>
+        <div className="event-admin-title">
+          {ev.title}
+          {!!ev.is_closed && (
+            <span className="badge badge--closed" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+              마감
+            </span>
+          )}
+        </div>
       </div>
 
       {!isClone ? (

@@ -13,6 +13,7 @@ import TenantSlugPersist from "@/components/TenantSlugPersist";
 import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
 import AdminEventVisibilityToggle from "@/components/AdminEventVisibilityToggle";
+import AdminEventClosedToggle from "@/components/AdminEventClosedToggle";
 import AutoToast from "@/components/AutoToast";
 import AdminOptionItemsField from "@/components/AdminOptionItemsField";
 import AdminAddOptionGroupForm from "@/components/AdminAddOptionGroupForm";
@@ -31,6 +32,9 @@ const TOAST_TEXT: Record<string, string> = {
   participant_deleted: "참여 기록을 삭제했습니다.",
   event_toggled_active: "공개로 전환했습니다.",
   event_toggled_inactive: "비공개로 전환했습니다.",
+  event_closed_on: "마감했습니다.",
+  event_closed_off: "마감을 해제했습니다.",
+  event_closed: "마감된 꼬리달기입니다. 참가·수정·취소가 불가능합니다.",
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
@@ -120,6 +124,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
 
   const eventDateVal = toDateInputValue(event.event_date);
   const clearHref = `/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`;
+  const isClosed = !!event.is_closed;
 
   return (
     <div className="page-admin-edit">
@@ -136,6 +141,12 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
         <div className="admin-edit-header">
           <h1 style={{ margin: 0 }}>꼬리달기 수정</h1>
           <div className="admin-edit-header-actions">
+            <AdminEventClosedToggle
+              eventId={event.id}
+              tenantSlug={tenant.slug}
+              returnTo={clearHref}
+              isClosed={isClosed}
+            />
             <AdminEventVisibilityToggle
               eventId={event.id}
               tenantSlug={tenant.slug}
@@ -242,7 +253,12 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
             ) : (
               <>
-                <p className="form-hint" style={{ marginTop: 0 }}>
+                {isClosed && (
+                  <p className="form-hint" style={{ marginTop: 0, color: "#b45309" }}>
+                    마감된 꼬리달기입니다. 참여자 수정·삭제가 불가능합니다.
+                  </p>
+                )}
+                <p className="form-hint" style={{ marginTop: isClosed ? "8px" : 0 }}>
                   맨 오른쪽 <strong>수정</strong>은 해당 참여자 옵션만 저장하고,{" "}
                   <strong>참여 삭제</strong>는 목록에서 제거합니다(텔레그램 방 알림은 가지 않습니다).
                 </p>
@@ -252,6 +268,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   groups={groupsWithItems}
                   participants={participants}
                   participantOptMap={participantOptIds}
+                  isClosed={isClosed}
                 />
               </>
             )}
