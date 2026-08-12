@@ -99,24 +99,13 @@ function titleWithPrefix(ev: TenantEventParticipantSnapshot): string {
 }
 
 function formatEventSnapshotBlock(ev: TenantEventParticipantSnapshot): string {
-  // 각 블록은 앞에 빈 줄을 넣어 시각적으로 구분
-  // 옵션 그룹이 2개 이상: 제목을 볼드로 한 줄, 그룹별 인원을 그 아래 들여쓰기로
-  if (ev.lines.length > 0) {
-    const sub: string[] = ["", "", `<b>${titleWithPrefix(ev)}</b>`];
-    for (const L of ev.lines) {
-      sub.push(`- ${escapeHtml(L.groupName)} ${L.count}명${formatDelta(L.delta)}`);
-    }
-    return sub.join("\n");
-  }
-  // 옵션 그룹이 0~1개: 한 줄로 '이벤트 제목 n명 (+1)'
-  const tf = ev.totalFallback;
-  const count = tf?.count ?? 0;
-  return `\n\n${titleWithPrefix(ev)} ${count}명${formatDelta(tf?.delta)}`;
+  // 각 블록은 앞에 빈 줄을 넣어 시각적으로 구분. '이벤트 제목 n명 (+1)' 한 줄.
+  return `\n\n${titleWithPrefix(ev)} ${ev.count}명${formatDelta(ev.delta)}`;
 }
 
 /**
- * 참가 인원 변동 알림 — 테넌트 활성 꼬리달기 전체 + 이벤트별 옵션 그룹(또는 전체) 인원.
- * (±n) 은 이번 신청/취소가 발생한 꼬리달기에만 붙음.
+ * 참가 인원 변동 알림 — 테넌트 활성 꼬리달기 전체의 신청 인원(옵션 그룹과 무관).
+ * (±1) 은 이번 신청/취소가 발생한 꼬리달기에만 붙음.
  */
 export function buildParticipantTenantWideSummaryTelegramHtml(opts: {
   events: TenantEventParticipantSnapshot[];

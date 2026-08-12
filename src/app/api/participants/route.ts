@@ -6,7 +6,6 @@ import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import {
   countEventParticipants,
-  fetchJoinDeltaPerOptionGroup,
   fetchTenantParticipantSnapshots,
   isParticipantCountMilestone,
 } from "@/lib/participantGroupCounts";
@@ -122,13 +121,7 @@ export async function POST(request: NextRequest) {
     );
 
     const link = eventListUrl(tenant.slug);
-    const joinDelta = await fetchJoinDeltaPerOptionGroup(optionItemIds);
-    const snapshots = await fetchTenantParticipantSnapshots(
-      tenant.id,
-      event.id,
-      "join",
-      joinDelta,
-    );
+    const snapshots = await fetchTenantParticipantSnapshots(tenant.id, event.id, "join");
 
     await sendMessage(
       tenant.chat_room_id,
