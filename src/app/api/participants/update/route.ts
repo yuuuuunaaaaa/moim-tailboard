@@ -4,10 +4,7 @@ import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembershi
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
-import {
-  fetchLeaveRemovedCountPerOptionGroup,
-  fetchTenantParticipantSnapshots,
-} from "@/lib/participantGroupCounts";
+import { fetchTenantParticipantSnapshots } from "@/lib/participantGroupCounts";
 import {
   sendMessage,
   eventListUrl,
@@ -75,8 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const removedByGroup = await fetchLeaveRemovedCountPerOptionGroup(participant.id);
-
     await execute(
       "INSERT INTO action_log (tenant_id, event_id, participant_id, action, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT('name', ?))",
       [tenant.id, participant.event_id, participant.id, "CANCEL_EVENT", participant.name],
@@ -95,7 +90,6 @@ export async function POST(request: NextRequest) {
       tenant.id,
       participant.event_id,
       "leave",
-      removedByGroup,
     );
 
     await sendMessage(
