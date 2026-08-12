@@ -217,6 +217,9 @@ label .optional { font-weight: 400; color: var(--muted); }
   margin: 6px 0 0 0;
 }
 .form-hint--warning { color: var(--danger); }
+.option-group__required { color: var(--danger); font-weight: 700; }
+/* flex 컨테이너(.p-edit-fields 등) 안에서도 한 줄 전체를 차지하게 */
+.participant-name-hint { flex-basis: 100%; width: 100%; }
 
 /* 텍스트·선택·날짜 등 공통 필드 (type 생략 input 포함) */
 .form-field,
@@ -776,6 +779,7 @@ html, body { overflow-x: clip; }
 .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
 .badge--on { background: var(--primary-light); color: var(--primary-hover); }
 .badge--off { background: #f3f4f6; color: var(--muted); }
+.badge--closed { background: #fef3c7; color: #b45309; }
 .event-edit-wrapper { display: none; padding: 10px 0 4px; }
 .event-edit-form .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .event-edit-form .row input, .event-edit-form .row textarea { flex: 1; min-width: 120px; }

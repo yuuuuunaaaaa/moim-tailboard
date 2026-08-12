@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
+import ParticipantNameInput from "@/components/ParticipantNameInput";
+import {
+  findUnselectedRequiredGroupName,
+  requiredOptionGroupMessage,
+} from "@/lib/requiredOptionGroups";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
 
 type Props = {
@@ -26,6 +31,7 @@ export default function JoinParticipantForm({
   participants,
 }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [requiredError, setRequiredError] = useState<string | null>(null);
   const {
     formRef,
     showDuplicateConfirm,
@@ -57,6 +63,13 @@ export default function JoinParticipantForm({
           e.preventDefault();
           return;
         }
+        const missing = findUnselectedRequiredGroupName(e.currentTarget, optionGroups);
+        if (missing) {
+          e.preventDefault();
+          setRequiredError(requiredOptionGroupMessage(missing));
+          return;
+        }
+        setRequiredError(null);
         handleDuplicateSubmit(e, () => setSubmitting(true));
       }}
     >
@@ -66,7 +79,7 @@ export default function JoinParticipantForm({
 
       <div className="form-group">
         <label htmlFor="name">이름</label>
-        <input id="name" name="name" type="text" required placeholder="이름을 입력하세요" />
+        <ParticipantNameInput id="name" required placeholder="이름을 입력하세요" />
       </div>
 
       {optionGroups.map((group) => {
@@ -74,7 +87,14 @@ export default function JoinParticipantForm({
         const fieldName = `g_${group.id}`;
         return (
           <div key={group.id} className="form-group option-group">
-            <div className="option-group__name">{group.name}</div>
+            <div className="option-group__name">
+              {group.name}
+              {group.is_required ? (
+                <span className="option-group__required"> *</span>
+              ) : (
+                <span className="optional"> (선택)</span>
+              )}
+            </div>
             {group.multiple_select ? (
               <div className="checkbox-group">
                 {groupOptions.map((opt) => (
@@ -99,6 +119,12 @@ export default function JoinParticipantForm({
           </div>
         );
       })}
+
+      {requiredError && (
+        <p className="form-hint form-hint--warning" role="alert">
+          {requiredError}
+        </p>
+      )}
 
       {showDuplicateConfirm && (
         <DuplicateParticipantConfirm

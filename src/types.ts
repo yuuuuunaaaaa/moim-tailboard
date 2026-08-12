@@ -29,6 +29,8 @@ export interface Event {
   /** DATE (YYYY-MM-DD) */
   event_date: Date | string;
   is_active: number;
+  /** 마감 여부. 1이면 일반 참여자의 참가·수정·취소 불가 (목록에는 계속 노출) */
+  is_closed: number;
   /** 화면 표시 순서. 작을수록 위. 관리 화면 드래그앤드롭으로 갱신 */
   event_order: number;
   /** 참가 신청 방 알림 말머리. null/빈 문자열이면 기본 👤 */
@@ -42,6 +44,8 @@ export interface OptionGroup {
   event_id: number;
   name: string;
   multiple_select: number;
+  /** 1이면 참여 신청·수정 시 이 그룹에서 최소 1개를 골라야 한다 */
+  is_required: number;
   sort_order: number;
 }
 

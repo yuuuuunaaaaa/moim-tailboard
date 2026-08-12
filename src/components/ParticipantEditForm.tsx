@@ -3,22 +3,21 @@
 import { useMemo, useState } from "react";
 import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
-import AlertModal from "@/components/AlertModal";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
 import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
-import { isEventDayToday } from "@/lib/dateOnly";
+import ParticipantNameInput from "@/components/ParticipantNameInput";
 import { buildOptionGroupsWithItems } from "@/lib/participantOptionGroups";
+import {
+  findUnselectedRequiredGroupName,
+  requiredOptionGroupMessage,
+} from "@/lib/requiredOptionGroups";
 import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
-
-const CANCEL_BLOCKED_ON_EVENT_DAY =
-  "당일에는 취소할 수 없습니다.\n임원에게 직접 취소 문의하세요.";
 
 type Props = {
   participant: Participant;
   eventId: number;
   tenantSlug: string;
-  eventDate: string;
   participants: Participant[];
   optionGroups?: OptionGroup[];
   optionItems?: OptionItem[];
@@ -36,7 +35,6 @@ export default function ParticipantEditForm({
   participant: p,
   eventId,
   tenantSlug,
-  eventDate,
   participants,
   pendingDeleteId,
   submittingId,
@@ -66,15 +64,7 @@ export default function ParticipantEditForm({
   const isDeleting = pendingDeleteId === p.id;
   const isSubmitting = submittingId === p.id;
   const isAdmin = role === "admin";
-  const [showCancelBlockedModal, setShowCancelBlockedModal] = useState(false);
-
-  const handleDeleteClick = () => {
-    if (!isAdmin && isEventDayToday(eventDate)) {
-      setShowCancelBlockedModal(true);
-      return;
-    }
-    setPendingDeleteId(p.id);
-  };
+  const [requiredError, setRequiredError] = useState<string | null>(null);
 
   const saveRow = async (formEl: HTMLFormElement) => {
     setSubmittingId(p.id);
@@ -85,7 +75,6 @@ export default function ParticipantEditForm({
         participantId: p.id,
         container: formEl,
         groups,
-        from: "event",
         allowDuplicate,
       });
     } catch (e) {
@@ -97,12 +86,6 @@ export default function ParticipantEditForm({
 
   return (
     <>
-      {showCancelBlockedModal && (
-        <AlertModal
-          message={CANCEL_BLOCKED_ON_EVENT_DAY}
-          onClose={() => setShowCancelBlockedModal(false)}
-        />
-      )}
     <form
       ref={formRef}
       className="p-edit-form"
@@ -115,6 +98,14 @@ export default function ParticipantEditForm({
           return;
         }
         if (isDeleting) return;
+
+        const missing = findUnselectedRequiredGroupName(e.currentTarget, groups);
+        if (missing) {
+          e.preventDefault();
+          setRequiredError(requiredOptionGroupMessage(missing));
+          return;
+        }
+        setRequiredError(null);
 
         handleDuplicateSubmit(e, () => {
           e.preventDefault();
@@ -132,7 +123,7 @@ export default function ParticipantEditForm({
       />
       <input type="hidden" name="studentNo" value={p.student_no || ""} />
       <div className="p-edit-fields">
-        <input type="text" name="name" defaultValue={p.name} placeholder="이름" disabled={isSubmitting} />
+        <ParticipantNameInput defaultValue={p.name} placeholder="이름" disabled={isSubmitting} />
       </div>
       <ParticipantOptionInputs
         groups={groups}
@@ -140,6 +131,11 @@ export default function ParticipantEditForm({
         disabled={isSubmitting}
         variant="inline"
       />
+      {requiredError && (
+        <p className="form-hint form-hint--warning" role="alert">
+          {requiredError}
+        </p>
+      )}
       <div className="p-edit-actions">
         <button
           className="btn btn--secondary btn--sm"
@@ -212,7 +208,7 @@ export default function ParticipantEditForm({
             className="btn btn--danger btn--sm"
             type="button"
             disabled={isSubmitting}
-            onClick={handleDeleteClick}
+            onClick={() => setPendingDeleteId(p.id)}
           >
             삭제
           </button>

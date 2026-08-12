@@ -8,6 +8,8 @@ interface NewOptionGroup {
   id: number;
   name: string;
   multipleSelect: boolean;
+  /** 기본은 필수. 관리자가 직접 해제한다. */
+  required: boolean;
   items: OptionItemRow[];
 }
 
@@ -22,7 +24,10 @@ export default function AdminEventCreateForm({ tenant, username }: Props) {
 
   function addCreateGroup() {
     const id = createGroupIdx.current++;
-    setCreateGroups((prev) => [...prev, { id, name: "", multipleSelect: false, items: rowsFromItems([]) }]);
+    setCreateGroups((prev) => [
+      ...prev,
+      { id, name: "", multipleSelect: false, required: true, items: rowsFromItems([]) },
+    ]);
   }
 
   function removeCreateGroup(id: number) {
@@ -38,6 +43,7 @@ export default function AdminEventCreateForm({ tenant, username }: Props) {
         <span key={g.id}>
           <input type="hidden" name="groupName" value={g.name} />
           <input type="hidden" name="multipleSelect" value={g.multipleSelect ? "true" : "false"} />
+          <input type="hidden" name="groupRequired" value={g.required ? "true" : "false"} />
           <input
             type="hidden"
             name="groupOptionNames"
@@ -105,6 +111,19 @@ export default function AdminEventCreateForm({ tenant, username }: Props) {
                     }
                   />
                   복수선택
+                </label>
+                <label style={{ whiteSpace: "nowrap", fontSize: "0.8125rem", margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    style={{ width: "auto", marginRight: "4px" }}
+                    checked={g.required}
+                    onChange={(e) =>
+                      setCreateGroups((prev) =>
+                        prev.map((x) => (x.id === g.id ? { ...x, required: e.target.checked } : x)),
+                      )
+                    }
+                  />
+                  필수
                 </label>
                 <button
                   type="button"

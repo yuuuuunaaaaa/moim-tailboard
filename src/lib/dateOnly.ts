@@ -29,23 +29,3 @@ export function formatDateKorean(v: Date | string): string {
   return s ? s.replace(/-/g, ".") : "";
 }
 
-function kstYmdFromDate(d: Date): string {
-  const parts = KST_YMD.formatToParts(d).reduce<Record<string, string>>((acc, p) => {
-    if (p.type !== "literal") acc[p.type] = p.value;
-    return acc;
-  }, {});
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-
-/** KST(Asia/Seoul) 기준 오늘 날짜 YYYY-MM-DD */
-export function getTodayKstYmd(): string {
-  return kstYmdFromDate(new Date());
-}
-
-/** 행사일이 KST 기준 오늘인지 */
-export function isEventDayToday(eventDateYmd: string): boolean {
-  const d = eventDateYmd.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-  return d === getTodayKstYmd();
-}
-

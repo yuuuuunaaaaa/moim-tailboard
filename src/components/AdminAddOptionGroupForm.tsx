@@ -33,6 +33,10 @@ export default function AdminAddOptionGroupForm({ tenantSlug, eventId }: Props) 
             <input type="checkbox" name="multipleSelect" value="true" />
             복수선택
           </label>
+          <label className="option-group-edit-check">
+            <input type="checkbox" name="required" value="true" defaultChecked />
+            필수
+          </label>
           <button className="btn btn--secondary option-group-edit-btn" type="submit">
             그룹 추가
           </button>

@@ -10,13 +10,13 @@ import {
 import { TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import Header from "@/components/Header";
 import TenantSlugPersist from "@/components/TenantSlugPersist";
-import AdminParticipantOptionsGrid from "@/components/AdminParticipantOptionsGrid";
 import AdminEventDeleteForm from "@/components/AdminEventDeleteForm";
 import AdminEventVisibilityToggle from "@/components/AdminEventVisibilityToggle";
+import AdminEventClosedToggle from "@/components/AdminEventClosedToggle";
 import AutoToast from "@/components/AutoToast";
 import AdminOptionItemsField from "@/components/AdminOptionItemsField";
 import AdminAddOptionGroupForm from "@/components/AdminAddOptionGroupForm";
-import type { Event, OptionGroup, OptionItem, Participant, ParticipantOption } from "@/types";
+import type { Event, OptionGroup, OptionItem } from "@/types";
 import { toDateInputValue } from "@/lib/dateOnly";
 
 interface Props {
@@ -28,9 +28,10 @@ export const metadata = { title: "수정 · 꼬리달기" };
 
 const TOAST_TEXT: Record<string, string> = {
   row_saved: "저장되었습니다.",
-  participant_deleted: "참여 기록을 삭제했습니다.",
   event_toggled_active: "공개로 전환했습니다.",
   event_toggled_inactive: "비공개로 전환했습니다.",
+  event_closed_on: "마감했습니다.",
+  event_closed_off: "마감을 해제했습니다.",
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
@@ -75,32 +76,18 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
     return <div style={{ padding: "48px", textAlign: "center" }}>꼬리달기를 찾을 수 없습니다.</div>;
   }
 
-  // 이벤트가 확정된 뒤: 옵션 그룹·참여자는 서로 독립 → 병렬
-  const [optionGroups, participants] = await Promise.all([
-    queryRows<OptionGroup>(
-      "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
-      [event.id],
-    ),
-    queryRows<Participant>(
-      "SELECT * FROM participant WHERE event_id = ? ORDER BY id ASC",
-      [event.id],
-    ),
-  ]);
+  const optionGroups = await queryRows<OptionGroup>(
+    "SELECT * FROM option_group WHERE event_id = ? ORDER BY sort_order ASC",
+    [event.id],
+  );
 
-  const [optionItems, participantOptions] = await Promise.all([
+  const optionItems =
     optionGroups.length === 0
-      ? Promise.resolve<OptionItem[]>([])
-      : queryRows<OptionItem>(
+      ? []
+      : await queryRows<OptionItem>(
           "SELECT * FROM option_item WHERE option_group_id IN (?) ORDER BY option_group_id, sort_order ASC",
           [optionGroups.map((g) => g.id)],
-        ),
-    participants.length === 0
-      ? Promise.resolve<ParticipantOption[]>([])
-      : queryRows<ParticipantOption>(
-          "SELECT po.*, oi.option_group_id FROM participant_option po JOIN option_item oi ON po.option_item_id = oi.id WHERE po.participant_id IN (?)",
-          [participants.map((p) => p.id)],
-        ),
-  ]);
+        );
 
   // 파생 자료구조: O(n+m)으로 준비
   const itemsByGroup = new Map<number, OptionItem[]>();
@@ -111,15 +98,9 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
   }
   const groupsWithItems = optionGroups.map((g) => ({ ...g, items: itemsByGroup.get(g.id) ?? [] }));
 
-  const participantOptIds: Record<number, number[]> = {};
-  for (const p of participants) participantOptIds[p.id] = [];
-  for (const po of participantOptions) {
-    const arr = participantOptIds[po.participant_id];
-    if (arr) arr.push(po.option_item_id);
-  }
-
   const eventDateVal = toDateInputValue(event.event_date);
   const clearHref = `/admin/events/${event.id}/edit?tenant=${encodeURIComponent(tenant.slug)}`;
+  const isClosed = !!event.is_closed;
 
   return (
     <div className="page-admin-edit">
@@ -136,6 +117,12 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
         <div className="admin-edit-header">
           <h1 style={{ margin: 0 }}>꼬리달기 수정</h1>
           <div className="admin-edit-header-actions">
+            <AdminEventClosedToggle
+              eventId={event.id}
+              tenantSlug={tenant.slug}
+              returnTo={clearHref}
+              isClosed={isClosed}
+            />
             <AdminEventVisibilityToggle
               eventId={event.id}
               tenantSlug={tenant.slug}
@@ -204,6 +191,15 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                                 />
                                 복수선택
                               </label>
+                              <label className="option-group-edit-check">
+                                <input
+                                  type="checkbox"
+                                  name="required"
+                                  value="true"
+                                  defaultChecked={!!g.is_required}
+                                />
+                                필수
+                              </label>
                               <button className="btn btn--secondary option-group-edit-btn" type="submit">
                                 저장
                               </button>
@@ -235,26 +231,16 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
           </div>
 
           <div className="card" style={{ gridColumn: "1 / -1" }}>
-            <h2 className="card__title">참여자 옵션 배치 수정</h2>
-            {participants.length === 0 ? (
-              <p className="empty-state mt-0 mb-0">참여자가 없습니다.</p>
-            ) : groupsWithItems.length === 0 ? (
-              <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
-            ) : (
-              <>
-                <p className="form-hint" style={{ marginTop: 0 }}>
-                  맨 오른쪽 <strong>수정</strong>은 해당 참여자 옵션만 저장하고,{" "}
-                  <strong>참여 삭제</strong>는 목록에서 제거합니다(텔레그램 방 알림은 가지 않습니다).
-                </p>
-                <AdminParticipantOptionsGrid
-                  eventId={event.id}
-                  tenantSlug={tenant.slug}
-                  groups={groupsWithItems}
-                  participants={participants}
-                  participantOptMap={participantOptIds}
-                />
-              </>
-            )}
+            <h2 className="card__title">참여자 관리</h2>
+            <p className="form-hint" style={{ marginTop: 0, marginBottom: "12px" }}>
+              참여자 이름·옵션 수정과 삭제는 꼬리달기 상세 화면에서 합니다.
+            </p>
+            <a
+              className="btn btn--secondary"
+              href={`/t/${encodeURIComponent(tenant.slug)}/events/${event.id}`}
+            >
+              참여자 보기
+            </a>
           </div>
         </div>
       </main>

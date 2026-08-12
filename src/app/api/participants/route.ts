@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { loadAdminMembershipCached } from "@/lib/adminMembership";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -22,7 +22,12 @@ import {
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
-import { collectOptionItemIdsFromForm } from "@/lib/syncParticipantOptions";
+import {
+  collectOptionItemIdsFromForm,
+  findUnselectedRequiredGroupNames,
+} from "@/lib/syncParticipantOptions";
+import { isEventClosed } from "@/lib/eventClosed";
+import { stripForbiddenParticipantNameChars } from "@/lib/participantName";
 import type { Event } from "@/types";
 
 // POST /api/participants — 참여 신청 (JWT → username → DB)
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
     const eventId = Number(formData.get("eventId"));
-    const name = String(formData.get("name") ?? "").trim();
+    const name = stripForbiddenParticipantNameChars(String(formData.get("name") ?? "")).trim();
     const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
     const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
 
@@ -52,11 +57,28 @@ export async function POST(request: NextRequest) {
       return new Response("접근이 거부되었습니다.", { status: 403 });
     }
 
+    if (!name) return new Response("이름을 입력해 주세요.", { status: 400 });
+
     const event = await queryFirst<Event>(
       "SELECT * FROM event WHERE id = ? AND tenant_id = ? LIMIT 1",
       [eventId, tenant.id],
     );
     if (!event) return new Response("Event not found", { status: 404 });
+    const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
+    if (isEventClosed(event) && !isTenantAdmin) {
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${event.id}?toast=event_closed`, request.url),
+        303,
+      );
+    }
+
+    const missingRequired = await findUnselectedRequiredGroupNames(event.id, formData);
+    if (missingRequired.length > 0) {
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${event.id}?toast=option_required`, request.url),
+        303,
+      );
+    }
 
     const optionItemIds = await collectOptionItemIdsFromForm(event.id, formData);
 

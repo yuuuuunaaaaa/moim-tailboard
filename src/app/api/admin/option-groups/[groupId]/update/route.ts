@@ -28,6 +28,7 @@ export async function POST(
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
+    const isRequired = formData.get("required") === "true" ? 1 : 0;
     const tenant = await findTenantBySlug(tenantSlug);
     if (!tenant) return new Response("Tenant not found", { status: 404 });
     if (!canAccessTenant(admin, tenant, membership)) return new Response("권한이 없습니다.", { status: 403 });
@@ -42,16 +43,15 @@ export async function POST(
     const itemInputs = parseOptionItemsFromFormData(formData);
 
     const savedNames = await withTransaction(async (_conn, db) => {
-      await db.exec("UPDATE option_group SET name = ?, multiple_select = ? WHERE id = ?", [
-        groupName,
-        multipleSelect,
-        groupId,
-      ]);
+      await db.exec(
+        "UPDATE option_group SET name = ?, multiple_select = ?, is_required = ? WHERE id = ?",
+        [groupName, multipleSelect, isRequired, groupId],
+      );
       return syncOptionGroupItems(groupId, itemInputs, db);
     });
 
     await execute(
-      "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'groupId', ?, 'groupName', ?, 'multipleSelect', ?, 'itemNames', ?))",
+      "INSERT INTO action_log (tenant_id, event_id, action, metadata) VALUES (?, ?, ?, JSON_OBJECT('username', ?, 'groupId', ?, 'groupName', ?, 'multipleSelect', ?, 'isRequired', ?, 'itemNames', ?))",
       [
         tenant.id,
         eventId,
@@ -60,6 +60,7 @@ export async function POST(
         groupId,
         groupName,
         multipleSelect,
+        isRequired,
         JSON.stringify(savedNames),
       ],
     );
