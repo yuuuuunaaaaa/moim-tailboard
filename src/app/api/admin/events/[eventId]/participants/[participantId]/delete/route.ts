@@ -69,10 +69,7 @@ export async function POST(
     await execute("DELETE FROM participant WHERE id = ?", [participant.id]);
 
     return NextResponse.redirect(
-      new URL(
-        `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=participant_deleted`,
-        request.url,
-      ),
+      new URL(`/t/${tenant.slug}/events/${eventId}?toast=participant_deleted`, request.url),
       303,
     );
   } catch (err) {

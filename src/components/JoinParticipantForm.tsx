@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
+import ParticipantNameInput from "@/components/ParticipantNameInput";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
 
 type Props = {
@@ -66,7 +67,7 @@ export default function JoinParticipantForm({
 
       <div className="form-group">
         <label htmlFor="name">이름</label>
-        <input id="name" name="name" type="text" required placeholder="이름을 입력하세요" />
+        <ParticipantNameInput id="name" required placeholder="이름을 입력하세요" />
       </div>
 
       {optionGroups.map((group) => {

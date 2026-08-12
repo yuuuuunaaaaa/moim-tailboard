@@ -5,6 +5,7 @@ import type { OptionGroup, OptionItem, Participant } from "@/types";
 import Spinner from "@/components/Spinner";
 import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfirm";
 import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
+import ParticipantNameInput from "@/components/ParticipantNameInput";
 import { buildOptionGroupsWithItems } from "@/lib/participantOptionGroups";
 import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
@@ -69,7 +70,6 @@ export default function ParticipantEditForm({
         participantId: p.id,
         container: formEl,
         groups,
-        from: "event",
         allowDuplicate,
       });
     } catch (e) {
@@ -110,7 +110,7 @@ export default function ParticipantEditForm({
       />
       <input type="hidden" name="studentNo" value={p.student_no || ""} />
       <div className="p-edit-fields">
-        <input type="text" name="name" defaultValue={p.name} placeholder="이름" disabled={isSubmitting} />
+        <ParticipantNameInput defaultValue={p.name} placeholder="이름" disabled={isSubmitting} />
       </div>
       <ParticipantOptionInputs
         groups={groups}

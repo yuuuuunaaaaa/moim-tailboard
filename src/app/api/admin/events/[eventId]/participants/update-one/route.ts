@@ -9,6 +9,7 @@ import { syncParticipantOptionsFromForm } from "@/lib/syncParticipantOptions";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { isEventClosed } from "@/lib/eventClosed";
+import { stripForbiddenParticipantNameChars } from "@/lib/participantName";
 
 // POST /api/admin/events/[eventId]/participants/update-one — 참여자 1행 이름·옵션 저장 (관리자 또는 본인)
 export async function POST(
@@ -21,7 +22,6 @@ export async function POST(
 
     const formData = await request.formData();
     const tenantSlug = String(formData.get("tenantSlug") ?? "").trim();
-    const from = String(formData.get("from") ?? "admin").trim() === "event" ? "event" : "admin";
     const usernameFromForm = String(formData.get("username") ?? "").trim() || null;
 
     const auth = await getUserFromRequest(request);
@@ -51,7 +51,8 @@ export async function POST(
     }
 
     const rawName = formData.get("name");
-    const nameInput = typeof rawName === "string" ? rawName.trim() : "";
+    const nameInput =
+      typeof rawName === "string" ? stripForbiddenParticipantNameChars(rawName).trim() : "";
     const studentNo = String(formData.get("studentNo") ?? "").trim() || null;
     const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
 
@@ -75,11 +76,10 @@ export async function POST(
       return new Response("권한이 없습니다.", { status: 403 });
     }
     if (isEventClosed(ev) && !isTenantAdmin) {
-      const toastPath =
-        from === "event"
-          ? `/t/${tenant.slug}/events/${eventId}?toast=event_closed`
-          : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`;
-      return NextResponse.redirect(new URL(toastPath, request.url), 303);
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${eventId}?toast=event_closed`, request.url),
+        303,
+      );
     }
 
     const newName = nameInput || p.name;
@@ -94,11 +94,10 @@ export async function POST(
         participantId,
       );
       if (duplicate) {
-        const toastPath =
-          from === "event"
-            ? `/t/${tenant.slug}/events/${eventId}?toast=duplicate`
-            : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=duplicate`;
-        return NextResponse.redirect(new URL(toastPath, request.url), 303);
+        return NextResponse.redirect(
+          new URL(`/t/${tenant.slug}/events/${eventId}?toast=duplicate`, request.url),
+          303,
+        );
       }
     }
 
@@ -127,13 +126,10 @@ export async function POST(
       ],
     );
 
-    const toast = from === "event" ? "updated" : "row_saved";
-    const redirectPath =
-      from === "event"
-        ? `/t/${tenant.slug}/events/${eventId}?toast=${toast}`
-        : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=${toast}`;
-
-    return NextResponse.redirect(new URL(redirectPath, request.url), 303);
+    return NextResponse.redirect(
+      new URL(`/t/${tenant.slug}/events/${eventId}?toast=updated`, request.url),
+      303,
+    );
   } catch (err) {
     console.error("POST /api/admin/events/[eventId]/participants/update-one:", err);
     return new Response("Internal server error", { status: 500 });
