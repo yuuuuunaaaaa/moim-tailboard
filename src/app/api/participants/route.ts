@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { loadAdminMembershipCached } from "@/lib/adminMembership";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
       [eventId, tenant.id],
     );
     if (!event) return new Response("Event not found", { status: 404 });
-    if (isEventClosed(event)) {
+    const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
+    if (isEventClosed(event) && !isTenantAdmin) {
       return NextResponse.redirect(
         new URL(`/t/${tenant.slug}/events/${event.id}?toast=event_closed`, request.url),
         303,

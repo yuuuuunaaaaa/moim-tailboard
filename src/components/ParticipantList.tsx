@@ -196,7 +196,7 @@ export default function ParticipantList({
                 const isEditing = editingId === p.id;
                 const isOwner = !!username && p.username === username;
                 const canAdminEdit = isAdmin && !isOwner;
-                const canOpenEditor = !isClosed && (isOwner || canAdminEdit);
+                const canOpenEditor = isAdmin || (isOwner && !isClosed);
 
                 return (
                   <li key={p.id} className="p-item" id={`p-item-${p.id}`}>

@@ -13,7 +13,7 @@ export default function AdminEventClosedToggle({
 }) {
   const confirmText = isClosed
     ? "정말 마감을 해제할까요?"
-    : "정말 마감할까요? 마감 후에는 참가·수정·취소가 불가능합니다.";
+    : "정말 마감할까요? 일반 참여자는 참가·수정·취소가 불가능해집니다.";
 
   return (
     <form

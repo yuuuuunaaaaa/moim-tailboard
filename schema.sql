@@ -55,7 +55,7 @@ CREATE TABLE event (
   -- 기존 DB에는 ALTER로 추가:
   --   ALTER TABLE event ADD COLUMN is_closed TINYINT(1) NOT NULL DEFAULT 0
   --     COMMENT '마감 여부 (참가/수정/취소 불가)' AFTER is_active;
-  is_closed TINYINT(1) NOT NULL DEFAULT 0 COMMENT '마감 여부 (참가/수정/취소 불가)',
+  is_closed TINYINT(1) NOT NULL DEFAULT 0 COMMENT '마감 여부 (일반 참여자 참가/수정/취소 불가)',
   -- 화면 표시 순서 (관리자가 드래그앤드롭으로 직접 지정). 작을수록 위.
   -- 기존 DB에는 ALTER로 추가:
   --   ALTER TABLE event ADD COLUMN event_order INT NOT NULL DEFAULT 0

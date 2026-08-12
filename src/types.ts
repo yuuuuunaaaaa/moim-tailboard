@@ -29,7 +29,7 @@ export interface Event {
   /** DATE (YYYY-MM-DD) */
   event_date: Date | string;
   is_active: number;
-  /** 마감 여부. 1이면 참가·수정·취소 불가 (목록에는 계속 노출) */
+  /** 마감 여부. 1이면 일반 참여자의 참가·수정·취소 불가 (목록에는 계속 노출) */
   is_closed: number;
   /** 화면 표시 순서. 작을수록 위. 관리 화면 드래그앤드롭으로 갱신 */
   event_order: number;

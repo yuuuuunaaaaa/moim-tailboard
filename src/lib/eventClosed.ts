@@ -5,4 +5,4 @@ export function isEventClosed(event: Pick<Event, "is_closed">): boolean {
 }
 
 export const EVENT_CLOSED_MESSAGE =
-  "마감된 꼬리달기입니다. 참가·수정·취소가 불가능합니다.";
+  "마감된 꼬리달기입니다. 일반 참여자는 참가·수정·취소가 불가능합니다.";

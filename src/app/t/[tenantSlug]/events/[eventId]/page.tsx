@@ -134,18 +134,25 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <div className="layout-half">
           <div className="card">
             <h2 className="card__title">참여 신청</h2>
-            {closed ? (
+            {closed && !isAdmin ? (
               <p className="empty-state mt-0 mb-0">{EVENT_CLOSED_MESSAGE}</p>
             ) : (
-              <JoinParticipantForm
-                tenantSlug={tenant.slug}
-                eventId={event.id}
-                username={username}
-                isDevBypass={isDevBypass}
-                optionGroups={optionGroups}
-                optionItems={optionItems}
-                participants={participants}
-              />
+              <>
+                {closed && isAdmin && (
+                  <p className="form-hint" style={{ marginTop: 0 }}>
+                    마감된 꼬리달기입니다. 관리자는 참여 추가·수정·삭제가 가능합니다.
+                  </p>
+                )}
+                <JoinParticipantForm
+                  tenantSlug={tenant.slug}
+                  eventId={event.id}
+                  username={username}
+                  isDevBypass={isDevBypass}
+                  optionGroups={optionGroups}
+                  optionItems={optionItems}
+                  participants={participants}
+                />
+              </>
             )}
           </div>
 

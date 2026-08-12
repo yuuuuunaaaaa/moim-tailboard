@@ -13,14 +13,12 @@ export default function AdminParticipantOptionsGrid({
   groups,
   participants,
   participantOptMap,
-  isClosed = false,
 }: {
   eventId: number;
   tenantSlug: string;
   groups: OptionGroupWithItems[];
   participants: Participant[];
   participantOptMap: Record<number, number[]>;
-  isClosed?: boolean;
 }) {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -127,13 +125,13 @@ export default function AdminParticipantOptionsGrid({
                   aria-expanded={isExpanded}
                   aria-controls={panelId}
                   onClick={() => toggleExpanded(p.id)}
-                  disabled={(submittingId != null && submittingId !== p.id) || isClosed}
+                  disabled={submittingId != null && submittingId !== p.id}
                 >
                   {isExpanded ? "접기" : "수정"}
                 </button>
               </header>
 
-              {isExpanded && !isClosed && (
+              {isExpanded && (
                 <div id={panelId} className="admin-participant-card__body">
                   <div className="admin-participant-card__name-edit">
                     <label

@@ -67,19 +67,19 @@ export async function POST(
     ]);
 
     if (!ev) return new Response("Event not found", { status: 404 });
-    if (isEventClosed(ev)) {
-      const toastPath =
-        from === "event"
-          ? `/t/${tenant.slug}/events/${eventId}?toast=event_closed`
-          : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`;
-      return NextResponse.redirect(new URL(toastPath, request.url), 303);
-    }
     if (!p) return new Response("Participant not found", { status: 404 });
 
     const isOwner = p.username === username;
     const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
     if (!isOwner && !isTenantAdmin) {
       return new Response("권한이 없습니다.", { status: 403 });
+    }
+    if (isEventClosed(ev) && !isTenantAdmin) {
+      const toastPath =
+        from === "event"
+          ? `/t/${tenant.slug}/events/${eventId}?toast=event_closed`
+          : `/admin/events/${eventId}/edit?tenant=${encodeURIComponent(tenant.slug)}&toast=event_closed`;
+      return NextResponse.redirect(new URL(toastPath, request.url), 303);
     }
 
     const newName = nameInput || p.name;

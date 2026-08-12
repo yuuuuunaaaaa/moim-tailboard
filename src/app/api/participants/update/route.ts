@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { loadAdminMembershipCached } from "@/lib/adminMembership";
+import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembership";
 import { findTenantBySlug } from "@/lib/db";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
       return new Response("이름·옵션 수정은 update-one API를 사용하세요.", { status: 400 });
     }
 
-    if (isEventClosed(participant)) {
+    const isTenantAdmin = !!(admin && canManageTenant(membership, tenant.id));
+    if (isEventClosed(participant) && !isTenantAdmin) {
       return NextResponse.redirect(
         new URL(
           `/t/${tenant.slug}/events/${participant.event_id}?toast=event_closed`,

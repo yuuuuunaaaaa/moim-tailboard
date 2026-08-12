@@ -34,7 +34,7 @@ const TOAST_TEXT: Record<string, string> = {
   event_toggled_inactive: "비공개로 전환했습니다.",
   event_closed_on: "마감했습니다.",
   event_closed_off: "마감을 해제했습니다.",
-  event_closed: "마감된 꼬리달기입니다. 참가·수정·취소가 불가능합니다.",
+  event_closed: "마감된 꼬리달기입니다. 일반 참여자는 참가·수정·취소가 불가능합니다.",
 };
 
 export default async function AdminEventEditPage({ params, searchParams }: Props) {
@@ -253,12 +253,7 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
               <p className="empty-state mt-0 mb-0">옵션 그룹이 없습니다.</p>
             ) : (
               <>
-                {isClosed && (
-                  <p className="form-hint" style={{ marginTop: 0, color: "#b45309" }}>
-                    마감된 꼬리달기입니다. 참여자 수정·삭제가 불가능합니다.
-                  </p>
-                )}
-                <p className="form-hint" style={{ marginTop: isClosed ? "8px" : 0 }}>
+                <p className="form-hint" style={{ marginTop: 0 }}>
                   맨 오른쪽 <strong>수정</strong>은 해당 참여자 옵션만 저장하고,{" "}
                   <strong>참여 삭제</strong>는 목록에서 제거합니다(텔레그램 방 알림은 가지 않습니다).
                 </p>
@@ -268,7 +263,6 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                   groups={groupsWithItems}
                   participants={participants}
                   participantOptMap={participantOptIds}
-                  isClosed={isClosed}
                 />
               </>
             )}
