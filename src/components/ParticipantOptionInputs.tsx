@@ -29,7 +29,10 @@ export default function ParticipantOptionInputs({
           const hasAnyInGroup = g.items.some((opt) => selected.has(opt.id));
           return (
             <fieldset key={g.id} className="option-group p-edit-option-group" disabled={disabled}>
-              <legend className="option-group__name">{g.name}</legend>
+              <legend className="option-group__name">
+                {g.name}
+                {!!g.is_required && <span className="option-group__required"> *</span>}
+              </legend>
               {g.items.length === 0 ? (
                 <span className="form-hint">옵션 없음</span>
               ) : g.multiple_select ? (
@@ -49,16 +52,18 @@ export default function ParticipantOptionInputs({
                 </div>
               ) : (
                 <div className="radio-group">
-                  <label>
-                    <input
-                      type="radio"
-                      name={key}
-                      value=""
-                      defaultChecked={!hasAnyInGroup}
-                      disabled={disabled}
-                    />
-                    미선택
-                  </label>
+                  {!g.is_required && (
+                    <label>
+                      <input
+                        type="radio"
+                        name={key}
+                        value=""
+                        defaultChecked={!hasAnyInGroup}
+                        disabled={disabled}
+                      />
+                      미선택
+                    </label>
+                  )}
                   {g.items.map((opt) => (
                     <label key={opt.id}>
                       <input
@@ -89,6 +94,7 @@ export default function ParticipantOptionInputs({
           <fieldset key={g.id} className="admin-option-group" disabled={disabled}>
             <legend className="admin-option-group__title">
               {g.name}
+              {!!g.is_required && <span className="option-group__required"> *</span>}
               <span className="admin-option-group__meta">
                 {g.multiple_select ? "복수 선택" : "하나만 선택"}
               </span>
@@ -112,16 +118,18 @@ export default function ParticipantOptionInputs({
               </div>
             ) : (
               <div className="admin-option-group__choices">
-                <label className="admin-option-choice admin-option-choice--muted">
-                  <input
-                    type="radio"
-                    name={key}
-                    value=""
-                    defaultChecked={!hasAnyInGroup}
-                    disabled={disabled}
-                  />
-                  <span>미선택</span>
-                </label>
+                {!g.is_required && (
+                  <label className="admin-option-choice admin-option-choice--muted">
+                    <input
+                      type="radio"
+                      name={key}
+                      value=""
+                      defaultChecked={!hasAnyInGroup}
+                      disabled={disabled}
+                    />
+                    <span>미선택</span>
+                  </label>
+                )}
                 {g.items.map((opt) => (
                   <label key={opt.id} className="admin-option-choice">
                     <input

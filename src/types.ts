@@ -44,6 +44,8 @@ export interface OptionGroup {
   event_id: number;
   name: string;
   multiple_select: number;
+  /** 1이면 참여 신청·수정 시 이 그룹에서 최소 1개를 골라야 한다 */
+  is_required: number;
   sort_order: number;
 }
 

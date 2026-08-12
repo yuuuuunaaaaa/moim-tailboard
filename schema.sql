@@ -85,6 +85,12 @@ CREATE TABLE option_group (
   name VARCHAR(255) NOT NULL,
   -- 다중 선택 허용 여부 (1: 여러 개 가능, 0: 단일 선택)
   multiple_select TINYINT(1) NOT NULL DEFAULT 0,
+  -- 필수 선택 여부. 1이면 참여 신청·수정 시 최소 1개를 골라야 한다.
+  -- 기존 DB에는 ALTER로 추가:
+  --   ALTER TABLE option_group ADD COLUMN is_required TINYINT(1) NOT NULL DEFAULT 1
+  --     COMMENT '필수 선택 여부' AFTER multiple_select;
+  --   -- 기존 그룹을 선택 사항으로 두려면: UPDATE option_group SET is_required = 0;
+  is_required TINYINT(1) NOT NULL DEFAULT 1 COMMENT '필수 선택 여부',
   -- 화면에서의 정렬 순서
   sort_order INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_option_group_event

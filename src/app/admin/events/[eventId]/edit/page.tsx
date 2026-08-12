@@ -191,6 +191,15 @@ export default async function AdminEventEditPage({ params, searchParams }: Props
                                 />
                                 복수선택
                               </label>
+                              <label className="option-group-edit-check">
+                                <input
+                                  type="checkbox"
+                                  name="required"
+                                  value="true"
+                                  defaultChecked={!!g.is_required}
+                                />
+                                필수
+                              </label>
                               <button className="btn btn--secondary option-group-edit-btn" type="submit">
                                 저장
                               </button>

@@ -22,7 +22,10 @@ import {
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
-import { collectOptionItemIdsFromForm } from "@/lib/syncParticipantOptions";
+import {
+  collectOptionItemIdsFromForm,
+  findUnselectedRequiredGroupNames,
+} from "@/lib/syncParticipantOptions";
 import { isEventClosed } from "@/lib/eventClosed";
 import { stripForbiddenParticipantNameChars } from "@/lib/participantName";
 import type { Event } from "@/types";
@@ -65,6 +68,14 @@ export async function POST(request: NextRequest) {
     if (isEventClosed(event) && !isTenantAdmin) {
       return NextResponse.redirect(
         new URL(`/t/${tenant.slug}/events/${event.id}?toast=event_closed`, request.url),
+        303,
+      );
+    }
+
+    const missingRequired = await findUnselectedRequiredGroupNames(event.id, formData);
+    if (missingRequired.length > 0) {
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${event.id}?toast=option_required`, request.url),
         303,
       );
     }

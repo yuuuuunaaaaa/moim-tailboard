@@ -217,6 +217,7 @@ label .optional { font-weight: 400; color: var(--muted); }
   margin: 6px 0 0 0;
 }
 .form-hint--warning { color: var(--danger); }
+.option-group__required { color: var(--danger); font-weight: 700; }
 /* flex 컨테이너(.p-edit-fields 등) 안에서도 한 줄 전체를 차지하게 */
 .participant-name-hint { flex-basis: 100%; width: 100%; }
 

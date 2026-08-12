@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const eventId = Number(formData.get("eventId"));
     const groupName = String(formData.get("groupName") ?? "").trim();
     const multipleSelect = formData.get("multipleSelect") === "true" ? 1 : 0;
+    const isRequired = formData.get("required") === "true" ? 1 : 0;
     const optionNames = parseOptionNamesJson(String(formData.get("optionNames") ?? ""));
 
     const tenant = await findTenantBySlug(tenantSlug);
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
     if (!event) return new Response("Event not found", { status: 404 });
 
     const groupResult = await execute(
-      "INSERT INTO option_group (event_id, name, multiple_select) VALUES (?, ?, ?)",
-      [event.id, groupName, multipleSelect],
+      "INSERT INTO option_group (event_id, name, multiple_select, is_required) VALUES (?, ?, ?, ?)",
+      [event.id, groupName, multipleSelect, isRequired],
     );
     const optionGroupId = groupResult.insertId;
 

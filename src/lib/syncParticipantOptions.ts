@@ -1,23 +1,63 @@
 import { execute, queryRows } from "@/lib/queryRows";
 
+type GroupRow = { id: number; name: string; multiple_select: number; is_required: number };
+type ItemRow = { id: number; option_group_id: number };
+
+async function loadOptionGroupsWithItemIndex(eventId: number): Promise<{
+  groups: GroupRow[];
+  itemById: Map<number, ItemRow>;
+}> {
+  const groups = await queryRows<GroupRow>(
+    "SELECT id, name, multiple_select, is_required FROM option_group WHERE event_id = ?",
+    [eventId],
+  );
+  if (groups.length === 0) return { groups, itemById: new Map() };
+
+  const itemRows = await queryRows<ItemRow>(
+    "SELECT id, option_group_id FROM option_item WHERE option_group_id IN (?)",
+    [groups.map((g) => g.id)],
+  );
+  const itemById = new Map<number, ItemRow>();
+  itemRows.forEach((r) => itemById.set(r.id, r));
+  return { groups, itemById };
+}
+
+/**
+ * 필수인데 선택이 비어 있는 그룹 이름 목록.
+ * 항목이 없는 그룹은 고를 수가 없으니 검사에서 제외한다.
+ */
+export async function findUnselectedRequiredGroupNames(
+  eventId: number,
+  formData: FormData,
+): Promise<string[]> {
+  const { groups, itemById } = await loadOptionGroupsWithItemIndex(eventId);
+  const groupIdsWithItems = new Set([...itemById.values()].map((it) => it.option_group_id));
+
+  const missing: string[] = [];
+  for (const g of groups) {
+    if (!g.is_required) continue;
+    if (!groupIdsWithItems.has(g.id)) continue;
+
+    const selected = formData
+      .getAll(`g_${g.id}`)
+      .map(String)
+      .some((v) => {
+        const optId = Number(v);
+        if (!Number.isFinite(optId) || optId <= 0) return false;
+        return itemById.get(optId)?.option_group_id === g.id;
+      });
+    if (!selected) missing.push(g.name);
+  }
+  return missing;
+}
+
 /** 폼 필드 `g_{groupId}` 에서 검증된 option_item id 목록 추출 */
 export async function collectOptionItemIdsFromForm(
   eventId: number,
   formData: FormData,
 ): Promise<number[]> {
-  const groups = await queryRows<{ id: number; multiple_select: number }>(
-    "SELECT id, multiple_select FROM option_group WHERE event_id = ?",
-    [eventId],
-  );
+  const { groups, itemById } = await loadOptionGroupsWithItemIndex(eventId);
   if (groups.length === 0) return [];
-
-  const groupIds = groups.map((g) => g.id);
-  const itemRows = await queryRows<{ id: number; option_group_id: number }>(
-    "SELECT id, option_group_id FROM option_item WHERE option_group_id IN (?)",
-    [groupIds],
-  );
-  const itemById = new Map<number, { id: number; option_group_id: number }>();
-  itemRows.forEach((r) => itemById.set(r.id, r));
 
   const ids: number[] = [];
   for (const g of groups) {

@@ -42,6 +42,7 @@ export async function POST(
     // 수정 폼에서 새 옵션 그룹 추가
     const groupNames = formData.getAll("groupName").map(String).filter(Boolean);
     const multipleSelects = formData.getAll("multipleSelect").map(String);
+    const groupRequireds = formData.getAll("groupRequired").map(String);
     const optionTexts = formData.getAll("optionText").map(String);
 
     if (groupNames.length > 0) {
@@ -56,8 +57,15 @@ export async function POST(
         const gName = groupNames[i].trim();
         if (!gName) continue;
         const gResult = await execute(
-          "INSERT INTO option_group (event_id, name, multiple_select, sort_order) VALUES (?, ?, ?, ?)",
-          [eventId, gName, multipleSelects[i] === "true" ? 1 : 0, sortOrder++],
+          "INSERT INTO option_group (event_id, name, multiple_select, is_required, sort_order) VALUES (?, ?, ?, ?, ?)",
+          [
+            eventId,
+            gName,
+            multipleSelects[i] === "true" ? 1 : 0,
+            // 값이 안 실려 오면 필수로 둔다(기본 필수).
+            groupRequireds[i] === "false" ? 0 : 1,
+            sortOrder++,
+          ],
         );
         const optNames = (optionTexts[i] || "").split("\n").map((s) => s.trim()).filter(Boolean);
         if (optNames.length > 0) {

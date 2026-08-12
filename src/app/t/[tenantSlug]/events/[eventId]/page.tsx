@@ -26,6 +26,7 @@ const TOAST_TEXT: Record<string, string> = {
   updated: "수정이 완료되었습니다.",
   cancelled: "참여가 취소되었습니다.",
   event_closed: EVENT_CLOSED_MESSAGE,
+  option_required: "필수 옵션을 선택해 주세요.",
   participant_deleted: "참여 기록을 삭제했습니다.",
   duplicate: "같은 이름으로 이미 참여한 기록이 있습니다. 계속하려면 확인 후 다시 제출해 주세요.",
 };
@@ -135,7 +136,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <div className="card">
             <h2 className="card__title">참여 신청</h2>
             {closed && !isAdmin ? (
-              <p className="empty-state mt-0 mb-0">{EVENT_CLOSED_MESSAGE}</p>
+              <p className="empty-state mt-0 mb-0" style={{ whiteSpace: "pre-line" }}>
+                {EVENT_CLOSED_MESSAGE}
+              </p>
             ) : (
               <>
                 {closed && isAdmin && (

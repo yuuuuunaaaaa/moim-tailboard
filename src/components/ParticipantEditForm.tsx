@@ -7,6 +7,10 @@ import DuplicateParticipantConfirm from "@/components/DuplicateParticipantConfir
 import ParticipantOptionInputs from "@/components/ParticipantOptionInputs";
 import ParticipantNameInput from "@/components/ParticipantNameInput";
 import { buildOptionGroupsWithItems } from "@/lib/participantOptionGroups";
+import {
+  findUnselectedRequiredGroupName,
+  requiredOptionGroupMessage,
+} from "@/lib/requiredOptionGroups";
 import { submitParticipantRowUpdate } from "@/lib/submitParticipantRowUpdate";
 import { useParticipantDuplicateSubmit } from "@/lib/useParticipantDuplicateSubmit";
 
@@ -60,6 +64,7 @@ export default function ParticipantEditForm({
   const isDeleting = pendingDeleteId === p.id;
   const isSubmitting = submittingId === p.id;
   const isAdmin = role === "admin";
+  const [requiredError, setRequiredError] = useState<string | null>(null);
 
   const saveRow = async (formEl: HTMLFormElement) => {
     setSubmittingId(p.id);
@@ -94,6 +99,14 @@ export default function ParticipantEditForm({
         }
         if (isDeleting) return;
 
+        const missing = findUnselectedRequiredGroupName(e.currentTarget, groups);
+        if (missing) {
+          e.preventDefault();
+          setRequiredError(requiredOptionGroupMessage(missing));
+          return;
+        }
+        setRequiredError(null);
+
         handleDuplicateSubmit(e, () => {
           e.preventDefault();
           void saveRow(e.currentTarget);
@@ -118,6 +131,11 @@ export default function ParticipantEditForm({
         disabled={isSubmitting}
         variant="inline"
       />
+      {requiredError && (
+        <p className="form-hint form-hint--warning" role="alert">
+          {requiredError}
+        </p>
+      )}
       <div className="p-edit-actions">
         <button
           className="btn btn--secondary btn--sm"

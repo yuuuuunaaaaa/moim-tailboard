@@ -5,7 +5,10 @@ import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { isDevBypassEnabled } from "@/lib/dev";
 import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
-import { syncParticipantOptionsFromForm } from "@/lib/syncParticipantOptions";
+import {
+  findUnselectedRequiredGroupNames,
+  syncParticipantOptionsFromForm,
+} from "@/lib/syncParticipantOptions";
 import { execute, queryFirst } from "@/lib/queryRows";
 import { isTenantAccessGrantedForApi, TENANT_COOKIE_NAME } from "@/lib/tenantRestrict";
 import { isEventClosed } from "@/lib/eventClosed";
@@ -78,6 +81,14 @@ export async function POST(
     if (isEventClosed(ev) && !isTenantAdmin) {
       return NextResponse.redirect(
         new URL(`/t/${tenant.slug}/events/${eventId}?toast=event_closed`, request.url),
+        303,
+      );
+    }
+
+    const missingRequired = await findUnselectedRequiredGroupNames(eventId, formData);
+    if (missingRequired.length > 0) {
+      return NextResponse.redirect(
+        new URL(`/t/${tenant.slug}/events/${eventId}?toast=option_required`, request.url),
         303,
       );
     }
