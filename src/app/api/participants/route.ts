@@ -20,7 +20,7 @@ import {
   getEventNoticeChatRoomIdStrict,
 } from "@/lib/telegram";
 import { isDevBypassEnabled } from "@/lib/dev";
-import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
+import { findParticipantByName } from "@/lib/participantDuplicate";
 import {
   collectOptionItemIdsFromForm,
   findUnselectedRequiredGroupNames,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     const allowDuplicate = String(formData.get("allowDuplicate") ?? "") === "1";
     if (!allowDuplicate) {
-      const duplicate = await findParticipantByNameAndStudentNo(event.id, name, studentNo);
+      const duplicate = await findParticipantByName(event.id, name);
       if (duplicate) {
         return NextResponse.redirect(
           new URL(`/t/${tenant.slug}/events/${event.id}?toast=duplicate`, request.url),
