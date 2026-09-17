@@ -12,7 +12,9 @@ type Props = {
 export default function DuplicateParticipantConfirm({ disabled, onYes, onNo }: Props) {
   return (
     <div className="p-delete-confirm" role="group" aria-label="중복 참여 확인">
-      <span className="p-delete-confirm-text">{DUPLICATE_PARTICIPANT_WARNING}</span>
+      <span className="p-delete-confirm-text" style={{ whiteSpace: "pre-line" }}>
+        {DUPLICATE_PARTICIPANT_WARNING}
+      </span>
       <button className="btn btn--secondary btn--sm" type="button" onClick={onNo} disabled={disabled}>
         아니오
       </button>

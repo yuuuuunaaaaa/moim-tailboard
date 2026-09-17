@@ -4,7 +4,7 @@ import { canManageTenant, loadAdminMembershipCached } from "@/lib/adminMembershi
 import { responseWhenTenantSlugMissingForRequest } from "@/lib/adminTenantSlug";
 import { findTenantBySlug } from "@/lib/db";
 import { isDevBypassEnabled } from "@/lib/dev";
-import { findParticipantByNameAndStudentNo } from "@/lib/participantDuplicate";
+import { findParticipantByName } from "@/lib/participantDuplicate";
 import {
   findUnselectedRequiredGroupNames,
   syncParticipantOptionsFromForm,
@@ -97,13 +97,8 @@ export async function POST(
     const nameChanged = newName !== p.name;
     const studentChanged = studentNo !== p.student_no;
 
-    if (!allowDuplicate && (nameChanged || studentChanged)) {
-      const duplicate = await findParticipantByNameAndStudentNo(
-        eventId,
-        newName,
-        studentNo,
-        participantId,
-      );
+    if (!allowDuplicate && nameChanged) {
+      const duplicate = await findParticipantByName(eventId, newName, participantId);
       if (duplicate) {
         return NextResponse.redirect(
           new URL(`/t/${tenant.slug}/events/${eventId}?toast=duplicate`, request.url),

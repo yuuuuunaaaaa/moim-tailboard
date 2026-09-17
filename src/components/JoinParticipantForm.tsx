@@ -134,18 +134,20 @@ export default function JoinParticipantForm({
         />
       )}
 
-      <button
-        className="btn btn--primary"
-        type="submit"
-        disabled={disabled || showDuplicateConfirm}
-        aria-disabled={disabled || showDuplicateConfirm}
-        title={!username && !isDevBypass ? "텔레그램에서 열어 로그인해 주세요" : undefined}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {submitting && <Spinner size={16} color="#fff" label="제출 중" />}
-          {submitting ? "처리 중..." : "참여하기"}
-        </span>
-      </button>
+      {!showDuplicateConfirm && (
+        <button
+          className="btn btn--primary"
+          type="submit"
+          disabled={disabled}
+          aria-disabled={disabled}
+          title={!username && !isDevBypass ? "텔레그램에서 열어 로그인해 주세요" : undefined}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            {submitting && <Spinner size={16} color="#fff" label="제출 중" />}
+            {submitting ? "처리 중..." : "참여하기"}
+          </span>
+        </button>
+      )}
     </form>
   );
 }

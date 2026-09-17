@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { hasDuplicateParticipantInList } from "@/lib/participantDuplicateShared";
 
-type ParticipantRow = { id: number; name: string; student_no: string | null };
+type ParticipantRow = { id: number; name: string };
 
 export function useParticipantDuplicateSubmit(opts: {
   participants: ParticipantRow[];
@@ -25,11 +25,9 @@ export function useParticipantDuplicateSubmit(opts: {
     const mode = String(new FormData(form).get("mode") ?? "");
     if (mode === "delete") return false;
     const name = String(new FormData(form).get("name") ?? "").trim();
-    const studentNo = String(new FormData(form).get("studentNo") ?? "").trim() || null;
     return hasDuplicateParticipantInList(
       opts.participants,
       name,
-      studentNo,
       opts.excludeParticipantId,
     );
   }
