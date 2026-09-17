@@ -10,8 +10,14 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f8f6f3",
+  themeColor: "#fbf1e6",
 };
+
+/**
+ * 계절별 배색은 public/style.css 의 [data-season="..."] 블록에 미리 정의되어 있다.
+ * 테마를 바꾸려면 아래 값만 "spring" | "summer" | "autumn" | "winter" 로 변경하면 된다.
+ */
+const SEASON: "spring" | "summer" | "autumn" | "winter" = "autumn";
 
 const PRETENDARD_CSS =
   "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css";
@@ -34,7 +40,7 @@ const LOAD_PRETENDARD = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" data-season={SEASON}>
       <head>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
